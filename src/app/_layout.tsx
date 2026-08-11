@@ -2,8 +2,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { Provider } from 'react-redux';
 import { View } from 'react-native';
+import { Provider } from 'react-redux';
 
 import { store } from '@/store';
 
@@ -33,7 +33,12 @@ export default function RootLayout() {
     <Provider store={store}>
       <QueryClientProvider client={queryClient}>
         <StatusBar style="dark" />
-        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#ffffff' } }}>
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            animation: 'slide_from_right',
+            contentStyle: { backgroundColor: '#ffffff' },
+          }}>
           <Stack.Screen name="dev" />
           <Stack.Screen name="(auth)" />
           <Stack.Screen name="(onboarding)" />

@@ -1,52 +1,9 @@
 import React from 'react';
-import { Image, ImageSourcePropType, Text, View } from 'react-native';
+import { Image, ImageSourcePropType, View } from 'react-native';
 import Svg from 'react-native-svg';
 
 import * as IconPaths from './iconPaths';
 
-const EMOJI_FALLBACKS: Record<string, string> = {
-  identity: '🪪',
-  documents: '🪪',
-  family: '👨‍👩‍👧',
-  history: '🕓',
-  back: '‹',
-  bell: '🔔',
-  settings: '⚙️',
-  camera: '📷',
-  face: '🙂',
-  shield: '🛡️',
-  lock: '🔒',
-  check: '✓',
-  checkCircle: '✅',
-  cross: '✕',
-  warning: '⚠️',
-  info: 'ℹ️',
-  calendar: '📅',
-  cake: '🎂',
-  trash: '🗑️',
-  clock: '⏰',
-  search: '🔍',
-  plus: '＋',
-  chevron: '›',
-  document: '📄',
-  passport: '🛂',
-  drivingLicense: '🚗',
-  idCard: '🪪',
-  selfie: '🤳',
-  phone: '📱',
-  email: '✉️',
-  eye: '👁️',
-  edit: '✏️',
-  logout: '🚪',
-  hotel: '🏨',
-  invoice: '🧾',
-  qr: '▦',
-  sparkle: '✨',
-  hourglass: '⏳',
-  location: '📍',
-  otpcode: '🔢',
-  inbox: '📥',
-};
 
 /**
  * Central icon registry — SVG-based.
@@ -113,7 +70,7 @@ export function Icon({ name, size = 22, color = '#000000', accessibilityLabel }:
   if (imageSource) {
     return (
       <View style={{ width: size, height: size, justifyContent: 'center', alignItems: 'center' }}>
-        <Image source={imageSource} style={{ width: size, height: size, resizeMode: 'contain' }} />
+        <Image source={imageSource} style={{ width: size, height: size }} resizeMode="contain" />
       </View>
     );
   }
@@ -127,12 +84,12 @@ export function Icon({ name, size = 22, color = '#000000', accessibilityLabel }:
       </View>
     );
   }
+  const fallback = IconPaths.check;
   return (
-    <Text
-      style={{ fontSize: size * 0.85, color, lineHeight: size * 1.1 }}
-      accessibilityLabel={accessibilityLabel ?? name}
-      allowFontScaling={false}>
-      {(EMOJI_FALLBACKS as Record<string, string>)[name] ?? '□'}
-    </Text>
+    <View style={{ width: size, height: size, justifyContent: 'center', alignItems: 'center' }}>
+      <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        {fallback(color)}
+      </Svg>
+    </View>
   );
 }

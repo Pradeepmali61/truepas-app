@@ -17,6 +17,7 @@ export const Colors = {
   bgDanger: '#fef2f2',
   bgSuccess: '#ecfdf5',
   text: '#000000',
+  ink: '#000000',
   textSecondary: '#666666',
   textMuted: '#999999',
   textFaint: '#b0b0b0',

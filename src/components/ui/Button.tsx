@@ -1,4 +1,6 @@
-import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+import * as Haptics from 'expo-haptics';
+import { ActivityIndicator, Platform, Pressable, Text, View } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import { Colors } from '@/constants/theme';
 import { Icon, IconName } from './Icon';
@@ -50,24 +52,49 @@ export function Button({
   icon,
   iconColor,
 }: ButtonProps) {
+  const scale = useSharedValue(1);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  const handlePressIn = () => {
+    scale.value = withTiming(0.96, { duration: 90 });
+  };
+
+  const handlePressOut = () => {
+    scale.value = withTiming(1, { duration: 120 });
+  };
+
+  const handlePress = () => {
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    onPress?.();
+  };
+
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      accessibilityState={{ disabled: disabled || loading }}
-      disabled={disabled || loading}
-      onPress={onPress}
-      className={`${CONTAINER[variant]} ${disabled ? 'opacity-50' : 'active:opacity-80'} ${className}`}>
-      {loading ? (
-        <ActivityIndicator color={variant === 'secondary' ? Colors.primary : '#fff'} />
-      ) : (
-        <View className="flex-row items-center gap-2">
-          {icon ? <Icon name={icon} size={18} color={iconColor ?? DEFAULT_ICON_COLOR[variant]} /> : null}
-          <Text allowFontScaling={false} className={LABEL[variant]}>
-            {label}
-          </Text>
-        </View>
-      )}
-    </Pressable>
+    <Animated.View style={[animatedStyle, variant !== 'link' ? { width: '100%' as const } : null]}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={label}
+        accessibilityState={{ disabled: disabled || loading }}
+        disabled={disabled || loading}
+        onPress={handlePress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        className={`${CONTAINER[variant]} ${disabled ? 'opacity-50' : 'active:opacity-80'} ${className}`}>
+        {loading ? (
+          <ActivityIndicator color={variant === 'secondary' ? Colors.primary : '#fff'} />
+        ) : (
+          <View className="flex-row items-center gap-2">
+            {icon ? <Icon name={icon} size={18} color={iconColor ?? DEFAULT_ICON_COLOR[variant]} /> : null}
+            <Text allowFontScaling={false} className={LABEL[variant]}>
+              {label}
+            </Text>
+          </View>
+        )}
+      </Pressable>
+    </Animated.View>
   );
 }

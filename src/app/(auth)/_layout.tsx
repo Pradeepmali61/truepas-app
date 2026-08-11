@@ -9,5 +9,13 @@ export default function AuthLayout() {
     return <Redirect href={faceEnrolled ? '/(tabs)' : '/(onboarding)/consent'} />;
   }
 
-  return <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#ffffff' } }} />;
+  return (
+    <Stack
+      screenOptions={{
+        headerShown: false,
+        animation: 'fade',
+        contentStyle: { backgroundColor: '#ffffff' },
+      }}
+    />
+  );
 }

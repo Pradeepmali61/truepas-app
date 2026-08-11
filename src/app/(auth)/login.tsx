@@ -1,8 +1,9 @@
 import { zodResolver } from '@hookform/resolvers/zod';
+import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { Image, Pressable, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, Text, View } from 'react-native';
 
 import { mockApi } from '@/api/mock';
 import { ScreenContainer, Spacer } from '@/components/layout/ScreenContainer';
@@ -32,12 +33,15 @@ export default function LoginScreen() {
 
   return (
     <ScreenContainer scroll={false}>
-      <View className="flex-1 px-6 pb-6">
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+        <View className="flex-1 px-6 pb-6">
         <View className="mb-10 mt-[52px] items-center">
           <View className="mb-6 h-[100px] w-[100px] items-center justify-center rounded-[24px] bg-surface overflow-hidden">
             <Image
               source={require('../../../assets/images/logo-glow.png')}
-              style={{ width: 80, height: 80, resizeMode: 'contain' }}
+              style={{ width: 80, height: 80 }}
+              contentFit="contain"
+              transition={120}
             />
           </View>
           <Text accessibilityRole="header" className="mb-3 text-[24px] font-extrabold text-ink">
@@ -110,7 +114,8 @@ export default function LoginScreen() {
           </View>
           <Button label="Next" onPress={onSubmit} loading={submitting} />
         </View>
-      </View>
+        </View>
+      </KeyboardAvoidingView>
     </ScreenContainer>
   );
 }
