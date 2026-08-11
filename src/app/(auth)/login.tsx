@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { KeyboardAvoidingView, Platform, Pressable, Text, View } from 'react-native';
 
-import { mockApi } from '@/api/mock';
+import { api } from '@/api';
 import { ScreenContainer, Spacer } from '@/components/layout/ScreenContainer';
 import { Button, FloatingInput, Icon } from '@/components/ui';
 import { LoginForm, loginSchema } from '@/features/auth/schemas';
@@ -26,7 +26,7 @@ export default function LoginScreen() {
 
   const onSubmit = handleSubmit(async () => {
     setSubmitting(true);
-    const user = await mockApi.getUser();
+    const user = await api.getUser();
     dispatch(sessionStarted({ user, accessToken: 'mock-access-token' }));
     setSubmitting(false);
   });

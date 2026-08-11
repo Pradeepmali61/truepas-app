@@ -2,49 +2,113 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { FlatList, Pressable, Text, TextInput, View } from 'react-native';
+import { FlatList, Pressable, RefreshControl, Text, TextInput, View } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Icon, Skeleton } from '@/components/ui';
 import { useDocuments } from '@/features/documents/hooks';
 import { useAppSelector } from '@/store';
-import type { IdentityDocument } from '@/types/domain';
+import type { IdentityDocument, VerificationStatus } from '@/types/domain';
 
 const DOC_CARD_STYLES: Record<
   IdentityDocument['type'],
-  { colors: [string, string]; name: string; meta: string }
+  { colors: [string, string]; icon: string; iconBg: string; name: string; meta: string }
 > = {
-  passport: { colors: ['#2c2c2c', '#000000'], name: '#ffffff', meta: '#b0b0b0' },
-  drivingLicense: { colors: ['#f7c04a', '#e0a63c'], name: '#000000', meta: '#5a4a2a' },
-  idCard: { colors: ['#ffffff', '#f5f5f5'], name: '#000000', meta: '#666666' },
+  passport: { colors: ['#2c2c2c', '#000000'], icon: '#ffffff', iconBg: 'rgba(255,255,255,0.12)', name: '#ffffff', meta: '#b0b0b0' },
+  drivingLicense: { colors: ['#f7c04a', '#e0a63c'], icon: '#000000', iconBg: 'rgba(0,0,0,0.08)', name: '#000000', meta: '#5a4a2a' },
+  idCard: { colors: ['#ffffff', '#f5f5f5'], icon: '#000000', iconBg: 'rgba(0,0,0,0.06)', name: '#000000', meta: '#666666' },
+};
+
+const STATUS_STYLES: Record<
+  VerificationStatus,
+  { bg: string; dot: string; label: string; text: string }
+> = {
+  verified: { bg: '#ecfdf5', dot: '#059669', label: 'Verified', text: '#065f46' },
+  pending: { bg: '#fff9e6', dot: '#ff9900', label: 'Pending', text: '#b45309' },
+  missing: { bg: '#f5f5f5', dot: '#999999', label: 'Missing', text: '#666666' },
+  failed: { bg: '#fef2f2', dot: '#ef4444', label: 'Failed', text: '#dc2626' },
 };
 
 function DocCard({ doc, onPress }: { doc: IdentityDocument; onPress: () => void }) {
+  const scale = useSharedValue(1);
   const palette = DOC_CARD_STYLES[doc.type];
+  const status = STATUS_STYLES[doc.status];
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  const onPressIn = () => {
+    scale.value = withSpring(0.97, { stiffness: 400, damping: 25 });
+  };
+  const onPressOut = () => {
+    scale.value = withSpring(1, { stiffness: 400, damping: 25 });
+  };
+
   return (
     <Pressable
+      onPress={onPress}
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}
       accessibilityRole="button"
       accessibilityLabel={`${doc.label}, ${doc.number}`}
-      onPress={onPress}
-      className="mx-5 my-2 overflow-hidden rounded-card active:opacity-90"
-      style={{ elevation: 3 }}>
-      <LinearGradient
-        colors={palette.colors}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 10 }}>
-        <View className="h-11 w-11 items-center justify-center rounded-btn">
-          <Icon name={doc.type === 'passport' ? 'passport' : doc.type === 'drivingLicense' ? 'drivingLicense' : 'idCard'} size={24} />
-        </View>
-        <View className="flex-1">
-          <Text className="text-[15px] font-bold" style={{ color: palette.name }}>
-            {doc.label}
-          </Text>
-          <Text className="mt-[2px] text-[11px]" style={{ color: palette.meta }}>
-            {doc.number} · Expires {doc.expiresAt ?? '—'}
-          </Text>
-        </View>
-      </LinearGradient>
+      className="mx-5 my-2">
+      <Animated.View
+        style={[
+          {
+            borderRadius: 16,
+            overflow: 'hidden',
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 3 },
+            shadowOpacity: 0.08,
+            shadowRadius: 8,
+            elevation: 4,
+          },
+          animatedStyle,
+        ]}>
+        <LinearGradient
+          colors={palette.colors}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 12 }}>
+          <View
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 22,
+              backgroundColor: palette.iconBg,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}>
+            <Icon
+              name={doc.type === 'passport' ? 'passport' : doc.type === 'drivingLicense' ? 'drivingLicense' : 'idCard'}
+              size={24}
+              color={palette.icon}
+            />
+          </View>
+          <View style={{ flex: 1, marginLeft: 12 }}>
+            <Text className="text-[15px] font-bold" style={{ color: palette.name }}>
+              {doc.label}
+            </Text>
+            <Text className="mt-[2px] text-[11px]" style={{ color: palette.meta }}>
+              {doc.number} · Expires {doc.expiresAt ?? '—'}
+            </Text>
+          </View>
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              backgroundColor: status.bg,
+              paddingHorizontal: 8,
+              paddingVertical: 4,
+              borderRadius: 20,
+              marginLeft: 8,
+            }}>
+            <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: status.dot, marginRight: 5 }} />
+            <Text style={{ fontSize: 11, fontWeight: '600', color: status.text }}>{status.label}</Text>
+          </View>
+        </LinearGradient>
+      </Animated.View>
     </Pressable>
   );
 }
@@ -52,7 +116,7 @@ function DocCard({ doc, onPress }: { doc: IdentityDocument; onPress: () => void 
 /** Identity tab — document list (mockup: "Identity Tab — Document List"). */
 export default function IdentityScreen() {
   const router = useRouter();
-  const { data: documents, isPending } = useDocuments();
+  const { data: documents, isPending, isRefetching, isError, refetch } = useDocuments();
   const user = useAppSelector((state) => state.auth.user);
   const [query, setQuery] = useState('');
 
@@ -70,7 +134,7 @@ export default function IdentityScreen() {
     return list.filter((doc) => doc.label.toLowerCase().includes(q) || doc.number.toLowerCase().includes(q));
   }, [documents, query]);
 
-  const isEmpty = !isPending && (documents?.length ?? 0) === 0;
+  const isEmpty = !isPending && !isError && (documents?.length ?? 0) === 0;
 
   return (
     <SafeAreaView className="flex-1 bg-white" edges={['top']}>
@@ -107,9 +171,12 @@ export default function IdentityScreen() {
 
       {isPending ? (
         <View className="gap-3 px-5 pt-2">
-          <Skeleton height={64} radius={16} />
-          <Skeleton height={64} radius={16} />
+          {[1, 2, 3].map((i) => (
+            <DocCardSkeleton key={i} />
+          ))}
         </View>
+      ) : isError ? (
+        <ErrorState onRetry={refetch} />
       ) : isEmpty ? (
         <View className="flex-1 items-center justify-center px-6">
           <View className="mb-5 h-24 w-24 items-center justify-center rounded-full bg-surface">
@@ -143,6 +210,9 @@ export default function IdentityScreen() {
           )}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: 20 }}
+          refreshControl={
+            <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor="#2727d6" />
+          }
           ListFooterComponent={
             <>
               <AddFamilyCard onPress={() => router.push('/family/add' as never)} />
@@ -158,25 +228,85 @@ export default function IdentityScreen() {
 }
 
 function AddFamilyCard({ onPress }: { onPress: () => void }) {
+  const scale = useSharedValue(1);
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  const onPressIn = () => {
+    scale.value = withSpring(0.97, { stiffness: 400, damping: 25 });
+  };
+  const onPressOut = () => {
+    scale.value = withSpring(1, { stiffness: 400, damping: 25 });
+  };
+
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel="Add family member"
-      onPress={onPress}
-      className="mx-5 my-2 items-center rounded-card bg-surface p-5 active:opacity-90">
-      <View className="flex-row items-center gap-2">
-        <Icon name="plus" size={20} color="#000000" />
-        <Text className="text-[15px] font-bold text-ink">Add family member</Text>
-      </View>
-      <Text className="mt-[2px] text-[11px] text-primary">Tap to invite</Text>
-      <View className="mt-2">
-        <Image
-          source={require('../../../assets/images/family.png')}
-          style={{ width: 112, height: 112 }}
-          contentFit="contain"
-          transition={120}
-        />
-      </View>
+    <Pressable onPress={onPress} onPressIn={onPressIn} onPressOut={onPressOut} className="mx-5 my-2">
+      <Animated.View
+        style={[
+          {
+            borderRadius: 16,
+            backgroundColor: '#e8f0fe',
+            padding: 20,
+            alignItems: 'center',
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 3 },
+            shadowOpacity: 0.06,
+            shadowRadius: 8,
+            elevation: 3,
+          },
+          animatedStyle,
+        ]}>
+        <View className="flex-row items-center gap-2">
+          <Icon name="plus" size={20} color="#000000" />
+          <Text className="text-[15px] font-bold text-ink">Add family member</Text>
+        </View>
+        <Text className="mt-[2px] text-[11px] text-primary">Tap to invite</Text>
+        <View className="mt-2">
+          <Image
+            source={require('../../../assets/images/family.png')}
+            style={{ width: 112, height: 112 }}
+            contentFit="contain"
+            transition={120}
+          />
+        </View>
+      </Animated.View>
     </Pressable>
+  );
+}
+
+function DocCardSkeleton() {
+  return (
+    <View className="mx-5 my-2 flex-row items-center rounded-card bg-surface p-3">
+      <Skeleton width={44} height={44} radius={22} />
+      <View className="ml-3 flex-1" style={{ gap: 6 }}>
+        <Skeleton width={120} height={14} radius={6} />
+        <Skeleton width={180} height={10} radius={4} />
+      </View>
+      <Skeleton width={70} height={20} radius={10} />
+    </View>
+  );
+}
+
+function ErrorState({ onRetry }: { onRetry: () => void }) {
+  return (
+    <View className="flex-1 items-center justify-center px-6">
+      <View className="mb-6 h-28 w-28 items-center justify-center rounded-full" style={{ backgroundColor: '#fef2f2' }}>
+        <Text style={{ fontSize: 40, fontWeight: '700', color: '#dc2626' }}>!</Text>
+      </View>
+      <Text accessibilityRole="header" className="mb-2 text-[22px] font-bold text-ink">
+        Could not load documents
+      </Text>
+      <Text className="mb-8 text-center text-[14px] leading-[22px] text-muted">
+        Something went wrong while fetching your documents. Please try again.
+      </Text>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Retry loading documents"
+        onPress={onRetry}
+        className="w-full flex-row items-center justify-center gap-2 rounded-btn bg-primary p-[14px] active:opacity-80">
+        <Text className="text-[16px] font-bold text-white">Try again</Text>
+      </Pressable>
+    </View>
   );
 }

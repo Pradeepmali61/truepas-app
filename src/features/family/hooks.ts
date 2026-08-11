@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 
-import { mockApi } from '@/api/mock';
+import { api } from '@/api';
 import type { FamilyAgeBand } from '@/types/domain';
 
 export const familyKeys = {
@@ -9,11 +9,11 @@ export const familyKeys = {
 };
 
 export function useFamily() {
-  return useQuery({ queryKey: familyKeys.all, queryFn: mockApi.getFamily });
+  return useQuery({ queryKey: familyKeys.all, queryFn: api.getFamily });
 }
 
 export function useFamilyMember(id: string) {
-  return useQuery({ queryKey: familyKeys.detail(id), queryFn: () => mockApi.getFamilyMember(id) });
+  return useQuery({ queryKey: familyKeys.detail(id), queryFn: () => api.getFamilyMember(id) });
 }
 
 /** PRD age rules: 0-4 doc only · 5-17 doc + selfie + face · 18+ rejected. */

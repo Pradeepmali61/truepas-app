@@ -1,0 +1,26 @@
+{
+  "status": "verified",
+  "face": "verified",
+  "document": "verified",
+  "selfieMatch": "verified",
+  "activity": [
+    {
+      "id": "a1",
+      "title": "Passport verified — match score 98%",
+      "timestamp": "Today, 9:14 AM",
+      "tone": "success"
+    },
+    {
+      "id": "a2",
+      "title": "Selfie matched with document portrait",
+      "timestamp": "Today, 9:12 AM",
+      "tone": "success"
+    },
+    {
+      "id": "a3",
+      "title": "Face enrolled successfully",
+      "timestamp": "Jul 1, 10:04 AM",
+      "tone": "success"
+    }
+  ]
+}

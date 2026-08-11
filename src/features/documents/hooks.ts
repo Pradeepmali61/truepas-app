@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 
-import { mockApi } from '@/api/mock';
+import { api } from '@/api';
 
 export const documentKeys = {
   all: ['documents'] as const,
@@ -8,9 +8,9 @@ export const documentKeys = {
 };
 
 export function useDocuments() {
-  return useQuery({ queryKey: documentKeys.all, queryFn: mockApi.getDocuments });
+  return useQuery({ queryKey: documentKeys.all, queryFn: api.getDocuments });
 }
 
 export function useDocument(id: string) {
-  return useQuery({ queryKey: documentKeys.detail(id), queryFn: () => mockApi.getDocument(id) });
+  return useQuery({ queryKey: documentKeys.detail(id), queryFn: () => api.getDocument(id) });
 }

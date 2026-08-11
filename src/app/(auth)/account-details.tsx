@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { Text, View } from 'react-native';
 
-import { mockApi } from '@/api/mock';
+import { api } from '@/api';
 import { ScreenContainer, Spacer } from '@/components/layout/ScreenContainer';
 import { TopBar } from '@/components/layout/TopBar';
 import { Button, FloatingInput, InfoBanner, ProgressTrack } from '@/components/ui';
@@ -23,7 +23,7 @@ export default function AccountDetailsScreen() {
 
   const onSubmit = handleSubmit(async (values) => {
     setSubmitting(true);
-    const user = await mockApi.getUser();
+    const user = await api.getUser();
     dispatch(
       sessionStarted({
         user: { ...user, fullName: values.fullName, faceEnrolled: false, biometricConsentAt: null },

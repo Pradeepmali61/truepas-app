@@ -1,0 +1,26 @@
+[
+  {
+    "id": "b1",
+    "venue": "Hayat Hotel",
+    "location": "Goa, India",
+    "type": "Hotel",
+    "image": "hayat hotel",
+    "checkIn": "Jul 21",
+    "checkOut": "Jul 24",
+    "status": "completed",
+    "guests": 2,
+    "amount": 14200
+  },
+  {
+    "id": "b2",
+    "venue": "Theme Park",
+    "location": "Mumbai, India",
+    "type": "Theme Park",
+    "image": "theme park",
+    "checkIn": "Jun 02",
+    "checkOut": "Jun 04",
+    "status": "completed",
+    "guests": 1,
+    "amount": 5400
+  }
+]

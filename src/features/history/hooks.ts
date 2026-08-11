@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 
-import { mockApi } from '@/api/mock';
+import { api } from '@/api';
 
 export const historyKeys = {
   all: ['bookings'] as const,
@@ -8,9 +8,9 @@ export const historyKeys = {
 };
 
 export function useBookings() {
-  return useQuery({ queryKey: historyKeys.all, queryFn: mockApi.getBookings });
+  return useQuery({ queryKey: historyKeys.all, queryFn: api.getBookings });
 }
 
 export function useBooking(id: string) {
-  return useQuery({ queryKey: historyKeys.detail(id), queryFn: () => mockApi.getBooking(id) });
+  return useQuery({ queryKey: historyKeys.detail(id), queryFn: () => api.getBooking(id) });
 }

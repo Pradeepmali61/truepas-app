@@ -1,0 +1,22 @@
+[
+  {
+    "id": "d1",
+    "type": "passport",
+    "label": "Passport",
+    "number": "P•••••4821",
+    "status": "verified",
+    "matchScore": 98,
+    "addedAt": "2026-07-01",
+    "expiresAt": "2032-05-14"
+  },
+  {
+    "id": "d2",
+    "type": "drivingLicense",
+    "label": "Driving License",
+    "number": "DL•••••9034",
+    "status": "pending",
+    "matchScore": null,
+    "addedAt": "2026-08-01",
+    "expiresAt": "2029-11-02"
+  }
+]
