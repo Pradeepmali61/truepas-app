@@ -29,15 +29,15 @@ export default function DeleteProcessingScreen() {
         </Text>
         <View className="mt-4">
           <View className="my-[6px] flex-row items-center gap-2">
-            <Icon name="check" size={14} color="#2727d6" />
+            <Icon name="check" size={14} color={Colors.primary} />
             <Text className="text-[13px] text-muted">Account data removed (PostgreSQL)</Text>
           </View>
           <View className="my-[6px] flex-row items-center gap-2">
-            <Icon name="check" size={14} color="#2727d6" />
+            <Icon name="check" size={14} color={Colors.primary} />
             <Text className="text-[13px] text-muted">Images deleted (S3)</Text>
           </View>
           <View className="my-[6px] flex-row items-center gap-2">
-            <Icon name="hourglass" size={14} color="#2727d6" />
+            <Icon name="hourglass" size={14} color={Colors.primary} />
             <Text className="text-[13px] text-muted">Removing face template (ROC)…</Text>
           </View>
         </View>

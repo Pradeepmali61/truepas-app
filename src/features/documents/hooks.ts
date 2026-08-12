@@ -5,6 +5,7 @@ import { api } from '@/api';
 export const documentKeys = {
   all: ['documents'] as const,
   detail: (id: string) => ['documents', id] as const,
+  issued: ['documents', 'issued'] as const,
 };
 
 export function useDocuments() {
@@ -13,4 +14,8 @@ export function useDocuments() {
 
 export function useDocument(id: string) {
   return useQuery({ queryKey: documentKeys.detail(id), queryFn: () => api.getDocument(id) });
+}
+
+export function useIssuedDocuments() {
+  return useQuery({ queryKey: documentKeys.issued, queryFn: api.getIssuedDocuments });
 }

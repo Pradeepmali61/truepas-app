@@ -1,5 +1,5 @@
 import React from 'react';
-import { Path, Circle, Rect } from 'react-native-svg';
+import { Circle, Path, Rect } from 'react-native-svg';
 
 type IconRenderer = (color: string) => React.ReactNode;
 
@@ -190,6 +190,15 @@ export const idCard: IconRenderer = (c) => (
     <Circle cx="9" cy="11" r="2" stroke={c} strokeWidth={2} />
     {P("M14 10H18", c)}{P("M14 13H18", c)}
     <Path d="M6 15C6 14 7 13 9 13C11 13 12 14 12 15" stroke={c} strokeWidth={1.5} strokeLinecap="round" />
+  </>
+);
+
+export const greenCard: IconRenderer = (c) => (
+  <>
+    <Rect x="3" y="6" width="18" height="12" rx="2" stroke={c} strokeWidth={2} />
+    <Circle cx="9" cy="11" r="2" stroke={c} strokeWidth={2} />
+    {P("M14 10H18", c)}{P("M14 13H18", c)}
+    <Path d="M12 8L12.6 9.8H14.4L12.9 10.8L13.5 12.6L12 11.6L10.5 12.6L11.1 10.8L9.6 9.8H11.4L12 8Z" stroke={c} strokeWidth={1.2} strokeLinejoin="round" />
   </>
 );
 

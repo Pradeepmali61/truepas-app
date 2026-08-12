@@ -18,5 +18,15 @@
     "matchScore": null,
     "addedAt": "2026-08-01",
     "expiresAt": "2029-11-02"
+  },
+  {
+    "id": "d3",
+    "type": "greenCard",
+    "label": "USA Green Card",
+    "number": "USCIS•••••1234",
+    "status": "verified",
+    "matchScore": 96,
+    "addedAt": "2026-08-10",
+    "expiresAt": null
   }
 ]

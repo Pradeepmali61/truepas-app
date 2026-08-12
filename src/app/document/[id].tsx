@@ -1,14 +1,15 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
 
+import { api } from '@/api';
 import { ScreenContainer, Spacer } from '@/components/layout/ScreenContainer';
 import { TopBar } from '@/components/layout/TopBar';
 import { Button, Card, Icon, Pill, Skeleton } from '@/components/ui';
-import { ISSUED_DOCS } from '@/constants/documents';
 import { useDocument } from '@/features/documents/hooks';
-import type { IdentityDocument } from '@/types/domain';
+import type { IdentityDocument, IssuedDoc } from '@/types/domain';
 
-type CombinedDoc = (typeof ISSUED_DOCS)[number] | IdentityDocument;
+type CombinedDoc = IssuedDoc | IdentityDocument;
 
 function isIdentityDocument(doc: CombinedDoc): doc is IdentityDocument {
   return 'label' in doc;
@@ -42,8 +43,16 @@ function getPillVariant(status: string) {
 export default function DocumentDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const issuedDoc = ISSUED_DOCS.find((d) => d.id === id);
   const { data: identityDoc, isPending } = useDocument(id ?? '');
+  const [issuedDoc, setIssuedDoc] = useState<IssuedDoc | null>(null);
+
+  useEffect(() => {
+    if (id) {
+      api.getIssuedDocuments().then((docs) => {
+        setIssuedDoc(docs.find((d) => d.id === id) ?? null);
+      });
+    }
+  }, [id]);
 
   if (!issuedDoc && isPending) {
     return (

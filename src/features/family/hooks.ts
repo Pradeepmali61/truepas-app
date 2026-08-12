@@ -6,6 +6,7 @@ import type { FamilyAgeBand } from '@/types/domain';
 export const familyKeys = {
   all: ['family'] as const,
   detail: (id: string) => ['family', id] as const,
+  activity: (id: string) => ['family', id, 'activity'] as const,
 };
 
 export function useFamily() {
@@ -14,6 +15,10 @@ export function useFamily() {
 
 export function useFamilyMember(id: string) {
   return useQuery({ queryKey: familyKeys.detail(id), queryFn: () => api.getFamilyMember(id) });
+}
+
+export function useFamilyActivity(id: string) {
+  return useQuery({ queryKey: familyKeys.activity(id), queryFn: () => api.getFamilyActivity(id) });
 }
 
 /** PRD age rules: 0-4 doc only · 5-17 doc + selfie + face · 18+ rejected. */

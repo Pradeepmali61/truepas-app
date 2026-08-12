@@ -30,15 +30,15 @@ export default function DocumentProcessingScreen() {
         <Text className="text-[14px] text-muted">Extracting details &amp; matching your face</Text>
         <View className="mt-4">
           <View className="my-1 flex-row items-center gap-2">
-            <Icon name="check" size={14} color="#2727d6" />
+            <Icon name="check" size={14} color={Colors.primary} />
             <Text className="text-[12px] text-muted">Document scanned</Text>
           </View>
           <View className="my-1 flex-row items-center gap-2">
-            <Icon name="check" size={14} color="#2727d6" />
+            <Icon name="check" size={14} color={Colors.primary} />
             <Text className="text-[12px] text-muted">Selfie captured</Text>
           </View>
           <View className="my-1 flex-row items-center gap-2">
-            <Icon name="hourglass" size={14} color="#2727d6" />
+            <Icon name="hourglass" size={14} color={Colors.primary} />
             <Text className="text-[12px] text-muted">Matching faces…</Text>
           </View>
         </View>

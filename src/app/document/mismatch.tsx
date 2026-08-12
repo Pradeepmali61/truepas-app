@@ -4,6 +4,7 @@ import { Text, View } from 'react-native';
 import { ScreenContainer, Spacer } from '@/components/layout/ScreenContainer';
 import { TopBar } from '@/components/layout/TopBar';
 import { Button, Icon } from '@/components/ui';
+import { Colors } from '@/constants/theme';
 import { formatCountdown, useCountdown } from '@/hooks/useCountdown';
 
 const SESSION_TTL_SECONDS = 15 * 60;
@@ -31,7 +32,7 @@ export default function MismatchScreen() {
 
         <View
           className="rounded-card border-[1.5px] border-[#f0f0f0] bg-white p-[18px] shadow-sm"
-          style={{ borderLeftWidth: 3, borderLeftColor: '#2727d6', elevation: 2 }}>
+          style={{ borderLeftWidth: 3, borderLeftColor: Colors.primary, elevation: 2 }}>
           <View className="mb-3 flex-row justify-between">
             <Text className="text-[11px] tracking-[0.5px] text-faint">PROFILE</Text>
             <Text className="text-[11px] tracking-[0.5px] text-faint">DOCUMENT</Text>

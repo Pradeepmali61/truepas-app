@@ -1,6 +1,7 @@
 import { Text, View } from 'react-native';
 
 import { Icon, IconName } from '@/components/ui/Icon';
+import { Colors } from '@/constants/theme';
 
 type BannerVariant = 'info' | 'warn' | 'danger';
 
@@ -17,9 +18,9 @@ const TEXT: Record<BannerVariant, string> = {
 };
 
 const ICON_COLOR: Record<BannerVariant, string> = {
-  info: '#2727d6',
-  warn: '#b45309',
-  danger: '#2727d6',
+  info: Colors.primary,
+  warn: Colors.warning,
+  danger: Colors.primary,
 };
 
 interface InfoBannerProps {

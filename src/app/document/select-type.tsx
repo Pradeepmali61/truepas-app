@@ -5,12 +5,14 @@ import { Pressable, Text, View } from 'react-native';
 import { ScreenContainer, Spacer } from '@/components/layout/ScreenContainer';
 import { TopBar } from '@/components/layout/TopBar';
 import { Button, Icon, IconName } from '@/components/ui';
+import type { DocumentType } from '@/types/domain';
 
-type DocOption = { id: 'passport' | 'drivingLicense'; label: string; icon: IconName };
+type DocOption = { id: DocumentType; label: string; icon: IconName };
 
 const OPTIONS: DocOption[] = [
   { id: 'passport', label: 'Passport', icon: 'passport' },
   { id: 'drivingLicense', label: "Driver's License", icon: 'drivingLicense' },
+  { id: 'greenCard', label: 'USA Green Card', icon: 'greenCard' },
 ];
 
 /** Add document — select type (no skip, per PRD). */

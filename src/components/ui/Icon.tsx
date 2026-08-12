@@ -38,6 +38,7 @@ export type IconName =
   | 'passport'
   | 'drivingLicense'
   | 'idCard'
+  | 'greenCard'
   | 'selfie'
   | 'phone'
   | 'email'
@@ -56,6 +57,7 @@ export type IconName =
 const IMAGE_SOURCES: Record<string, ImageSourcePropType> = {
   drivingLicense: require('../../../assets/images/DL.png'),
   passport: require('../../../assets/images/passporticon.png'),
+  greenCard: require('../../../assets/images/tabIcons/greencard1.png'),
 };
 
 interface IconProps {

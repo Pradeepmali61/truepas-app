@@ -1,4 +1,5 @@
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
+import * as Haptics from 'expo-haptics';
 import { Redirect, Tabs } from 'expo-router';
 import { useEffect } from 'react';
 import { LayoutChangeEvent, Pressable, View } from 'react-native';
@@ -95,6 +96,7 @@ function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
         const isFocused = state.index === index;
         const label = (options.tabBarLabel as string) ?? (options.title as string) ?? route.name;
         const onPress = () => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
           navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
           if (!isFocused) {
             navigation.navigate(route.name as never);

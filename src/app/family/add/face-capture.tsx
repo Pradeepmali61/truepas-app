@@ -3,6 +3,7 @@ import { Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/ui/Icon';
+import { Colors } from '@/constants/theme';
 
 /** Add family — step 3: selfie + face enrollment for ages 5-17 (PRD). */
 export default function FamilyFaceCaptureScreen() {
@@ -20,7 +21,7 @@ export default function FamilyFaceCaptureScreen() {
           <Icon name="face" size={70} />
         </View>
         <View className="mt-[14px] flex-row items-center gap-1">
-          <Icon name="check" size={14} color="#2727d6" />
+          <Icon name="check" size={14} color={Colors.primary} />
           <Text accessibilityLiveRegion="polite" className="text-[13px] text-primary">Face Detected</Text>
         </View>
         <Text className="mt-2 max-w-[240px] text-center text-[12px] text-muted">

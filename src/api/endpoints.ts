@@ -1,10 +1,10 @@
 import { apiClient } from '@/api/client';
 import type {
-  Booking,
-  FamilyMember,
-  IdentityDocument,
-  IdentitySummary,
-  User,
+    Booking,
+    FamilyMember,
+    IdentityDocument,
+    IdentitySummary,
+    User
 } from '@/types/domain';
 
 /**
@@ -29,12 +29,20 @@ export const realApi = {
     const { data } = await apiClient.get<IdentityDocument>(`/documents/${id}`);
     return data;
   },
+  getIssuedDocuments: async (): Promise<IssuedDoc[]> => {
+    const { data } = await apiClient.get<IssuedDoc[]>('/documents/issued');
+    return data;
+  },
   getFamily: async (): Promise<FamilyMember[]> => {
     const { data } = await apiClient.get<FamilyMember[]>('/family');
     return data;
   },
   getFamilyMember: async (id: string): Promise<FamilyMember | null> => {
     const { data } = await apiClient.get<FamilyMember>(`/family/${id}`);
+    return data;
+  },
+  getFamilyActivity: async (id: string): Promise<ActivityLogItem[]> => {
+    const { data } = await apiClient.get<ActivityLogItem[]>(`/family/${id}/activity`);
     return data;
   },
   getBookings: async (): Promise<Booking[]> => {

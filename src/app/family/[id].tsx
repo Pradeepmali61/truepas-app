@@ -4,19 +4,15 @@ import { Text, View } from 'react-native';
 import { ScreenContainer, Spacer } from '@/components/layout/ScreenContainer';
 import { TopBar } from '@/components/layout/TopBar';
 import { Avatar, Button, Card, Icon, Pill, SectionTitle, Skeleton } from '@/components/ui';
-import { useFamilyMember } from '@/features/family/hooks';
-
-const ACTIVITY = [
-  { id: 'fa1', title: 'Identity Card verified', date: 'Jul 20, 2026' },
-  { id: 'fa2', title: 'Face enrolled', date: 'Jul 20, 2026' },
-  { id: 'fa3', title: 'Added to family', date: 'Jul 20, 2026' },
-];
+import { Colors } from '@/constants/theme';
+import { useFamilyActivity, useFamilyMember } from '@/features/family/hooks';
 
 /** Family member detail — verification summary, documents, activity log. */
 export default function FamilyMemberScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data: member, isPending } = useFamilyMember(id);
+  const { data: activity } = useFamilyActivity(id ?? '');
 
   if (isPending) {
     return (
@@ -65,7 +61,7 @@ export default function FamilyMemberScreen() {
         <View className="mb-2 flex-row items-center justify-between">
           <Text className="text-[13px] text-muted">Face Enrolled</Text>
           <View className="flex-row items-center gap-1">
-            {faceEnrolled ? <Icon name="check" size={14} color="#2727d6" /> : null}
+            {faceEnrolled ? <Icon name="check" size={14} color={Colors.primary} /> : null}
             <Text className="text-[13px] font-bold text-primary">
               {faceEnrolled ? 'Yes' : 'No'}
             </Text>
@@ -92,7 +88,7 @@ export default function FamilyMemberScreen() {
       </View>
 
       <SectionTitle centered>Recent Activity</SectionTitle>
-      {ACTIVITY.map((item) => (
+      {(activity ?? []).map((item) => (
         <View key={item.id} className="flex-row items-start gap-3 px-5 py-[10px]">
           <View className="mt-[5px] h-[10px] w-[10px] rounded-full bg-primary" />
           <View>

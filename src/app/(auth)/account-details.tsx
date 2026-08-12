@@ -1,7 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Text, View } from 'react-native';
 
 import { api } from '@/api';
 import { ScreenContainer, Spacer } from '@/components/layout/ScreenContainer';
@@ -35,7 +35,10 @@ export default function AccountDetailsScreen() {
 
   return (
     <ScreenContainer scroll={false}>
-      <TopBar title="Sign Up" />
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        className="flex-1">
+        <TopBar title="Sign Up" />
       <ProgressTrack percent={45} />
       <View className="flex-1 px-6">
         <View className="items-center pb-1 pt-[10px]">
@@ -97,6 +100,7 @@ export default function AccountDetailsScreen() {
           <Button label="Continue" onPress={onSubmit} loading={submitting} />
         </View>
       </View>
+      </KeyboardAvoidingView>
     </ScreenContainer>
   );
 }

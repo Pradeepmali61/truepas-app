@@ -24,7 +24,7 @@ export interface ActivityItem {
   tone: 'success' | 'warning' | 'error';
 }
 
-export type DocumentType = 'passport' | 'drivingLicense' | 'idCard';
+export type DocumentType = 'passport' | 'drivingLicense' | 'idCard' | 'greenCard';
 
 export interface IdentityDocument {
   id: string;
@@ -60,4 +60,20 @@ export interface Booking {
   status: 'completed' | 'failed';
   guests: number;
   amount: number;
+}
+
+export interface IssuedDoc {
+  id: string;
+  name: string;
+  issuer: string;
+  issuedAt: string;
+  icon: 'drivingLicense' | 'passport' | 'greenCard';
+  number: string;
+  status: 'Active' | 'Expired';
+}
+
+export interface ActivityLogItem {
+  id: string;
+  title: string;
+  date: string;
 }

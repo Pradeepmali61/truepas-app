@@ -3,7 +3,7 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { mockUser } from '@/api/mock';
-import { sessionEnded, sessionStarted, faceEnrollmentCompleted } from '@/features/auth/slice';
+import { faceEnrollmentCompleted, sessionEnded, sessionStarted } from '@/features/auth/slice';
 import { useAppDispatch } from '@/store';
 
 type AuthPreset = 'unauth' | 'auth-no-face' | 'auth-face';

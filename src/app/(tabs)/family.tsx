@@ -1,19 +1,112 @@
+import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { memo, useState } from 'react';
+import { FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Avatar, Button, EmptyState, Icon, Pill, Skeleton } from '@/components/ui';
+import { AnimatedCard, Avatar, Button, EmptyState, ErrorState, Icon, Pill, Skeleton } from '@/components/ui';
+import { Colors, Elevation } from '@/constants/theme';
 import { useFamily } from '@/features/family/hooks';
+import type { FamilyMember } from '@/types/domain';
 
-/** Family tab — list with age-18 notification, or empty state. */
+const MemberCard = memo(function MemberCard({ member, onPress }: { member: FamilyMember; onPress: () => void }) {
+  const initials = member.name.split(' ').map((p) => p[0]).join('');
+  return (
+    <AnimatedCard
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`${member.name}, ${member.relationship}, age ${member.age}`}
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+        backgroundColor: Colors.surfaceElevated,
+        borderRadius: 16,
+        paddingHorizontal: 16,
+        paddingVertical: 14,
+        ...Elevation.small,
+      }}>
+      <Avatar initials={initials} size={44} />
+      <View style={{ flex: 1 }}>
+        <Text style={{ fontSize: 15, fontWeight: '700', color: Colors.ink }}>{member.name}</Text>
+        <Text style={{ fontSize: 12, color: Colors.textMuted, marginTop: 2 }}>
+          {member.relationship} · Age {member.age} · {member.verification}
+        </Text>
+      </View>
+      {member.turning18Soon ? <Pill label="Turning 18" variant="warn" /> : <Pill label="Active" />}
+    </AnimatedCard>
+  );
+});
+
+function MemberSkeleton() {
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 14, marginBottom: 8 }}>
+      <Skeleton width={44} height={44} radius={22} />
+      <View style={{ flex: 1, gap: 6 }}>
+        <Skeleton width={120} height={14} radius={6} />
+        <Skeleton width={180} height={10} radius={4} />
+      </View>
+      <Skeleton width={60} height={20} radius={10} />
+    </View>
+  );
+}
+
 export default function FamilyScreen() {
   const router = useRouter();
-  const { data: members, isPending } = useFamily();
+  const { data: members, isPending, isError, isRefetching, refetch } = useFamily();
   const [notificationDismissed, setNotificationDismissed] = useState(false);
 
   const turning18 = members?.find((m) => m.turning18Soon);
-  const isEmpty = !isPending && (members?.length ?? 0) === 0;
+  const isEmpty = !isPending && !isError && (members?.length ?? 0) === 0;
+
+  const handleAddPress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    router.push('/family/add');
+  };
+
+  const renderItem = ({ item }: { item: FamilyMember }) => (
+    <MemberCard member={item} onPress={() => router.push(`/family/${item.id}`)} />
+  );
+
+  const ListHeader = () => {
+    if (turning18 && !notificationDismissed) {
+      return (
+        <View
+          className="mx-5 my-3 flex-row items-start gap-3 rounded-card border border-[#fde68a] bg-[#fff9e6] px-[18px] py-4">
+          <Icon name="cake" size={24} />
+          <View className="flex-1 items-center">
+            <Text className="w-full text-center text-[14px] font-bold text-ink">
+              {turning18.name} is turning 18 soon
+            </Text>
+            <Text className="mt-1 w-full text-center text-[12px] leading-[18px] text-muted" numberOfLines={2}>
+              They&apos;ll need their own Truepas account.{'\n'}Remove them from family or remind later.
+            </Text>
+            <View className="mt-[10px] flex-row gap-2">
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Remove from family"
+                onPress={() => setNotificationDismissed(true)}
+                className="w-36 items-center justify-center rounded-[12px] bg-primary py-2 active:opacity-80">
+                <Text className="text-center text-[12px] font-semibold text-white" numberOfLines={2}>
+                  Remove from{'\n'}Family
+                </Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Remind later"
+                onPress={() => setNotificationDismissed(true)}
+                className="w-36 items-center justify-center rounded-[12px] border border-line bg-white py-2 active:opacity-80">
+                <Text className="text-center text-[12px] font-semibold text-muted" numberOfLines={2}>
+                  Remind{'\n'}Later
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      );
+    }
+    return null;
+  };
 
   return (
     <SafeAreaView className="flex-1 bg-white" edges={['top']}>
@@ -24,17 +117,22 @@ export default function FamilyScreen() {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Add family member"
-          onPress={() => router.push('/family/add')}
+          onPress={handleAddPress}
           className="h-9 w-9 items-center justify-center rounded-btn bg-surface active:opacity-80">
-          <Icon name="plus" size={20} color="#2727d6" />
+          <Icon name="plus" size={20} color={Colors.primary} />
         </Pressable>
       </View>
 
       {isPending ? (
-        <View className="gap-3 px-5">
-          <Skeleton height={72} radius={16} />
-          <Skeleton height={72} radius={16} />
+        <View className="px-5 pt-2">
+          {[1, 2].map((i) => <MemberSkeleton key={i} />)}
         </View>
+      ) : isError ? (
+        <ErrorState
+          title="Couldn't load family"
+          message="Please check your connection and try again."
+          onRetry={refetch}
+        />
       ) : isEmpty ? (
         <EmptyState
           icon="family"
@@ -42,86 +140,28 @@ export default function FamilyScreen() {
           desc="Add your dependents to manage their identity verification too."
           action={
             <View className="w-[220px]">
-              <Button label="Add Family Member" onPress={() => router.push('/family/add')} />
+              <Button label="Add Family Member" onPress={handleAddPress} />
             </View>
           }
         />
       ) : (
-        <ScrollView showsVerticalScrollIndicator={false}>
-          {turning18 && !notificationDismissed ? (
-            <View className="mx-5 my-3 flex-row items-start gap-3 rounded-card border border-[#fde68a] bg-[#fff9e6] px-[18px] py-4">
-              <Icon name="cake" size={24} />
-              <View className="flex-1 items-center">
-                <Text className="w-full text-center text-[14px] font-bold text-ink">
-                  {turning18.name} is turning 18 soon
-                </Text>
-                <Text
-                  className="mt-1 w-full text-center text-[12px] leading-[18px] text-muted"
-                  numberOfLines={2}>
-                  They&apos;ll need their own Truepas account.{'\n'}Remove them from family or remind later.
-                </Text>
-                <View className="mt-[10px] flex-row gap-2">
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel="Remove from family"
-                    onPress={() => setNotificationDismissed(true)}
-                    className="w-36 items-center justify-center rounded-[12px] bg-primary py-2 active:opacity-80">
-                    <Text className="text-center text-[12px] font-semibold text-white" numberOfLines={2}>
-                      Remove from{'\n'}Family
-                    </Text>
-                  </Pressable>
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel="Remind later"
-                    onPress={() => setNotificationDismissed(true)}
-                    className="w-36 items-center justify-center rounded-[12px] border border-line bg-white py-2 active:opacity-80">
-                    <Text className="text-center text-[12px] font-semibold text-muted" numberOfLines={2}>
-                      Remind{'\n'}Later
-                    </Text>
-                  </Pressable>
-                </View>
-              </View>
+        <FlatList
+          data={members}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 20 }}
+          showsVerticalScrollIndicator={false}
+          ListHeaderComponent={ListHeader}
+          ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
+          renderItem={renderItem}
+          refreshControl={
+            <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={Colors.primary} />
+          }
+          ListFooterComponent={
+            <View className="px-0 py-4">
+              <Button label="Add Family Member" variant="secondary" icon="plus" onPress={handleAddPress} />
             </View>
-          ) : null}
-
-          {members?.map((member) => (
-            <Pressable
-              key={member.id}
-              accessibilityRole="button"
-              accessibilityLabel={`${member.name}, ${member.relationship}, age ${member.age}`}
-              onPress={() => router.push(`/family/${member.id}`)}
-              className="mx-5 my-2 flex-row items-center gap-3 rounded-card border-[0.5px] border-canvas bg-white px-4 py-[14px] shadow-sm active:opacity-90"
-              style={{ elevation: 2 }}>
-              <Avatar
-                initials={member.name
-                  .split(' ')
-                  .map((part) => part[0])
-                  .join('')}
-                size={44}
-              />
-              <View className="flex-1">
-                <Text className="text-[14px] font-bold text-ink">{member.name}</Text>
-                <Text className="mt-[2px] text-[12px] text-muted">
-                  {member.relationship} · Age {member.age} · {member.verification}
-                </Text>
-              </View>
-              {member.turning18Soon ? (
-                <Pill label="Turning 18" variant="warn" />
-              ) : (
-                <Pill label="Active" />
-              )}
-            </Pressable>
-          ))}
-
-          <View className="px-5 py-4">
-            <Button
-              label="Add Family Member"
-              variant="secondary"
-              icon="plus"
-              onPress={() => router.push('/family/add')}
-            />
-          </View>
-        </ScrollView>
+          }
+        />
       )}
     </SafeAreaView>
   );

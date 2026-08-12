@@ -2,6 +2,7 @@ import { Text, View } from 'react-native';
 
 import { ScreenContainer, Spacer } from '@/components/layout/ScreenContainer';
 import { Button, Card, Icon, IconName } from '@/components/ui';
+import { Colors } from '@/constants/theme';
 import { sessionEnded } from '@/features/auth/slice';
 import { useAppDispatch } from '@/store';
 
@@ -39,7 +40,7 @@ export default function DeleteSuccessScreen() {
                   </Text>
                 </View>
                 <View className="flex-row items-center gap-1">
-                  <Icon name="check" size={12} color="#2727d6" />
+                  <Icon name="check" size={12} color={Colors.primary} />
                   <Text className="text-[12px] font-bold text-primary">Deleted</Text>
                 </View>
               </View>

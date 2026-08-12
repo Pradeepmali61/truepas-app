@@ -6,7 +6,8 @@ import { FlatList, Pressable, RefreshControl, Text, TextInput, View } from 'reac
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Icon, Skeleton } from '@/components/ui';
+import { AnimatedCard, Icon, ErrorState as ReusableErrorState, Skeleton } from '@/components/ui';
+import { Colors, Elevation } from '@/constants/theme';
 import { useDocuments } from '@/features/documents/hooks';
 import { useAppSelector } from '@/store';
 import type { IdentityDocument, VerificationStatus } from '@/types/domain';
@@ -18,6 +19,7 @@ const DOC_CARD_STYLES: Record<
   passport: { colors: ['#2c2c2c', '#000000'], icon: '#ffffff', iconBg: 'rgba(255,255,255,0.12)', name: '#ffffff', meta: '#b0b0b0' },
   drivingLicense: { colors: ['#f7c04a', '#e0a63c'], icon: '#000000', iconBg: 'rgba(0,0,0,0.08)', name: '#000000', meta: '#5a4a2a' },
   idCard: { colors: ['#ffffff', '#f5f5f5'], icon: '#000000', iconBg: 'rgba(0,0,0,0.06)', name: '#000000', meta: '#666666' },
+  greenCard: { colors: ['#1a4d2e', '#14502a'], icon: '#ffffff', iconBg: 'rgba(255,255,255,0.12)', name: '#ffffff', meta: '#b0d0b0' },
 };
 
 const STATUS_STYLES: Record<
@@ -81,7 +83,7 @@ function DocCard({ doc, onPress }: { doc: IdentityDocument; onPress: () => void 
               justifyContent: 'center',
             }}>
             <Icon
-              name={doc.type === 'passport' ? 'passport' : doc.type === 'drivingLicense' ? 'drivingLicense' : 'idCard'}
+              name={doc.type}
               size={24}
               color={palette.icon}
             />
@@ -146,13 +148,13 @@ export default function IdentityScreen() {
         <Text className="mt-1 text-[13px] text-muted">Manage your verified documents</Text>
       </View>
 
-      <View className="mx-5 mb-4 flex-row items-center rounded-card border border-line bg-white px-3 py-2">
-        <Icon name="search" size={18} color="#999999" />
+      <View className="mx-5 mb-4 flex-row items-center rounded-card border border-divider bg-white px-3 py-2">
+        <Icon name="search" size={18} color={Colors.textFaint} />
         <TextInput
           value={query}
           onChangeText={setQuery}
           placeholder="Search documents"
-          placeholderTextColor="#999999"
+          placeholderTextColor={Colors.textFaint}
           className="ml-2 flex-1 text-[14px] text-ink"
         />
       </View>
@@ -164,7 +166,7 @@ export default function IdentityScreen() {
           accessibilityLabel="Verify new document"
           onPress={() => router.push('/document/select-type' as never)}
           className="flex-row items-center gap-[6px] rounded-3xl bg-surface px-[14px] py-2 active:opacity-80">
-          <Icon name="plus" size={18} color="#2727d6" />
+          <Icon name="plus" size={18} color={Colors.primary} />
           <Text className="text-[13px] font-semibold text-primary">Verify new document</Text>
         </Pressable>
       </View>
@@ -176,7 +178,11 @@ export default function IdentityScreen() {
           ))}
         </View>
       ) : isError ? (
-        <ErrorState onRetry={refetch} />
+        <ReusableErrorState
+          title="Could not load documents"
+          message="Something went wrong while fetching your documents. Please try again."
+          onRetry={refetch}
+        />
       ) : isEmpty ? (
         <View className="flex-1 items-center justify-center px-6">
           <View className="mb-5 h-24 w-24 items-center justify-center rounded-full bg-surface">
@@ -211,7 +217,7 @@ export default function IdentityScreen() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: 20 }}
           refreshControl={
-            <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor="#2727d6" />
+            <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={Colors.primary} />
           }
           ListFooterComponent={
             <>
@@ -228,50 +234,34 @@ export default function IdentityScreen() {
 }
 
 function AddFamilyCard({ onPress }: { onPress: () => void }) {
-  const scale = useSharedValue(1);
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
-
-  const onPressIn = () => {
-    scale.value = withSpring(0.97, { stiffness: 400, damping: 25 });
-  };
-  const onPressOut = () => {
-    scale.value = withSpring(1, { stiffness: 400, damping: 25 });
-  };
-
   return (
-    <Pressable onPress={onPress} onPressIn={onPressIn} onPressOut={onPressOut} className="mx-5 my-2">
-      <Animated.View
-        style={[
-          {
-            borderRadius: 16,
-            backgroundColor: '#e8f0fe',
-            padding: 20,
-            alignItems: 'center',
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 3 },
-            shadowOpacity: 0.06,
-            shadowRadius: 8,
-            elevation: 3,
-          },
-          animatedStyle,
-        ]}>
-        <View className="flex-row items-center gap-2">
-          <Icon name="plus" size={20} color="#000000" />
-          <Text className="text-[15px] font-bold text-ink">Add family member</Text>
-        </View>
-        <Text className="mt-[2px] text-[11px] text-primary">Tap to invite</Text>
-        <View className="mt-2">
-          <Image
-            source={require('../../../assets/images/family.png')}
-            style={{ width: 112, height: 112 }}
-            contentFit="contain"
-            transition={120}
-          />
-        </View>
-      </Animated.View>
-    </Pressable>
+    <AnimatedCard
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel="Add family member"
+      style={{
+        marginHorizontal: 20,
+        marginVertical: 8,
+        borderRadius: 16,
+        backgroundColor: Colors.surface,
+        padding: 20,
+        alignItems: 'center',
+        ...Elevation.small,
+      }}>
+      <View className="flex-row items-center gap-2">
+        <Icon name="plus" size={20} color={Colors.ink} />
+        <Text className="text-[15px] font-bold text-ink">Add family member</Text>
+      </View>
+      <Text className="mt-[2px] text-[11px] text-primary">Tap to invite</Text>
+      <View className="mt-2">
+        <Image
+          source={require('../../../assets/images/family.png')}
+          style={{ width: 112, height: 112 }}
+          contentFit="contain"
+          transition={120}
+        />
+      </View>
+    </AnimatedCard>
   );
 }
 
@@ -284,29 +274,6 @@ function DocCardSkeleton() {
         <Skeleton width={180} height={10} radius={4} />
       </View>
       <Skeleton width={70} height={20} radius={10} />
-    </View>
-  );
-}
-
-function ErrorState({ onRetry }: { onRetry: () => void }) {
-  return (
-    <View className="flex-1 items-center justify-center px-6">
-      <View className="mb-6 h-28 w-28 items-center justify-center rounded-full" style={{ backgroundColor: '#fef2f2' }}>
-        <Text style={{ fontSize: 40, fontWeight: '700', color: '#dc2626' }}>!</Text>
-      </View>
-      <Text accessibilityRole="header" className="mb-2 text-[22px] font-bold text-ink">
-        Could not load documents
-      </Text>
-      <Text className="mb-8 text-center text-[14px] leading-[22px] text-muted">
-        Something went wrong while fetching your documents. Please try again.
-      </Text>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="Retry loading documents"
-        onPress={onRetry}
-        className="w-full flex-row items-center justify-center gap-2 rounded-btn bg-primary p-[14px] active:opacity-80">
-        <Text className="text-[16px] font-bold text-white">Try again</Text>
-      </Pressable>
     </View>
   );
 }
