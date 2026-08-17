@@ -1,9 +1,10 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { KeyboardAvoidingView, Platform, Pressable, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { api } from '@/api';
 import { ScreenContainer, Spacer } from '@/components/layout/ScreenContainer';
@@ -33,22 +34,23 @@ export default function LoginScreen() {
 
   return (
     <ScreenContainer scroll={false}>
+      <LinearGradient
+        colors={['#ffffff', '#93c5fd']}
+        style={StyleSheet.absoluteFill}
+      />
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         <View className="flex-1 px-6 pb-6">
         <View className="mb-10 mt-[52px] items-center">
-          <View className="mb-6 h-[100px] w-[100px] items-center justify-center rounded-[24px] bg-surface overflow-hidden">
+          <View className="mb-6 h-[100px] w-[100px] items-center justify-center rounded-full bg-white/80">
             <Image
-              source={require('../../../assets/images/logo-glow.png')}
-              style={{ width: 80, height: 80 }}
+              source={require('../../../assets/images/truepas-logo.png')}
+              style={{ width: 100, height: 100 }}
               contentFit="contain"
               transition={120}
             />
           </View>
           <Text accessibilityRole="header" className="mb-3 text-[24px] font-extrabold text-ink">
-            Login to Truepas
-          </Text>
-          <Text className="text-center text-[14px] leading-5 text-muted">
-            Enter your mobile number or email ID linked{'\n'}to your Truepas Account.
+            Login to <Text className="text-primary">Truepas</Text>
           </Text>
         </View>
 
@@ -66,6 +68,7 @@ export default function LoginScreen() {
                 value={value}
                 onChangeText={onChange}
                 error={fieldState.error?.message}
+                gradient
               />
             )}
           />
@@ -81,13 +84,14 @@ export default function LoginScreen() {
                 value={value}
                 onChangeText={onChange}
                 error={fieldState.error?.message}
+                gradient
                 rightSlot={
                   <Pressable
                     accessibilityRole="button"
                     accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
                     onPress={() => setShowPassword((v) => !v)}
                     className="h-9 w-9 items-center justify-center">
-                    <Icon name="eye" size={20} color="#999" />
+                    <Icon name={showPassword ? 'eye' : 'eyeClosed'} size={20} color="#999" />
                   </Pressable>
                 }
               />

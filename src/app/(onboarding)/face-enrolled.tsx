@@ -1,4 +1,5 @@
-import { Text, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { ScreenContainer, Spacer } from '@/components/layout/ScreenContainer';
 import { TopBar } from '@/components/layout/TopBar';
@@ -12,6 +13,10 @@ export default function FaceEnrolledScreen() {
 
   return (
     <ScreenContainer scroll={false}>
+      <LinearGradient
+        colors={['#ffffff', '#93c5fd']}
+        style={StyleSheet.absoluteFill}
+      />
       <TopBar title="" />
       <View className="flex-1 items-center justify-center p-5">
         <View className="h-[90px] w-[90px] items-center justify-center rounded-full bg-surface">

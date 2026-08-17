@@ -1,5 +1,6 @@
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { ScreenContainer, Spacer } from '@/components/layout/ScreenContainer';
 import { Button, Icon } from '@/components/ui';
@@ -10,6 +11,10 @@ export default function DocumentVerifiedScreen() {
 
   return (
     <ScreenContainer scroll={false}>
+      <LinearGradient
+        colors={['#ffffff', '#93c5fd']}
+        style={StyleSheet.absoluteFill}
+      />
       <View className="flex-1 items-center justify-center p-5">
         <View className="h-[90px] w-[90px] items-center justify-center rounded-full bg-[#ecfdf5]">
           <Icon name="checkCircle" size={40} />

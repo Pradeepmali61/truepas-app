@@ -1,66 +1,71 @@
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { memo, useMemo, useState } from 'react';
-import { FlatList, RefreshControl, Text, TextInput, View } from 'react-native';
+import { FlatList, Platform, Pressable, RefreshControl, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { AnimatedCard, ErrorState, Icon, Skeleton } from '@/components/ui';
+import { ErrorState, Icon, Skeleton } from '@/components/ui';
 import { Colors, Elevation } from '@/constants/theme';
 import { useIssuedDocuments } from '@/features/documents/hooks';
 import type { IssuedDoc } from '@/types/domain';
 
-const STATUS_BADGE: Record<string, { bg: string; text: string; label: string }> = {
-  Active: { bg: Colors.successBg, text: Colors.successDark, label: 'Active' },
-  Expired: { bg: Colors.errorBg, text: Colors.error, label: 'Expired' },
+const DOC_ACCENT: Record<string, { bg: string; icon: string }> = {
+  passport:         { bg: '#F5F7FF', icon: '#4F46E5' },
+  drivingLicense:   { bg: '#F5F9FF', icon: '#2563EB' },
+  greenCard:        { bg: '#F5FBF7', icon: '#059669' },
+  birthCertificate: { bg: '#FFFAF5', icon: '#EA580C' },
+  usVisa:           { bg: '#FAF9FF', icon: '#7C3AED' },
 };
 
 const DocCard = memo(function DocCard({ doc, onPress }: { doc: IssuedDoc; onPress: () => void }) {
-  const badge = STATUS_BADGE[doc.status] ?? STATUS_BADGE.Active;
+  const accent = DOC_ACCENT[doc.icon] ?? { bg: '#EEF2FF', icon: '#4F46E5' };
   return (
-    <AnimatedCard
+    <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={`${doc.name}, ${doc.issuer}, ${doc.status}`}
+      accessibilityLabel={`${doc.name}, ${doc.issuer}`}
       style={{
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 12,
-        backgroundColor: Colors.surfaceElevated,
-        borderRadius: 14,
-        paddingHorizontal: 14,
-        paddingVertical: 14,
-        marginBottom: 8,
-        ...Elevation.small,
+        gap: 14,
+        backgroundColor: '#FFFFFF',
+        borderRadius: 16,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        marginBottom: 10,
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
+        ...Elevation.none,
       }}>
-      <View style={{ width: 48, height: 48, borderRadius: 12, backgroundColor: Colors.surface, alignItems: 'center', justifyContent: 'center' }}>
-        <Icon name={doc.icon} size={26} color={Colors.primary} />
+      <View style={{
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        backgroundColor: accent.bg,
+      }}>
+        <Icon name={doc.icon} size={24} color={accent.icon} />
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={{ fontSize: 15, fontWeight: '700', color: Colors.ink }}>{doc.name}</Text>
-        <Text style={{ fontSize: 12, color: Colors.textMuted, marginTop: 2 }} numberOfLines={1}>
+        <Text style={{ fontSize: 17, fontWeight: '600', color: '#111827' }}>{doc.name}</Text>
+        <Text style={{ fontSize: 13, color: '#6B7280', marginTop: 2 }} numberOfLines={1}>
           {doc.issuer}
         </Text>
-        <Text style={{ fontSize: 11, color: Colors.textFaint, marginTop: 3 }}>{doc.issuedAt}</Text>
       </View>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-        <View style={{ backgroundColor: badge.bg, borderRadius: 20, paddingHorizontal: 8, paddingVertical: 4 }}>
-          <Text style={{ fontSize: 11, fontWeight: '600', color: badge.text }}>{badge.label}</Text>
-        </View>
-        <Icon name="chevron" size={18} color={Colors.divider} />
-      </View>
-    </AnimatedCard>
+      <Icon name="chevron" size={18} color={Colors.textFaint} />
+    </Pressable>
   );
 });
 
 function DocSkeleton() {
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 14, paddingVertical: 14, marginBottom: 8 }}>
-      <Skeleton width={48} height={48} radius={12} />
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 16, paddingVertical: 14, marginBottom: 10 }}>
+      <Skeleton width={48} height={48} radius={24} />
       <View style={{ flex: 1, gap: 6 }}>
-        <Skeleton width={140} height={14} radius={6} />
-        <Skeleton width={200} height={10} radius={4} />
-        <Skeleton width={100} height={10} radius={4} />
+        <Skeleton width={140} height={16} radius={6} />
+        <Skeleton width={200} height={12} radius={4} />
       </View>
-      <Skeleton width={60} height={20} radius={10} />
     </View>
   );
 }
@@ -82,17 +87,38 @@ export default function DocumentsScreen() {
   const isEmpty = !isPending && !isError && (documents?.length ?? 0) === 0;
 
   return (
-    <SafeAreaView className="flex-1 bg-white" edges={['top']}>
-      <View className="px-5 pb-1 pt-3">
-        <Text accessibilityRole="header" className="text-[20px] font-bold text-ink">
-          Issued Documents
+    <SafeAreaView className="flex-1" edges={['top']} style={Platform.OS === 'web' ? ({ backgroundImage: 'linear-gradient(180deg, #F8FBFF, #EAF4FF)' } as any) : undefined}>
+      {Platform.OS !== 'web' && (
+        <LinearGradient
+          colors={['#F8FBFF', '#EAF4FF']}
+          style={StyleSheet.absoluteFill}
+        />
+      )}
+      <View style={{ flex: 1 }}>
+      <View style={{ paddingHorizontal: 28, paddingTop: 12, paddingBottom: 24 }}>
+        <Text accessibilityRole="header" style={{ fontSize: 28, fontWeight: '700', color: Colors.ink }}>
+          Documents
+        </Text>
+        <Text style={{ fontSize: 14, color: Colors.textMuted, marginTop: 2 }}>
+          Your important documents
         </Text>
       </View>
-
       <View
-        className="mx-5 my-[10px] flex-row items-center rounded-[14px] border border-divider bg-white px-[14px] py-2">
-        <View className="mr-[10px]">
-          <Icon name="search" size={18} color={Colors.textFaint} />
+        style={{
+          marginHorizontal: 20,
+          marginBottom: 28,
+          flexDirection: 'row',
+          alignItems: 'center',
+          borderRadius: 16,
+          borderWidth: 1,
+          borderColor: Colors.divider,
+          backgroundColor: '#FFFFFF',
+          paddingHorizontal: 16,
+          paddingVertical: 4,
+          ...Elevation.small,
+        }}>
+        <View style={{ marginRight: 12 }}>
+          <Icon name="search" size={20} color={Colors.textFaint} />
         </View>
         <TextInput
           value={query}
@@ -100,12 +126,23 @@ export default function DocumentsScreen() {
           placeholder="Search documents"
           placeholderTextColor={Colors.textFaint}
           accessibilityLabel="Search issued documents"
-          className="flex-1 text-[14px] text-ink"
+          style={{ flex: 1, fontSize: 15, color: Colors.ink }}
         />
       </View>
 
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, marginBottom: 12 }}>
+        <Text style={{ fontSize: 20, fontWeight: '700', color: Colors.ink }}>My Documents</Text>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Verify new document"
+          onPress={() => router.push('/document/select-type' as never)}
+          style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: '#3535D8' }}>
+          <Icon name="plus" size={16} color="#FFFFFF" />
+        </Pressable>
+      </View>
+
       {isPending ? (
-        <View className="px-5 pt-2">
+        <View style={{ paddingHorizontal: 20, paddingTop: 8 }}>
           {[1, 2, 3].map((i) => <DocSkeleton key={i} />)}
         </View>
       ) : isError ? (
@@ -145,6 +182,7 @@ export default function DocumentsScreen() {
           }
         />
       )}
+      </View>
     </SafeAreaView>
   );
 }

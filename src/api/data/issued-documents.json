@@ -25,5 +25,23 @@
     "icon": "greenCard",
     "number": "USCIS\u00b2\u00b2\u00b2\u00b2\u00b21234",
     "status": "Active"
+  },
+  {
+    "id": "i4",
+    "name": "Birth Certificate",
+    "issuer": "Municipal Corporation",
+    "issuedAt": "Mon, 15 Aug 2022 09:30 GMT",
+    "icon": "birthCertificate",
+    "number": "BC\u00b2\u00b2\u00b2\u00b2\u00b25678",
+    "status": "Active"
+  },
+  {
+    "id": "i5",
+    "name": "US Visa",
+    "issuer": "U.S. Department of State",
+    "issuedAt": "Wed, 02 Mar 2023 11:45 GMT",
+    "icon": "usVisa",
+    "number": "V\u00b2\u00b2\u00b2\u00b2\u00b29012",
+    "status": "Active"
   }
 ]

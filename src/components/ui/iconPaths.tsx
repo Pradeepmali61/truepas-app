@@ -9,33 +9,52 @@ const P = (d: string, color: string, sw = 2) => (
 
 export const identity: IconRenderer = (c) => (
   <>
-    <Rect x="3" y="5" width="18" height="14" rx="2" stroke={c} strokeWidth={2} />
-    <Circle cx="9" cy="11" r="2" stroke={c} strokeWidth={2} />
-    {P("M14 10H18", c)}{P("M14 13H18", c)}{P("M7 16C7 14.5 8 13.5 9 13.5C10 13.5 11 14.5 11 16", c, 1.5)}
+    {P("M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8", c)}
+    {P("M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z", c)}
   </>
 );
 
 export const documents: IconRenderer = (c) => (
   <>
-    <Path d="M14 3H6C5 3 4 4 4 5V19C4 20 5 21 6 21H18C19 21 20 20 20 19V9L14 3Z" stroke={c} strokeWidth={2} strokeLinejoin="round" />
-    <Path d="M14 3V9H20" stroke={c} strokeWidth={2} strokeLinejoin="round" />
-    {P("M8 13H16", c)}{P("M8 17H16", c)}
+    {P("M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z", c)}
+    {P("M14 2v5a1 1 0 0 0 1 1h5", c)}
+    {P("M10 9H8", c)}
+    {P("M16 13H8", c)}
+    {P("M16 17H8", c)}
   </>
 );
 
 export const family: IconRenderer = (c) => (
   <>
-    <Circle cx="8" cy="8" r="3" stroke={c} strokeWidth={2} />
-    <Circle cx="16" cy="8" r="3" stroke={c} strokeWidth={2} />
-    <Path d="M3 20C3 16.5 5 14 8 14C11 14 13 16.5 13 20" stroke={c} strokeWidth={2} strokeLinecap="round" />
-    <Path d="M11 20C11 16.5 13 14 16 14C19 14 21 16.5 21 20" stroke={c} strokeWidth={2} strokeLinecap="round" />
+    {P("M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2", c)}
+    {P("M16 3.128a4 4 0 0 1 0 7.744", c)}
+    {P("M22 21v-2a4 4 0 0 0-3-3.87", c)}
+    <Circle cx="9" cy="7" r="4" stroke={c} strokeWidth={2} fill="none" />
   </>
 );
 
 export const history: IconRenderer = (c) => (
   <>
-    <Circle cx="12" cy="12" r="9" stroke={c} strokeWidth={2} />
-    {P("M12 7V12L15 14", c)}
+    {P("M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8", c)}
+    {P("M3 3v5h5", c)}
+    {P("M12 7v5l4 2", c)}
+  </>
+);
+
+export const drivingLicense: IconRenderer = (c) => (
+  <>
+    {P("M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2", c)}
+    <Circle cx="7" cy="17" r="2" stroke={c} strokeWidth={2} fill="none" />
+    {P("M9 17h6", c)}
+    <Circle cx="17" cy="17" r="2" stroke={c} strokeWidth={2} fill="none" />
+  </>
+);
+
+export const passport: IconRenderer = (c) => (
+  <>
+    <Circle cx="12" cy="12" r="10" stroke={c} strokeWidth={2} fill="none" />
+    {P("M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20", c)}
+    {P("M2 12h20", c)}
   </>
 );
 
@@ -50,8 +69,8 @@ export const bell: IconRenderer = (c) => (
 
 export const settings: IconRenderer = (c) => (
   <>
-    <Circle cx="12" cy="12" r="3" stroke={c} strokeWidth={2} />
-    <Path d="M12 2V5M12 19V22M2 12H5M19 12H22M5 5L7 7M17 17L19 19M5 19L7 17M17 7L19 5" stroke={c} strokeWidth={2} strokeLinecap="round" />
+    {P("M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915", c)}
+    <Circle cx="12" cy="12" r="3" stroke={c} strokeWidth={2} fill="none" />
   </>
 );
 
@@ -102,8 +121,9 @@ export const cross: IconRenderer = (c) => (
 
 export const warning: IconRenderer = (c) => (
   <>
-    <Path d="M12 3L2 20H22L12 3Z" stroke={c} strokeWidth={2} strokeLinejoin="round" />
-    {P("M12 10V14", c)}{P("M12 17V17.01", c)}
+    {P("m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3", c)}
+    {P("M12 9v4", c)}
+    {P("M12 17h.01", c)}
   </>
 );
 
@@ -117,18 +137,24 @@ export const info: IconRenderer = (c) => (
 
 export const calendar: IconRenderer = (c) => (
   <>
-    <Rect x="3" y="5" width="18" height="16" rx="2" stroke={c} strokeWidth={2} />
-    <Path d="M3 9H21" stroke={c} strokeWidth={2} />
-    <Path d="M8 3V7M16 3V7" stroke={c} strokeWidth={2} strokeLinecap="round" />
+    {P("M8 2v3", c)}
+    {P("M16 2v3", c)}
+    <Rect x="3" y="3" width="18" height="18" rx="2" stroke={c} strokeWidth={2} />
+    {P("M3 9h18", c)}
   </>
 );
 
 export const cake: IconRenderer = (c) => (
   <>
-    <Path d="M4 21V12C4 11 5 10 6 10H18C19 10 20 11 20 12V21" stroke={c} strokeWidth={2} strokeLinejoin="round" />
-    <Path d="M2 21H22" stroke={c} strokeWidth={2} strokeLinecap="round" />
-    {P("M12 10V6", c)}{P("M10 6C10 5 11 4 12 4C13 4 14 5 14 6", c, 1.5)}
-    <Path d="M4 16C6 15 8 15 12 16C16 17 18 15 20 16" stroke={c} strokeWidth={1.5} strokeLinecap="round" />
+    {P("M20 21v-8a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8", c)}
+    {P("M4 16s.5-1 2-1 2.5 2 4 2 2.5-2 4-2 2.5 2 4 2 2-1 2-1", c)}
+    {P("M2 21h20", c)}
+    {P("M7 8v3", c)}
+    {P("M12 8v3", c)}
+    {P("M17 8v3", c)}
+    {P("M7 4h.01", c)}
+    {P("M12 4h.01", c)}
+    {P("M17 4h.01", c)}
   </>
 );
 
@@ -168,22 +194,6 @@ export const document: IconRenderer = (c) => (
   </>
 );
 
-export const passport: IconRenderer = (c) => (
-  <>
-    <Rect x="5" y="2" width="14" height="20" rx="2" stroke={c} strokeWidth={2} />
-    <Circle cx="12" cy="10" r="3" stroke={c} strokeWidth={2} />
-    {P("M9 17H15", c)}
-  </>
-);
-
-export const drivingLicense: IconRenderer = (c) => (
-  <>
-    <Rect x="3" y="6" width="18" height="12" rx="2" stroke={c} strokeWidth={2} />
-    <Circle cx="8" cy="11" r="2" stroke={c} strokeWidth={2} />
-    <Path d="M13 10H18M13 13H18M5 15C5 14 6 13 8 13C10 13 11 14 11 15" stroke={c} strokeWidth={1.5} strokeLinecap="round" />
-  </>
-);
-
 export const idCard: IconRenderer = (c) => (
   <>
     <Rect x="3" y="6" width="18" height="12" rx="2" stroke={c} strokeWidth={2} />
@@ -195,10 +205,24 @@ export const idCard: IconRenderer = (c) => (
 
 export const greenCard: IconRenderer = (c) => (
   <>
-    <Rect x="3" y="6" width="18" height="12" rx="2" stroke={c} strokeWidth={2} />
-    <Circle cx="9" cy="11" r="2" stroke={c} strokeWidth={2} />
-    {P("M14 10H18", c)}{P("M14 13H18", c)}
-    <Path d="M12 8L12.6 9.8H14.4L12.9 10.8L13.5 12.6L12 11.6L10.5 12.6L11.1 10.8L9.6 9.8H11.4L12 8Z" stroke={c} strokeWidth={1.2} strokeLinejoin="round" />
+    <Circle cx="12" cy="12" r="10" stroke={c} strokeWidth={2} fill="none" />
+    {P("M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8", c)}
+    {P("M12 18V6", c)}
+  </>
+);
+
+export const birthCertificate: IconRenderer = (c) => (
+  <>
+    {P("M10 16c.5.3 1.2.5 2 .5s1.5-.2 2-.5", c)}
+    {P("M15 12h.01", c)}
+    {P("M19.38 6.813A9 9 0 0 1 20.8 10.2a2 2 0 0 1 0 3.6 9 9 0 0 1-17.6 0 2 2 0 0 1 0-3.6A9 9 0 0 1 12 3c2 0 3.5 1.1 3.5 2.5s-.9 2.5-2 2.5c-.8 0-1.5-.4-1.5-1", c)}
+    {P("M9 12h.01", c)}
+  </>
+);
+
+export const usVisa: IconRenderer = (c) => (
+  <>
+    {P("M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z", c)}
   </>
 );
 
@@ -229,6 +253,16 @@ export const eye: IconRenderer = (c) => (
   <>
     <Path d="M2 12C2 12 5 5 12 5C19 5 22 12 22 12C22 12 19 19 12 19C5 19 2 12 2 12Z" stroke={c} strokeWidth={2} strokeLinejoin="round" />
     <Circle cx="12" cy="12" r="3" stroke={c} strokeWidth={2} />
+  </>
+);
+
+export const eyeClosed: IconRenderer = (c) => (
+  <>
+    {P("m15 18-.722-3.25", c)}
+    {P("M2 8a10.645 10.645 0 0 0 20 0", c)}
+    {P("m20 15-1.726-2.05", c)}
+    {P("m4 15 1.726-2.05", c)}
+    {P("m9 18 .722-3.25", c)}
   </>
 );
 
@@ -305,7 +339,19 @@ export const otpcode: IconRenderer = (c) => (
 
 export const inbox: IconRenderer = (c) => (
   <>
-    <Path d="M3 12L5 4H19L21 12V20H3V12Z" stroke={c} strokeWidth={2} strokeLinejoin="round" />
-    <Path d="M3 12H8L9 14H15L16 12H21" stroke={c} strokeWidth={2} strokeLinejoin="round" />
+    {P("m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7", c)}
+    <Rect x="2" y="4" width="20" height="16" rx="2" stroke={c} strokeWidth={2} />
+  </>
+);
+
+export const scanFace: IconRenderer = (c) => (
+  <>
+    {P("M3 7V5a2 2 0 0 1 2-2h2", c)}
+    {P("M17 3h2a2 2 0 0 1 2 2v2", c)}
+    {P("M21 17v2a2 2 0 0 1-2 2h-2", c)}
+    {P("M7 21H5a2 2 0 0 1-2-2v-2", c)}
+    {P("M8 14s1.5 2 4 2 4-2 4-2", c)}
+    {P("M9 9h.01", c)}
+    {P("M15 9h.01", c)}
   </>
 );

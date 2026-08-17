@@ -3,11 +3,11 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { memo, useMemo, useState } from 'react';
-import { FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
+import { FlatList, Platform, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { AnimatedCard, BottomSheet, EmptyState, ErrorState, Icon, Skeleton } from '@/components/ui';
-import { Colors, Elevation, Gradients } from '@/constants/theme';
+import { BottomSheet, EmptyState, ErrorState, Icon, Skeleton } from '@/components/ui';
+import { Colors } from '@/constants/theme';
 import { useBookings } from '@/features/history/hooks';
 import type { Booking } from '@/types/domain';
 
@@ -22,62 +22,61 @@ const BOOKING_IMAGES: Record<string, ReturnType<typeof require>> = {
 const BookingCard = memo(function BookingCard({ item, onPress }: { item: Booking; onPress: () => void }) {
   const imageSource = BOOKING_IMAGES[item.image];
   return (
-    <AnimatedCard
+    <Pressable
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={`${item.venue}, ${item.location}, ${item.type}`}
       style={{
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 10,
-        backgroundColor: Colors.surfaceElevated,
-        borderRadius: 12,
-        paddingHorizontal: 14,
-        paddingVertical: 12,
-        marginBottom: 8,
-        ...Elevation.small,
+        gap: 14,
+        backgroundColor: '#FFFFFF',
+        borderRadius: 16,
+        paddingHorizontal: 16,
+        paddingVertical: 14,
+        marginBottom: 10,
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
       }}>
       {imageSource ? (
-        <View style={{ width: 72, height: 72, borderRadius: 10, overflow: 'hidden' }}>
-          <Image source={imageSource} style={{ width: 72, height: 72 }} contentFit="cover" transition={200} cachePolicy="memory-disk" />
+        <View style={{ width: 64, height: 64, borderRadius: 12, overflow: 'hidden' }}>
+          <Image source={imageSource} style={{ width: 64, height: 64 }} contentFit="cover" transition={200} cachePolicy="memory-disk" />
         </View>
       ) : (
-        <LinearGradient
-          colors={Gradients.historyThumb}
-          style={{ width: 72, height: 72, borderRadius: 10, alignItems: 'center', justifyContent: 'center' }}>
-          <Icon name="hotel" size={28} color="#ffffff" />
-        </LinearGradient>
+        <View style={{ width: 64, height: 64, borderRadius: 12, backgroundColor: '#E2E8F0', alignItems: 'center', justifyContent: 'center' }}>
+          <Icon name="hotel" size={28} color={Colors.ink} />
+        </View>
       )}
       <View style={{ flex: 1, minWidth: 0 }}>
-        <Text style={{ fontSize: 11, fontWeight: '700', color: Colors.primary, marginBottom: 2 }}>{item.type}</Text>
-        <Text style={{ fontSize: 15, fontWeight: '700', color: Colors.ink, lineHeight: 18 }} numberOfLines={1}>
+        <Text style={{ fontSize: 12, fontWeight: '600', color: Colors.primary, marginBottom: 1 }}>{item.type}</Text>
+        <Text style={{ fontSize: 17, fontWeight: '600', color: Colors.ink, lineHeight: 22 }} numberOfLines={1}>
           {item.venue}
         </Text>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
-          <Icon name="location" size={12} color={Colors.textFaint} />
-          <Text style={{ fontSize: 11, color: Colors.textMuted }} numberOfLines={1}>{item.location}</Text>
+          <Icon name="location" size={13} color={Colors.textMuted} />
+          <Text style={{ fontSize: 13, color: Colors.textMuted }} numberOfLines={1}>{item.location}</Text>
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
-          <Icon name="calendar" size={12} color={Colors.textFaint} />
-          <Text style={{ fontSize: 11, color: Colors.textMuted }}>{item.checkIn}–{item.checkOut}</Text>
+          <Icon name="calendar" size={13} color={Colors.textMuted} />
+          <Text style={{ fontSize: 13, color: Colors.textMuted }}>{item.checkIn}–{item.checkOut}</Text>
         </View>
       </View>
       <View style={{ alignItems: 'flex-end', gap: 4 }}>
-        <View style={{ backgroundColor: item.status === 'completed' ? Colors.successBg : Colors.errorBg, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 }}>
-          <Text style={{ fontSize: 11, fontWeight: '600', color: item.status === 'completed' ? Colors.successDark : Colors.error }}>
+        <View style={{ backgroundColor: item.status === 'completed' ? '#ECFDF5' : '#FEF2F2', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 3 }}>
+          <Text style={{ fontSize: 12, fontWeight: '500', color: item.status === 'completed' ? '#059669' : Colors.error }}>
             {item.status === 'completed' ? 'Completed' : 'Failed'}
           </Text>
         </View>
-        <Icon name="chevron" size={20} color={Colors.divider} />
+        <Icon name="chevron" size={18} color={Colors.textFaint} />
       </View>
-    </AnimatedCard>
+    </Pressable>
   );
 });
 
 function BookingSkeleton() {
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 14, paddingVertical: 12, marginBottom: 8 }}>
-      <Skeleton width={72} height={72} radius={10} />
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: '#FFFFFF', borderRadius: 16, paddingHorizontal: 16, paddingVertical: 14, marginBottom: 10, borderWidth: 1, borderColor: '#E5E7EB' }}>
+      <Skeleton width={64} height={64} radius={12} />
       <View style={{ flex: 1, gap: 6 }}>
         <Skeleton width={60} height={11} radius={4} />
         <Skeleton width={140} height={15} radius={4} />
@@ -123,13 +122,30 @@ export default function HistoryScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-white" edges={['top']}>
-      <View className="flex-row items-center justify-between px-5 py-[14px]">
-        <Text accessibilityRole="header" className="text-[20px] font-bold text-ink">
-          My bookings
-        </Text>
-        <View className="h-9 w-9 items-center justify-center rounded-btn bg-surface">
-          <Icon name="search" size={20} color={Colors.primary} />
+    <SafeAreaView className="flex-1" edges={['top']} style={Platform.OS === 'web' ? ({ backgroundImage: 'linear-gradient(180deg, #F8FBFF, #EAF4FF)' } as any) : undefined}>
+      {Platform.OS !== 'web' && (
+        <LinearGradient
+          colors={['#F8FBFF', '#EAF4FF']}
+          style={StyleSheet.absoluteFill}
+        />
+      )}
+      <View className="flex-1">
+      <View style={{ paddingHorizontal: 32, paddingTop: 12, paddingBottom: 24 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+          <View>
+            <Text accessibilityRole="header" style={{ fontSize: 28, fontWeight: '700', color: Colors.ink }}>
+              My Bookings
+            </Text>
+            <Text style={{ fontSize: 14, color: Colors.textMuted, marginTop: 2 }}>
+              View your check-in history
+            </Text>
+          </View>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Search bookings"
+            className="h-9 w-9 items-center justify-center rounded-btn bg-surface">
+            <Icon name="search" size={20} color={Colors.ink} />
+          </Pressable>
         </View>
       </View>
 
@@ -141,31 +157,35 @@ export default function HistoryScreen() {
         />
       ) : (
         <>
-          <View className="flex-row gap-1 px-5 pb-3">
+          <View style={{ flexDirection: 'row', gap: 1, paddingHorizontal: 32, paddingBottom: 12 }}>
             {(['upcoming', 'past'] as const).map((t) => (
               <Pressable
                 key={t}
                 accessibilityRole="tab"
                 accessibilityState={{ selected: tab === t }}
                 onPress={() => handleTabChange(t)}
-                className={`flex-1 items-center border-b-2 py-[10px] ${
-                  tab === t ? 'border-primary' : 'border-canvas'
-                }`}>
-                <Text className={`text-[13px] font-semibold ${tab === t ? 'text-primary' : 'text-muted'}`}>
+                style={{
+                  flex: 1,
+                  alignItems: 'center',
+                  borderBottomWidth: 2,
+                  borderBottomColor: tab === t ? Colors.primary : '#E5E7EB',
+                  paddingVertical: 10,
+                }}>
+                <Text style={{ fontSize: 14, fontWeight: tab === t ? '600' : '500', color: tab === t ? Colors.primary : Colors.textMuted }}>
                   {t === 'upcoming' ? 'Upcoming' : 'Past'}
                 </Text>
               </Pressable>
             ))}
           </View>
 
-          <View className="flex-row items-center justify-between px-5 py-3">
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 32, paddingVertical: 12 }}>
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Sort options"
               onPress={() => setShowSortSheet(true)}
-              className="flex-row items-center gap-2">
-              <Text className="text-[13px] text-muted">Sort by</Text>
-              <Text className="text-[13px] font-bold text-primary">
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <Text style={{ fontSize: 14, color: Colors.textMuted }}>Sort by</Text>
+              <Text style={{ fontSize: 14, fontWeight: '600', color: Colors.primary }}>
                 {sortOption === 'recent' ? 'Recent' : 'Oldest'} ▾
               </Text>
             </Pressable>
@@ -173,13 +193,13 @@ export default function HistoryScreen() {
               accessibilityRole="button"
               accessibilityLabel="Filter options"
               onPress={() => setShowFilterSheet(true)}
-              className="flex-row items-center gap-2">
-              <Text className="text-[13px] font-semibold text-primary">Filter</Text>
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <Text style={{ fontSize: 14, fontWeight: '600', color: Colors.primary }}>Filter</Text>
             </Pressable>
           </View>
 
           {isPending ? (
-            <View className="px-5 pt-2">
+            <View style={{ paddingHorizontal: 32, paddingTop: 8 }}>
               {[1, 2].map((i) => <BookingSkeleton key={i} />)}
             </View>
           ) : isError ? (
@@ -192,10 +212,10 @@ export default function HistoryScreen() {
             <FlatList
               data={visible}
               keyExtractor={(item) => item.id}
-              contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 20 }}
+              contentContainerStyle={{ paddingHorizontal: 32, paddingBottom: 28 }}
               showsVerticalScrollIndicator={false}
               ListEmptyComponent={
-                <Text className="pt-10 text-center text-[13px] text-muted">
+                <Text style={{ paddingTop: 40, textAlign: 'center', fontSize: 14, color: Colors.textMuted }}>
                   No {tab} bookings.
                 </Text>
               }
@@ -247,6 +267,7 @@ export default function HistoryScreen() {
           </Pressable>
         ))}
       </BottomSheet>
+      </View>
     </SafeAreaView>
   );
 }

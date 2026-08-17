@@ -1,8 +1,9 @@
 import { zodResolver } from '@hookform/resolvers/zod';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { z } from 'zod';
 
 import { ScreenContainer, Spacer } from '@/components/layout/ScreenContainer';
@@ -45,6 +46,10 @@ export default function AddFamilyScreen() {
 
   return (
     <ScreenContainer scroll={false}>
+      <LinearGradient
+        colors={['#ffffff', '#93c5fd']}
+        style={StyleSheet.absoluteFill}
+      />
       <TopBar title="Add Family Member" />
       <Stepper total={4} done={1} />
       <View className="flex-1 px-6">
@@ -64,6 +69,7 @@ export default function AddFamilyScreen() {
                 value={value}
                 onChangeText={onChange}
                 error={fieldState.error?.message}
+                gradient
               />
             )}
           />
@@ -78,6 +84,7 @@ export default function AddFamilyScreen() {
                 value={value}
                 onChangeText={onChange}
                 error={fieldState.error?.message}
+                gradient
               />
             )}
           />

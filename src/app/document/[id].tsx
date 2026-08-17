@@ -1,11 +1,12 @@
+import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { api } from '@/api';
 import { ScreenContainer, Spacer } from '@/components/layout/ScreenContainer';
 import { TopBar } from '@/components/layout/TopBar';
-import { Button, Card, Icon, Pill, Skeleton } from '@/components/ui';
+import { Card, Icon, NeuButton, Pill, Skeleton } from '@/components/ui';
 import { useDocument } from '@/features/documents/hooks';
 import type { IdentityDocument, IssuedDoc } from '@/types/domain';
 
@@ -84,6 +85,10 @@ export default function DocumentDetailScreen() {
 
   return (
     <ScreenContainer>
+      <LinearGradient
+        colors={['#ffffff', '#93c5fd']}
+        style={StyleSheet.absoluteFill}
+      />
       <TopBar title={title} />
       <View className="items-center py-5">
         <View className="h-[100px] w-[100px] items-center justify-center rounded-[24px] bg-surface">
@@ -97,7 +102,7 @@ export default function DocumentDetailScreen() {
       </View>
 
       {isIdentityDocument(doc) ? (
-        <Card>
+        <Card className="bg-white/80">
           <View className="mb-2 flex-row items-center justify-between">
             <Text className="text-[13px] text-muted">Document Number</Text>
             <Text className="text-[13px] font-bold text-primary">{doc.number}</Text>
@@ -126,7 +131,7 @@ export default function DocumentDetailScreen() {
           </View>
         </Card>
       ) : (
-        <Card>
+        <Card className="bg-white/80">
           <View className="mb-2 flex-row items-center justify-between">
             <Text className="text-[13px] text-muted">Document Number</Text>
             <Text className="text-[13px] font-bold text-primary">{doc.number}</Text>
@@ -148,7 +153,7 @@ export default function DocumentDetailScreen() {
 
       <Spacer />
       <View className="px-5 pb-6 pt-4">
-        <Button label="Done" onPress={() => router.back()} />
+        <NeuButton label="Done" onPress={() => router.back()} />
       </View>
     </ScreenContainer>
   );

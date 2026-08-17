@@ -1,6 +1,7 @@
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { ScreenContainer, Spacer } from '@/components/layout/ScreenContainer';
 import { TopBar } from '@/components/layout/TopBar';
@@ -13,6 +14,8 @@ const OPTIONS: DocOption[] = [
   { id: 'passport', label: 'Passport', icon: 'passport' },
   { id: 'drivingLicense', label: "Driver's License", icon: 'drivingLicense' },
   { id: 'greenCard', label: 'USA Green Card', icon: 'greenCard' },
+  { id: 'birthCertificate', label: 'Birth Certificate', icon: 'birthCertificate' },
+  { id: 'usVisa', label: 'US Visa', icon: 'usVisa' },
 ];
 
 /** Add document — select type (no skip, per PRD). */
@@ -22,6 +25,10 @@ export default function SelectTypeScreen() {
 
   return (
     <ScreenContainer scroll={false}>
+      <LinearGradient
+        colors={['#ffffff', '#93c5fd']}
+        style={StyleSheet.absoluteFill}
+      />
       <TopBar title="Verify Document" />
       <View className="flex-1 px-6">
         <Text
@@ -39,13 +46,11 @@ export default function SelectTypeScreen() {
                 accessibilityState={{ selected: active }}
                 accessibilityLabel={option.label}
                 onPress={() => setSelected(option.id)}
-                className={`flex-row items-center gap-[14px] rounded-[14px] px-5 py-[18px] ${
-                  active ? 'border-2 border-primary bg-surface' : 'border-[1.5px] border-[#e0e0e0] bg-white'
-                }`}>
+                className="flex-row items-center gap-[14px] rounded-[14px] border-2 border-primary bg-transparent px-5 py-[18px]">
                 <Icon name={option.icon} size={28} />
                 <Text
                   allowFontScaling={false}
-                  className={`text-[16px] text-primary ${active ? 'font-semibold' : 'font-medium'}`}>
+                  className="text-[16px] font-semibold text-primary">
                   {option.label}
                 </Text>
               </Pressable>

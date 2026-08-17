@@ -6,7 +6,7 @@ import { KeyboardAvoidingView, Platform, Text, View } from 'react-native';
 import { api } from '@/api';
 import { ScreenContainer, Spacer } from '@/components/layout/ScreenContainer';
 import { TopBar } from '@/components/layout/TopBar';
-import { Button, FloatingInput, InfoBanner, ProgressTrack } from '@/components/ui';
+import { Button, FloatingInput, Icon, InfoBanner, ProgressTrack } from '@/components/ui';
 import { AccountDetailsForm, accountDetailsSchema } from '@/features/auth/schemas';
 import { sessionStarted } from '@/features/auth/slice';
 import { useAppDispatch } from '@/store';
@@ -72,6 +72,7 @@ export default function AccountDetailsScreen() {
                 value={value}
                 onChangeText={onChange}
                 error={fieldState.error?.message}
+                rightSlot={<Icon name="calendar" size={20} color="#999" />}
               />
             )}
           />

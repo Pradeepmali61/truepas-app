@@ -1,7 +1,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Icon, IconName } from '@/components/ui/Icon';
@@ -16,7 +16,7 @@ interface Slide {
 
 const SLIDES: Slide[] = [
   {
-    icon: 'idCard',
+    icon: 'scanFace',
     title: 'Your Face is\nYour Identity.',
     desc: 'Enroll once with your face and government ID — securely verified, always trusted.',
     cta: 'Next',
@@ -51,7 +51,11 @@ export default function WelcomeScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-white" edges={['top']}>
+    <SafeAreaView className="flex-1" edges={['top']}>
+      <LinearGradient
+        colors={['#ffffff', '#93c5fd']}
+        style={StyleSheet.absoluteFill}
+      />
       <View className="absolute right-5 top-14 z-30">
         <Pressable
           accessibilityRole="button"
@@ -63,7 +67,7 @@ export default function WelcomeScreen() {
         </Pressable>
       </View>
 
-      <View className="flex-1 items-center justify-center bg-white">
+      <View className="flex-1 items-center justify-center">
         <Icon name={slide.icon} size={80} />
       </View>
 

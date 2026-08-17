@@ -39,10 +39,13 @@ export type IconName =
   | 'drivingLicense'
   | 'idCard'
   | 'greenCard'
+  | 'birthCertificate'
+  | 'usVisa'
   | 'selfie'
   | 'phone'
   | 'email'
   | 'eye'
+  | 'eyeClosed'
   | 'edit'
   | 'logout'
   | 'hotel'
@@ -52,13 +55,10 @@ export type IconName =
   | 'hourglass'
   | 'location'
   | 'otpcode'
-  | 'inbox';
+  | 'inbox'
+  | 'scanFace';
 
-const IMAGE_SOURCES: Record<string, ImageSourcePropType> = {
-  drivingLicense: require('../../../assets/images/DL.png'),
-  passport: require('../../../assets/images/passporticon.png'),
-  greenCard: require('../../../assets/images/tabIcons/greencard1.png'),
-};
+const IMAGE_SOURCES: Record<string, ImageSourcePropType> = {};
 
 interface IconProps {
   name: IconName;

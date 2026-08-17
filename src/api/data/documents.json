@@ -28,5 +28,25 @@
     "matchScore": 96,
     "addedAt": "2026-08-10",
     "expiresAt": null
+  },
+  {
+    "id": "d4",
+    "type": "birthCertificate",
+    "label": "Birth Certificate",
+    "number": "BC•••••5678",
+    "status": "verified",
+    "matchScore": 95,
+    "addedAt": "2026-08-12",
+    "expiresAt": null
+  },
+  {
+    "id": "d5",
+    "type": "usVisa",
+    "label": "US Visa",
+    "number": "V•••••9012",
+    "status": "pending",
+    "matchScore": null,
+    "addedAt": "2026-08-12",
+    "expiresAt": "2030-01-15"
   }
 ]

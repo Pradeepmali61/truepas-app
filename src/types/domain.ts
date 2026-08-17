@@ -24,7 +24,13 @@ export interface ActivityItem {
   tone: 'success' | 'warning' | 'error';
 }
 
-export type DocumentType = 'passport' | 'drivingLicense' | 'idCard' | 'greenCard';
+export type DocumentType =
+  | 'passport'
+  | 'drivingLicense'
+  | 'idCard'
+  | 'greenCard'
+  | 'birthCertificate'
+  | 'usVisa';
 
 export interface IdentityDocument {
   id: string;
@@ -67,7 +73,7 @@ export interface IssuedDoc {
   name: string;
   issuer: string;
   issuedAt: string;
-  icon: 'drivingLicense' | 'passport' | 'greenCard';
+  icon: 'drivingLicense' | 'passport' | 'greenCard' | 'birthCertificate' | 'usVisa';
   number: string;
   status: 'Active' | 'Expired';
 }

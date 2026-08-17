@@ -1,5 +1,6 @@
+import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { ScreenContainer, Spacer } from '@/components/layout/ScreenContainer';
 import { TopBar } from '@/components/layout/TopBar';
@@ -15,6 +16,10 @@ export default function FamilyDocumentScreen() {
 
   return (
     <ScreenContainer scroll={false}>
+      <LinearGradient
+        colors={['#ffffff', '#93c5fd']}
+        style={StyleSheet.absoluteFill}
+      />
       <TopBar title="Add Family Member" />
       <Stepper total={4} done={isMinorWithFace ? 2 : 3} />
       <View className="flex-1 px-6">
@@ -37,6 +42,7 @@ export default function FamilyDocumentScreen() {
             label="Document Type"
             value={isMinorWithFace ? 'Identity Card' : 'Identity Card / Birth Certificate'}
             editable={false}
+            gradient
           />
         </View>
         <View className="items-center">

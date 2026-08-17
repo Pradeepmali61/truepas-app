@@ -92,9 +92,59 @@ export const Spacing = {
   massive: 48,
 } as const;
 
+function hexToRgb(hex: string) {
+  const sanitized = hex.replace('#', '');
+  const bigint = parseInt(sanitized, 16);
+  return {
+    r: (bigint >> 16) & 255,
+    g: (bigint >> 8) & 255,
+    b: bigint & 255,
+  };
+}
+
+function componentToHex(c: number) {
+  const hex = c.toString(16);
+  return hex.length === 1 ? '0' + hex : hex;
+}
+
+function adjustBrightness(hex: string, percent: number) {
+  const { r, g, b } = hexToRgb(hex);
+  const clamp = (v: number) => Math.min(255, Math.max(0, v));
+  const R = clamp(r + (r * percent) / 100);
+  const G = clamp(g + (g * percent) / 100);
+  const B = clamp(b + (b * percent) / 100);
+  return '#' + componentToHex(R) + componentToHex(G) + componentToHex(B);
+}
+
+export const Neumorphism = {
+  base: Colors.surface,
+  light: '#ffffff',
+  radius: Radius.card,
+  getColors: (base: string = Colors.surface) => ({
+    base,
+    light: '#ffffff',
+    dark: adjustBrightness(base, -22),
+    fillStart: adjustBrightness(base, 4),
+    fillEnd: adjustBrightness(base, -6),
+    pressedStart: adjustBrightness(base, -4),
+    pressedEnd: adjustBrightness(base, -14),
+  }),
+} as const;
+
 export const FontFamily = Platform.select({
   ios: { regular: 'Satoshi', fallback: 'System' },
   default: { regular: 'Satoshi', fallback: 'sans-serif' },
 });
 
 export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;
+
+function hexToRgba(hex: string, alpha: number) {
+  const { r, g, b } = hexToRgb(hex);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+export function getNeuBoxShadow(base: string = Colors.surface, inset = false, distance = 6, blur = 12) {
+  const colors = Neumorphism.getColors(base);
+  const prefix = inset ? 'inset ' : '';
+  return `${prefix}${distance}px ${distance}px ${blur}px ${hexToRgba(colors.dark, 0.35)}, ${prefix}${-distance}px ${-distance}px ${blur}px ${hexToRgba(colors.light, 0.85)}`;
+}
