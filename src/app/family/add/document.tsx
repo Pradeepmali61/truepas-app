@@ -1,9 +1,9 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 
 import { ScreenContainer, Spacer } from '@/components/layout/ScreenContainer';
-import { TopBar } from '@/components/layout/TopBar';
+import { ScreenHeader } from '@/components/layout/ScreenHeader';
 import { Button, FloatingInput, Icon, InfoBanner, Pill, Stepper } from '@/components/ui';
 import type { FamilyAgeBand } from '@/types/domain';
 
@@ -16,11 +16,15 @@ export default function FamilyDocumentScreen() {
 
   return (
     <ScreenContainer scroll={false}>
-      <LinearGradient
-        colors={['#ffffff', '#93c5fd']}
-        style={StyleSheet.absoluteFill}
-      />
-      <TopBar title="Add Family Member" />
+      {Platform.OS === 'web' ? (
+        <View style={[StyleSheet.absoluteFill, { backgroundImage: 'linear-gradient(180deg, #F8FBFF, #EAF4FF)' } as any]} />
+      ) : (
+        <LinearGradient
+          colors={['#F8FBFF', '#EAF4FF']}
+          style={StyleSheet.absoluteFill}
+        />
+      )}
+      <ScreenHeader title="Add Family Member" />
       <Stepper total={4} done={isMinorWithFace ? 2 : 3} />
       <View className="flex-1 px-6">
         <View className="items-center pb-2 pt-4">

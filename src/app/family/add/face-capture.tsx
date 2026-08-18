@@ -2,6 +2,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { ScreenHeader } from '@/components/layout/ScreenHeader';
 import { Icon } from '@/components/ui/Icon';
 import { Colors } from '@/constants/theme';
 
@@ -13,6 +14,7 @@ export default function FamilyFaceCaptureScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-[#111111]" edges={['top', 'bottom']}>
+      <ScreenHeader title="Add Family Member" />
       <View className="flex-1 items-center justify-center">
         <Text className="mb-3 text-[14px] font-semibold text-primary-light">
           Capture {firstName}&apos;s Face

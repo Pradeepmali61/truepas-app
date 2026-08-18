@@ -3,11 +3,11 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 import { z } from 'zod';
 
 import { ScreenContainer, Spacer } from '@/components/layout/ScreenContainer';
-import { TopBar } from '@/components/layout/TopBar';
+import { ScreenHeader } from '@/components/layout/ScreenHeader';
 import { Button, CheckboxRow, Chip, ChipRow, FloatingInput, Stepper } from '@/components/ui';
 import { ageBandFromAge, ageFromDob } from '@/features/family/hooks';
 
@@ -46,16 +46,20 @@ export default function AddFamilyScreen() {
 
   return (
     <ScreenContainer scroll={false}>
-      <LinearGradient
-        colors={['#ffffff', '#93c5fd']}
-        style={StyleSheet.absoluteFill}
-      />
-      <TopBar title="Add Family Member" />
+      {Platform.OS === 'web' ? (
+        <View style={[StyleSheet.absoluteFill, { backgroundImage: 'linear-gradient(180deg, #F8FBFF, #EAF4FF)' } as any]} />
+      ) : (
+        <LinearGradient
+          colors={['#F8FBFF', '#EAF4FF']}
+          style={StyleSheet.absoluteFill}
+        />
+      )}
+      <ScreenHeader title="Add Family Member" />
       <Stepper total={4} done={1} />
       <View className="flex-1 px-6">
         <View className="items-center pb-3 pt-[6px]">
-          <Text accessibilityRole="header" className="text-center text-[16px] font-bold text-primary">
-            Basic Information
+          <Text accessibilityRole="header" className="text-center text-[16px] font-bold text-ink">
+            Basic information
           </Text>
         </View>
         <View className="-mx-6">
