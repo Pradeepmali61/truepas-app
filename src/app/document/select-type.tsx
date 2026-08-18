@@ -1,44 +1,61 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { ScreenContainer, Spacer } from '@/components/layout/ScreenContainer';
-import { TopBar } from '@/components/layout/TopBar';
-import { Button, Icon, IconName } from '@/components/ui';
+import { ScreenHeader } from '@/components/layout/ScreenHeader';
+import { Button, Icon } from '@/components/ui';
+import { Colors, Elevation } from '@/constants/theme';
 import type { DocumentType } from '@/types/domain';
 
-type DocOption = { id: DocumentType; label: string; icon: IconName };
+type DocOption = { id: DocumentType; label: string; icon: keyof typeof DOC_ACCENT };
+
+const DOC_ACCENT: Record<DocumentType, { bg: string; icon: string }> = {
+  passport:         { bg: '#EEF2FF', icon: '#4F46E5' },
+  drivingLicense:   { bg: '#EFF6FF', icon: '#2563EB' },
+  greenCard:        { bg: '#ECFDF5', icon: '#059669' },
+  birthCertificate: { bg: '#FFF7ED', icon: '#EA580C' },
+  usVisa:           { bg: '#F5F3FF', icon: '#7C3AED' },
+  idCard:           { bg: '#EEF2FF', icon: '#7C3AED' },
+};
 
 const OPTIONS: DocOption[] = [
   { id: 'passport', label: 'Passport', icon: 'passport' },
   { id: 'drivingLicense', label: "Driver's License", icon: 'drivingLicense' },
-  { id: 'greenCard', label: 'USA Green Card', icon: 'greenCard' },
+  { id: 'greenCard', label: 'U.S. Green Card', icon: 'greenCard' },
   { id: 'birthCertificate', label: 'Birth Certificate', icon: 'birthCertificate' },
-  { id: 'usVisa', label: 'US Visa', icon: 'usVisa' },
+  { id: 'usVisa', label: 'U.S. Visa', icon: 'usVisa' },
 ];
 
-/** Add document — select type (no skip, per PRD). */
+/** Add document — select type. */
 export default function SelectTypeScreen() {
   const router = useRouter();
   const [selected, setSelected] = useState<DocOption['id']>('passport');
 
   return (
     <ScreenContainer scroll={false}>
-      <LinearGradient
-        colors={['#ffffff', '#93c5fd']}
-        style={StyleSheet.absoluteFill}
-      />
-      <TopBar title="Verify Document" />
+      {Platform.OS === 'web' ? (
+        <View style={[StyleSheet.absoluteFill, { backgroundImage: 'linear-gradient(180deg, #F8FBFF, #EAF4FF)' } as any]} />
+      ) : (
+        <LinearGradient
+          colors={['#F8FBFF', '#EAF4FF']}
+          style={StyleSheet.absoluteFill}
+        />
+      )}
+      {/* Header */}
+      <ScreenHeader title="Verify Document" />
+
       <View className="flex-1 px-6">
         <Text
           accessibilityRole="header"
-          className="mb-6 mt-9 text-center text-[22px] font-bold text-primary">
-          Select Document Type
+          className="mb-3 mt-2 text-[22px] font-bold text-ink">
+          Select document type
         </Text>
         <View className="gap-3">
           {OPTIONS.map((option) => {
             const active = option.id === selected;
+            const accent = DOC_ACCENT[option.id];
             return (
               <Pressable
                 key={option.id}
@@ -46,13 +63,45 @@ export default function SelectTypeScreen() {
                 accessibilityState={{ selected: active }}
                 accessibilityLabel={option.label}
                 onPress={() => setSelected(option.id)}
-                className="flex-row items-center gap-[14px] rounded-[14px] border-2 border-primary bg-transparent px-5 py-[18px]">
-                <Icon name={option.icon} size={28} />
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 14,
+                  borderRadius: 20,
+                  backgroundColor: active ? '#F5F3FF' : '#FFFFFF',
+                  paddingHorizontal: 16,
+                  paddingVertical: 10,
+                  borderWidth: active ? 2 : 1,
+                  borderColor: active ? Colors.primary : '#F1F5F9',
+                  ...(active ? Elevation.small : Elevation.none),
+                }}>
+                <View style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: 22,
+                  backgroundColor: accent.bg,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}>
+                  <Icon name={option.icon} size={24} color={accent.icon} />
+                </View>
                 <Text
                   allowFontScaling={false}
-                  className="text-[16px] font-semibold text-primary">
+                  className="flex-1 text-[16px] font-semibold text-ink">
                   {option.label}
                 </Text>
+                {active && (
+                  <View style={{
+                    width: 24,
+                    height: 24,
+                    borderRadius: 12,
+                    backgroundColor: Colors.primary,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}>
+                    <Icon name="check" size={14} color="#FFFFFF" />
+                  </View>
+                )}
               </Pressable>
             );
           })}
