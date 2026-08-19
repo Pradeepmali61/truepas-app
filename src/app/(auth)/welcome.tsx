@@ -5,7 +5,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Icon, IconName } from '@/components/ui/Icon';
-import { Gradients } from '@/constants/theme';
+import { Colors, Gradients } from '@/constants/theme';
 
 interface Slide {
   icon: IconName;
@@ -68,7 +68,7 @@ export default function WelcomeScreen() {
       </View>
 
       <View className="flex-1 items-center justify-center">
-        <Icon name={slide.icon} size={80} />
+        <Icon name={slide.icon} size={80} color={Colors.primary} />
       </View>
 
       <LinearGradient

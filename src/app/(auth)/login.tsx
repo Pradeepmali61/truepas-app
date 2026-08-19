@@ -41,15 +41,28 @@ export default function LoginScreen() {
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         <View className="flex-1 px-6 pb-6">
         <View className="mb-10 mt-[52px] items-center">
-          <View className="mb-6 h-[100px] w-[100px] items-center justify-center rounded-full bg-white/80">
+          <View style={{
+            width: 100,
+            height: 100,
+            borderRadius: 50,
+            backgroundColor: '#FFFFFF',
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginBottom: 24,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.06,
+            shadowRadius: 20,
+            elevation: 2,
+          }}>
             <Image
               source={require('../../../assets/images/truepas-logo.png')}
-              style={{ width: 100, height: 100 }}
+              style={{ width: 46, height: 46 }}
               contentFit="contain"
               transition={120}
             />
           </View>
-          <Text accessibilityRole="header" className="mb-3 text-[24px] font-extrabold text-ink">
+          <Text accessibilityRole="header" className="mb-3 text-[23px] font-semibold text-ink">
             Login to <Text className="text-primary">Truepas</Text>
           </Text>
         </View>
@@ -91,7 +104,7 @@ export default function LoginScreen() {
                     accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
                     onPress={() => setShowPassword((v) => !v)}
                     className="h-9 w-9 items-center justify-center">
-                    <Icon name={showPassword ? 'eye' : 'eyeClosed'} size={20} color="#999" />
+                    <Icon name={showPassword ? 'eyeClosed' : 'eye'} size={20} color="#999" />
                   </Pressable>
                 }
               />

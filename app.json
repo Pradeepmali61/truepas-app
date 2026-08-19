@@ -43,8 +43,9 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "870323ad-497c-41f4-9d10-15ab41bd6611"
+        "projectId": "88e77b4a-dd32-4158-af1e-cf218d2edbbd"
       }
-    }
+    },
+    "owner": "pradeepmali"
   }
 }
