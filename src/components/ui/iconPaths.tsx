@@ -235,10 +235,18 @@ export const selfie: IconRenderer = (c) => (
   </>
 );
 
-export const phone: IconRenderer = (c) => (
+export const smartphone: IconRenderer = (c) => (
   <>
-    <Rect x="7" y="2" width="10" height="20" rx="2" stroke={c} strokeWidth={2} />
-    {P("M11 6H13", c)}{P("M11 18H13", c)}
+    <Rect x="5" y="2" width="14" height="20" rx="2" ry="2" stroke={c} strokeWidth={2} />
+    <Path d="M12 18h.01" stroke={c} strokeWidth={2} strokeLinecap="round" />
+  </>
+);
+
+export const more: IconRenderer = (c) => (
+  <>
+    <Circle cx="12" cy="12" r="1" fill={c} />
+    <Circle cx="12" cy="5" r="1" fill={c} />
+    <Circle cx="12" cy="19" r="1" fill={c} />
   </>
 );
 

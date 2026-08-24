@@ -1,112 +1,252 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
+import { useCallback, useRef, useState } from 'react';
+import {
+  Dimensions,
+  FlatList,
+  Image,
+  ImageSourcePropType,
+  ListRenderItemInfo,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Icon, IconName } from '@/components/ui/Icon';
 import { Colors, Gradients } from '@/constants/theme';
 
-interface Slide {
-  icon: IconName;
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const CARD_HEIGHT = SCREEN_HEIGHT * 0.42;
+const IMAGE_OVERLAP = 74;
+
+type Slide = {
+  id: string;
   title: string;
-  desc: string;
-  cta: string;
-}
+  description: string;
+  image: ImageSourcePropType;
+};
 
 const SLIDES: Slide[] = [
   {
-    icon: 'scanFace',
+    id: 'identity',
     title: 'Your Face is\nYour Identity.',
-    desc: 'Enroll once with your face and government ID — securely verified, always trusted.',
-    cta: 'Next',
+    description:
+      'Enroll once with your face and government ID — securely verified, always trusted.',
+    image: require('@/assets/onboarding/1.png'),
   },
   {
-    icon: 'lock',
+    id: 'verified',
     title: 'Verified Once,\nTrusted Everywhere.',
-    desc: 'Your face and document are matched and stored securely — no repeat KYC.',
-    cta: 'Next',
+    description:
+      'Your face and document are matched and stored securely — no repeat KYC.',
+    image: require('@/assets/onboarding/2.png'),
   },
   {
-    icon: 'family',
+    id: 'family',
     title: 'Protect Your\nWhole Family.',
-    desc: 'Add and verify identities for dependents — all managed from one account.',
-    cta: 'Get Started',
+    description:
+      'Add and verify identities for dependents — all managed from one account.',
+    image: require('@/assets/onboarding/3.png'),
   },
 ];
 
-/** Welcome carousel — pixel-match of the mockup welcome slides 1–3. */
 export default function WelcomeScreen() {
   const router = useRouter();
-  const [index, setIndex] = useState(0);
-  const slide = SLIDES[index];
-  const isLast = index === SLIDES.length - 1;
+  const listRef = useRef<FlatList<Slide>>(null);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const insets = useSafeAreaInsets();
 
-  const advance = () => {
-    if (isLast) {
-      router.push('/(auth)/login');
-    } else {
-      setIndex((i) => i + 1);
+  const handleFinish = useCallback(() => {
+    router.push('/(auth)/login');
+  }, [router]);
+
+  const handleNext = useCallback(() => {
+    if (activeIndex === SLIDES.length - 1) {
+      handleFinish();
+      return;
     }
-  };
+    listRef.current?.scrollToIndex({ index: activeIndex + 1, animated: true });
+  }, [activeIndex, handleFinish]);
+
+  const handleMomentumEnd = useCallback(
+    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+      setActiveIndex(Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH));
+    },
+    [],
+  );
+
+  const renderItem = useCallback(
+    ({ item }: ListRenderItemInfo<Slide>) => (
+      <View style={styles.slide}>
+        <View
+          style={[
+            styles.imageArea,
+            { height: SCREEN_HEIGHT - CARD_HEIGHT + IMAGE_OVERLAP },
+          ]}>
+          <Image source={item.image} style={styles.image} resizeMode="cover" />
+        </View>
+
+        <LinearGradient
+          colors={Gradients.welcome}
+          locations={[0, 0.36, 1]}
+          start={{ x: 0.5, y: 0 }}
+          end={{ x: 0.5, y: 1 }}
+          style={[styles.bottomCard, { marginTop: -IMAGE_OVERLAP }]}>
+          <Text style={styles.title}>{item.title}</Text>
+          <Text style={styles.description}>{item.description}</Text>
+
+          <View style={styles.dotsRow}>
+            {SLIDES.map((s, i) => (
+              <View
+                key={s.id}
+                style={[
+                  styles.dot,
+                  i === activeIndex ? styles.dotActive : styles.dotInactive,
+                ]}
+              />
+            ))}
+          </View>
+
+          <TouchableOpacity
+            onPress={handleNext}
+            activeOpacity={0.88}
+            style={styles.ctaButton}
+            accessibilityRole="button"
+            accessibilityLabel={
+              activeIndex === SLIDES.length - 1 ? 'Get Started' : 'Next'
+            }>
+            <Text style={styles.ctaText}>
+              {activeIndex === SLIDES.length - 1 ? 'Get Started' : 'Next'}
+            </Text>
+          </TouchableOpacity>
+        </LinearGradient>
+      </View>
+    ),
+    [activeIndex, handleNext],
+  );
 
   return (
-    <SafeAreaView className="flex-1" edges={['top']}>
-      <LinearGradient
-        colors={['#ffffff', '#93c5fd']}
-        style={StyleSheet.absoluteFill}
+    <LinearGradient
+      colors={['#F0F4FF', '#D8E6FF']}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 0, y: 1 }}
+      style={styles.container}>
+      <StatusBar style="dark" />
+
+      <View style={[styles.skipWrapper, { top: insets.top + 8 }]}>
+        <TouchableOpacity
+          onPress={handleFinish}
+          activeOpacity={0.7}
+          hitSlop={12}
+          accessibilityRole="button"
+          accessibilityLabel="Skip introduction">
+          <Text style={styles.skipText}>Skip</Text>
+        </TouchableOpacity>
+      </View>
+
+      <FlatList
+        ref={listRef}
+        data={SLIDES}
+        keyExtractor={(item) => item.id}
+        renderItem={renderItem}
+        horizontal
+        pagingEnabled
+        bounces={false}
+        showsHorizontalScrollIndicator={false}
+        scrollEventThrottle={16}
+        onMomentumScrollEnd={handleMomentumEnd}
+        style={styles.flatList}
       />
-      <View className="absolute right-5 top-14 z-30">
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Skip introduction"
-          onPress={() => router.push('/(auth)/login')}>
-          <Text className="text-[15px] font-bold underline" style={{ color: 'rgba(39,39,214,0.75)' }}>
-            Skip
-          </Text>
-        </Pressable>
-      </View>
 
-      <View className="flex-1 items-center justify-center">
-        <Icon name={slide.icon} size={80} color={Colors.primary} />
-      </View>
-
-      <LinearGradient
-        colors={Gradients.welcome}
-        locations={[0, 0.36, 1]}
-        className="z-10 -mt-8"
-        style={{ borderTopLeftRadius: 32, borderTopRightRadius: 32, paddingHorizontal: 28, paddingTop: 32, paddingBottom: 24 }}>
-        <Text
-          accessibilityRole="header"
-          className="mb-3 text-center text-[38px] font-medium leading-[50px] text-white">
-          {slide.title}
-        </Text>
-        <Text className="mb-5 text-center text-[18px] leading-[23px]" style={{ color: 'rgba(255,255,255,0.78)' }}>
-          {slide.desc}
-        </Text>
-        <View className="mb-5 flex-row items-center justify-center gap-2">
-          {SLIDES.map((_, i) => (
-            <View
-              key={i}
-              className="h-1 rounded-full"
-              style={{
-                width: i === index ? 32 : 22,
-                backgroundColor: i === index ? '#ffffff' : 'rgba(255,255,255,0.35)',
-              }}
-            />
-          ))}
-        </View>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={slide.cta}
-          onPress={advance}
-          className="h-[58px] w-full items-center justify-center rounded-btn bg-white shadow-lg active:opacity-90">
-          <Text allowFontScaling={false} className="text-[17px] font-extrabold tracking-[0.2px] text-primary">
-            {slide.cta}
-          </Text>
-        </Pressable>
-      </LinearGradient>
-      <View className="h-5 bg-primary-dark" />
-    </SafeAreaView>
+      <View
+        style={[
+          styles.bottomBar,
+          { height: insets.bottom > 0 ? insets.bottom : 20 },
+        ]}
+      />
+    </LinearGradient>
   );
 }
+
+const styles = StyleSheet.create({
+  container: { flex: 1 },
+  skipWrapper: { position: 'absolute', right: 20, zIndex: 30 },
+  skipText: {
+    color: 'rgba(39, 39, 214, 0.75)',
+    fontSize: 15,
+    fontWeight: '700',
+    textDecorationLine: 'underline',
+  },
+  flatList: { flex: 1 },
+  slide: {
+    width: SCREEN_WIDTH,
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  imageArea: {
+    width: '100%',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+  },
+  image: { width: '100%', height: '100%' },
+  bottomCard: {
+    height: CARD_HEIGHT,
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    paddingHorizontal: 28,
+    paddingTop: 32,
+    paddingBottom: 24,
+    alignItems: 'center',
+  },
+  title: {
+    color: '#FFFFFF',
+    fontSize: 38,
+    fontWeight: '500',
+    textAlign: 'center',
+    lineHeight: 50,
+    marginBottom: 12,
+  },
+  description: {
+    color: 'rgba(255, 255, 255, 0.78)',
+    fontSize: 18,
+    lineHeight: 23,
+    fontWeight: '400',
+    textAlign: 'center',
+    flex: 1,
+  },
+  dotsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 20,
+  },
+  dot: { height: 4, borderRadius: 99 },
+  dotActive: { width: 32, backgroundColor: '#FFFFFF' },
+  dotInactive: { width: 22, backgroundColor: 'rgba(255, 255, 255, 0.35)' },
+  ctaButton: {
+    width: '100%',
+    height: 58,
+    borderRadius: 29,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.14,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 5,
+  },
+  ctaText: {
+    color: '#5B1FE0',
+    fontSize: 17,
+    fontWeight: '800',
+    letterSpacing: 0.2,
+  },
+  bottomBar: { backgroundColor: Colors.primaryDark },
+});

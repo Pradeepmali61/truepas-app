@@ -5,17 +5,17 @@ interface AvatarProps {
   size?: number;
 }
 
-/** Avatar matching `.avatar` (48px, radius 8, gray bg). */
+/** Avatar — rounded square with initials, gray background. */
 export function Avatar({ initials, size = 48 }: AvatarProps) {
   return (
     <View
       accessibilityLabel={`Avatar ${initials}`}
-      className="items-center justify-center rounded-[8px] bg-faint"
-      style={{ width: size, height: size }}>
+      className="items-center justify-center bg-faint"
+      style={{ width: size, height: size, borderRadius: 16 }}>
       <Text
         allowFontScaling={false}
-        className="font-bold text-white"
-        style={{ fontSize: size / 3 }}>
+        className="text-white"
+        style={{ fontSize: 28, fontWeight: '700' }}>
         {initials}
       </Text>
     </View>

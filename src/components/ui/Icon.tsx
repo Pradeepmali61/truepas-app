@@ -42,6 +42,7 @@ export type IconName =
   | 'birthCertificate'
   | 'usVisa'
   | 'selfie'
+  | 'smartphone'
   | 'phone'
   | 'email'
   | 'eye'
@@ -56,7 +57,8 @@ export type IconName =
   | 'location'
   | 'otpcode'
   | 'inbox'
-  | 'scanFace';
+  | 'scanFace'
+  | 'more';
 
 const IMAGE_SOURCES: Record<string, ImageSourcePropType> = {};
 

@@ -9,7 +9,7 @@ export default function VerifyPhoneScreen() {
       title="Verify Phone"
       heading="Enter verification code"
       sentTo="Sent to +1 (555) 123-4567"
-      icon="otpcode"
+      icon="smartphone"
       progress={25}
       onVerified={() => router.push('/(auth)/verify-email')}
     />

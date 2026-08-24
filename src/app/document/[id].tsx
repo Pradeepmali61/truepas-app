@@ -5,6 +5,7 @@ import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { api } from '@/api';
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
+import { ScreenHeader } from '@/components/layout/ScreenHeader';
 import { Icon, Skeleton } from '@/components/ui';
 import { Colors, Elevation } from '@/constants/theme';
 import { useDocument } from '@/features/documents/hooks';
