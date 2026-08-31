@@ -3,17 +3,17 @@ import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useRef, useState } from 'react';
 import {
-  Dimensions,
-  FlatList,
-  Image,
-  ImageSourcePropType,
-  ListRenderItemInfo,
-  NativeScrollEvent,
-  NativeSyntheticEvent,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    Dimensions,
+    FlatList,
+    Image,
+    ImageSourcePropType,
+    ListRenderItemInfo,
+    NativeScrollEvent,
+    NativeSyntheticEvent,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -131,7 +131,7 @@ export default function WelcomeScreen() {
 
   return (
     <LinearGradient
-      colors={['#F0F4FF', '#D8E6FF']}
+      colors={['#e6f8ff', '#cef0fe']}
       start={{ x: 0, y: 0 }}
       end={{ x: 0, y: 1 }}
       style={styles.container}>
@@ -176,7 +176,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   skipWrapper: { position: 'absolute', right: 20, zIndex: 30 },
   skipText: {
-    color: 'rgba(39, 39, 214, 0.75)',
+    color: 'rgba(8, 182, 252, 0.85)',
     fontSize: 15,
     fontWeight: '700',
     textDecorationLine: 'underline',
@@ -243,7 +243,7 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   ctaText: {
-    color: '#5B1FE0',
+    color: '#08B6FC',
     fontSize: 17,
     fontWeight: '800',
     letterSpacing: 0.2,

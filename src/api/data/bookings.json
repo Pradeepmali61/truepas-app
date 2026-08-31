@@ -9,7 +9,8 @@
     "checkOut": "Jul 24",
     "status": "completed",
     "guests": 2,
-    "amount": 14200
+    "amount": 14200,
+    "checkedInMembers": ["Sarah Johnson", "Max Kim"]
   },
   {
     "id": "b2",
@@ -21,6 +22,85 @@
     "checkOut": "Jun 04",
     "status": "completed",
     "guests": 1,
-    "amount": 5400
+    "amount": 5400,
+    "checkedInMembers": ["Sarah Johnson"]
+  },
+  {
+    "id": "b3",
+    "venue": "Disney Cruise",
+    "location": "Miami, USA",
+    "type": "Cruise",
+    "image": "disney cruise",
+    "checkIn": "May 12",
+    "checkOut": "May 18",
+    "status": "completed",
+    "guests": 4,
+    "amount": 86000,
+    "checkedInMembers": ["Sarah Johnson", "Max Kim", "Emma Johnson", "Liam Johnson"]
+  },
+  {
+    "id": "b4",
+    "venue": "Taj Palace Hotel",
+    "location": "New Delhi, India",
+    "type": "Hotel",
+    "image": "hayat hotel",
+    "checkIn": "Apr 15",
+    "checkOut": "Apr 18",
+    "status": "completed",
+    "guests": 3,
+    "amount": 28500,
+    "checkedInMembers": ["Sarah Johnson", "Max Kim", "Emma Johnson"]
+  },
+  {
+    "id": "b5",
+    "venue": "Universal Studios",
+    "location": "Orlando, USA",
+    "type": "Theme Park",
+    "image": "theme park",
+    "checkIn": "Mar 08",
+    "checkOut": "Mar 10",
+    "status": "completed",
+    "guests": 2,
+    "amount": 12400,
+    "checkedInMembers": ["Sarah Johnson", "Liam Johnson"]
+  },
+  {
+    "id": "b6",
+    "venue": "Royal Caribbean Cruise",
+    "location": "Bahamas",
+    "type": "Cruise",
+    "image": "disney cruise",
+    "checkIn": "Feb 20",
+    "checkOut": "Feb 27",
+    "status": "failed",
+    "guests": 4,
+    "amount": 95000,
+    "checkedInMembers": ["Sarah Johnson", "Max Kim"]
+  },
+  {
+    "id": "b7",
+    "venue": "Marriott Resort",
+    "location": "Bali, Indonesia",
+    "type": "Hotel",
+    "image": "hayat hotel",
+    "checkIn": "Jan 05",
+    "checkOut": "Jan 12",
+    "status": "completed",
+    "guests": 4,
+    "amount": 52000,
+    "checkedInMembers": ["Sarah Johnson", "Max Kim", "Emma Johnson", "Liam Johnson"]
+  },
+  {
+    "id": "b8",
+    "venue": "Legoland",
+    "location": "Dubai, UAE",
+    "type": "Theme Park",
+    "image": "theme park",
+    "checkIn": "Dec 18",
+    "checkOut": "Dec 20",
+    "status": "completed",
+    "guests": 3,
+    "amount": 8800,
+    "checkedInMembers": ["Sarah Johnson", "Emma Johnson", "Liam Johnson"]
   }
 ]

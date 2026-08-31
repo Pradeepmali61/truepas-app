@@ -35,33 +35,18 @@ export default function LoginScreen() {
   return (
     <ScreenContainer scroll={false}>
       <LinearGradient
-        colors={['#ffffff', '#93c5fd']}
+        colors={['#ffffff', '#84dbfe']}
         style={StyleSheet.absoluteFill}
       />
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         <View className="flex-1 px-6 pb-6">
         <View className="mb-10 mt-[52px] items-center">
-          <View style={{
-            width: 100,
-            height: 100,
-            borderRadius: 50,
-            backgroundColor: '#FFFFFF',
-            alignItems: 'center',
-            justifyContent: 'center',
-            marginBottom: 24,
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.06,
-            shadowRadius: 20,
-            elevation: 2,
-          }}>
-            <Image
-              source={require('../../../assets/images/truepas-logo.png')}
-              style={{ width: 46, height: 46 }}
-              contentFit="contain"
-              transition={120}
-            />
-          </View>
+          <Image
+            source={require('../../../assets/images/truepas-logo2.png')}
+            style={{ width: 80, height: 80, marginBottom: 24 }}
+            contentFit="contain"
+            transition={120}
+          />
           <Text accessibilityRole="header" className="mb-3 text-[23px] font-semibold text-ink">
             Login to <Text className="text-primary">Truepas</Text>
           </Text>

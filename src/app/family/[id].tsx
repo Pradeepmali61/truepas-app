@@ -125,9 +125,9 @@ export default function FamilyMemberScreen() {
       </Modal>
       <View className="items-center pt-3 pb-2">
         <LinearGradient
-          colors={[gradStart, gradEnd]}
+          colors={['#08B6FC', '#84dbfe']}
           style={{ alignItems: 'center', justifyContent: 'center', width: 64, height: 64, borderRadius: 32 }}>
-          <Text style={{ fontSize: 24, fontWeight: '700', color: '#3730A3' }}>
+          <Text style={{ fontSize: 24, fontWeight: '700', color: '#FFFFFF' }}>
             {initials}
           </Text>
         </LinearGradient>

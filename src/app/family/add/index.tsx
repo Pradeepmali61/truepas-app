@@ -73,7 +73,6 @@ export default function AddFamilyScreen() {
                 value={value}
                 onChangeText={onChange}
                 error={fieldState.error?.message}
-                gradient
               />
             )}
           />
@@ -88,7 +87,6 @@ export default function AddFamilyScreen() {
                 value={value}
                 onChangeText={onChange}
                 error={fieldState.error?.message}
-                gradient
               />
             )}
           />

@@ -7,11 +7,13 @@ import { Colors } from '@/constants/theme';
 interface ScreenHeaderProps {
   title: string;
   rightAction?: React.ReactNode;
+  light?: boolean;
 }
 
 /** Consistent secondary screen header: ← centered title (optional right action) */
-export function ScreenHeader({ title, rightAction }: ScreenHeaderProps) {
+export function ScreenHeader({ title, rightAction, light = false }: ScreenHeaderProps) {
   const router = useRouter();
+  const color = light ? '#FFFFFF' : Colors.ink;
   return (
     <View style={{
       height: 64,
@@ -26,15 +28,15 @@ export function ScreenHeader({ title, rightAction }: ScreenHeaderProps) {
         style={{
           position: 'absolute',
           left: 16,
-          width: 48,
-          height: 48,
+          width: 44,
+          height: 44,
           alignItems: 'center',
           justifyContent: 'center',
         }}>
-        <Icon name="back" size={24} color={Colors.ink} />
+        <Icon name="back" size={22} color={color} />
       </Pressable>
       <View style={{ flex: 1, alignItems: 'center' }}>
-        <Text style={{ fontSize: 20, fontWeight: '700', color: Colors.ink }}>
+        <Text style={{ fontSize: 20, fontWeight: '700', color }}>
           {title}
         </Text>
       </View>

@@ -1,67 +1,76 @@
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import * as Haptics from 'expo-haptics';
 import { Redirect, Tabs } from 'expo-router';
-import { useEffect } from 'react';
-import { LayoutChangeEvent, Pressable, View } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
+import { useEffect, useRef, useState } from 'react';
+import { Animated, LayoutChangeEvent, Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/ui/Icon';
 import { Colors } from '@/constants/theme';
 import { useAppSelector } from '@/store';
 
-const INDICATOR_WIDTH = 24;
+const INDICATOR_WIDTH = 32;
 const INDICATOR_HEIGHT = 4;
 
 function TabItem({ isFocused, options, label, onPress }: { isFocused: boolean; options: any; label: string; onPress: () => void }) {
-  const scale = useSharedValue(1);
-  const color = useSharedValue(Colors.textSecondary);
+  const scaleAnim = useRef(new Animated.Value(isFocused ? 1.15 : 1)).current;
+  const translateYAnim = useRef(new Animated.Value(isFocused ? -2 : 0)).current;
 
   useEffect(() => {
-    scale.value = withSpring(isFocused ? 1.1 : 1, { stiffness: 260, damping: 20 });
-    color.value = isFocused ? Colors.primary : Colors.textSecondary;
-  }, [isFocused, scale, color]);
-
-  const iconStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
-
-  const labelStyle = useAnimatedStyle(() => ({
-    color: color.value,
-  }));
+    Animated.parallel([
+      Animated.spring(scaleAnim, {
+        toValue: isFocused ? 1.15 : 1,
+        useNativeDriver: true,
+        tension: 300,
+        friction: 10,
+      }),
+      Animated.spring(translateYAnim, {
+        toValue: isFocused ? -2 : 0,
+        useNativeDriver: true,
+        tension: 300,
+        friction: 10,
+      }),
+    ]).start();
+  }, [isFocused]);
 
   const icon = options.tabBarIcon
     ? options.tabBarIcon({ focused: isFocused, color: isFocused ? Colors.primary : Colors.textSecondary, size: 24 })
     : null;
 
+  const handlePress = () => {
+    Animated.sequence([
+      Animated.timing(scaleAnim, { toValue: 0.8, duration: 80, useNativeDriver: true }),
+      Animated.spring(scaleAnim, { toValue: isFocused ? 1.15 : 1, useNativeDriver: true, tension: 300, friction: 8 }),
+    ]).start();
+    onPress();
+  };
+
   return (
-    <Pressable onPress={onPress} className="flex-1 items-center justify-center" style={{ paddingTop: 8, paddingBottom: 2 }}>
-      <Animated.View style={iconStyle}>{icon}</Animated.View>
-      <Animated.Text style={[{ fontSize: 10, marginTop: 4, fontWeight: isFocused ? '600' : '500' }, labelStyle]}>
+    <Pressable onPress={handlePress} className="flex-1 items-center justify-center" style={{ paddingTop: 8, paddingBottom: 2 }}>
+      <Animated.View style={{ transform: [{ scale: scaleAnim }, { translateY: translateYAnim }] }}>
+        {icon}
+      </Animated.View>
+      <Text style={{ fontSize: 10, marginTop: 4, fontWeight: isFocused ? '600' : '500', color: isFocused ? Colors.primary : Colors.textSecondary }}>
         {label}
-      </Animated.Text>
+      </Text>
     </Pressable>
   );
 }
 
 function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
-  const tabWidth = useSharedValue(0);
-  const activeIndex = useSharedValue(state.index);
-
-  useEffect(() => {
-    activeIndex.value = state.index;
-  }, [state.index, activeIndex]);
+  const [tabWidth, setTabWidth] = useState(0);
+  const activeIndex = state.index;
 
   const onLayout = (e: LayoutChangeEvent) => {
     const { width } = e.nativeEvent.layout;
-    tabWidth.value = width / state.routes.length;
+    setTabWidth(width / state.routes.length);
   };
 
-  const indicatorStyle = useAnimatedStyle(() => ({
-    left: (tabWidth.value - INDICATOR_WIDTH) / 2,
-    transform: [{ translateX: withSpring(activeIndex.value * tabWidth.value, { stiffness: 260, damping: 24 }) }],
-  }));
+  const indicatorStyle = {
+    left: (tabWidth - INDICATOR_WIDTH) / 2,
+    transform: [{ translateX: activeIndex * tabWidth }],
+  };
 
   return (
     <View
@@ -78,7 +87,7 @@ function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
         shadowRadius: 8,
         elevation: 8,
       }}>
-      <Animated.View
+      <View
         style={[
           {
             position: 'absolute',

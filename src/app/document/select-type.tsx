@@ -23,7 +23,7 @@ const DOC_ACCENT: Record<DocumentType, { bg: string; icon: string }> = {
 const OPTIONS: DocOption[] = [
   { id: 'passport', label: 'Passport', icon: 'passport' },
   { id: 'drivingLicense', label: "Driver's License", icon: 'drivingLicense' },
-  { id: 'greenCard', label: 'U.S. Green Card', icon: 'greenCard' },
+  { id: 'greenCard', label: 'US Green Card', icon: 'greenCard' },
   { id: 'birthCertificate', label: 'Birth Certificate', icon: 'birthCertificate' },
   { id: 'usVisa', label: 'U.S. Visa', icon: 'usVisa' },
 ];

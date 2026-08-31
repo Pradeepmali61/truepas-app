@@ -3,11 +3,11 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { memo, useMemo, useState } from 'react';
-import { FlatList, Platform, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BottomSheet, EmptyState, ErrorState, Icon, Skeleton } from '@/components/ui';
-import { Colors } from '@/constants/theme';
+import { Colors, Elevation } from '@/constants/theme';
 import { useBookings } from '@/features/history/hooks';
 import type { Booking } from '@/types/domain';
 
@@ -15,12 +15,14 @@ type BookingTab = 'upcoming' | 'past';
 type SortOption = 'recent' | 'oldest';
 
 const BOOKING_IMAGES: Record<string, ReturnType<typeof require>> = {
-  'hayat hotel': require('../../../assets/images/hayat hotel.png'),
-  'theme park': require('../../../assets/images/theme park.png'),
+  'hayat hotel': require('../../../assets/images/hotel-simple.png'),
+  'theme park': require('../../../assets/images/themepark-simple.png'),
+  'disney cruise': require('../../../assets/images/cruise-simple.png'),
 };
 
 const BookingCard = memo(function BookingCard({ item, onPress }: { item: Booking; onPress: () => void }) {
   const imageSource = BOOKING_IMAGES[item.image];
+  const isCompleted = item.status === 'completed';
   return (
     <Pressable
       onPress={onPress}
@@ -35,47 +37,51 @@ const BookingCard = memo(function BookingCard({ item, onPress }: { item: Booking
         paddingHorizontal: 16,
         paddingVertical: 14,
         marginBottom: 10,
-        borderWidth: 1,
-        borderColor: '#E5E7EB',
+        ...Elevation.small,
       }}>
       {imageSource ? (
-        <View style={{ width: 72, height: 72, borderRadius: 14, overflow: 'hidden' }}>
-          <Image source={imageSource} style={{ width: 72, height: 72 }} contentFit="cover" transition={200} cachePolicy="memory-disk" />
+        <View style={{ width: 64, height: 64, borderRadius: 18, overflow: 'hidden' }}>
+          <Image source={imageSource} style={{ width: 64, height: 64 }} contentFit={item.image === 'disney cruise' ? 'contain' : 'cover'} transition={200} cachePolicy="memory-disk" />
         </View>
       ) : (
-        <View style={{ width: 72, height: 72, borderRadius: 14, backgroundColor: '#E2E8F0', alignItems: 'center', justifyContent: 'center' }}>
+        <View style={{ width: 64, height: 64, borderRadius: 18, backgroundColor: '#E2E8F0', alignItems: 'center', justifyContent: 'center' }}>
           <Icon name="hotel" size={28} color={Colors.ink} />
         </View>
       )}
       <View style={{ flex: 1, minWidth: 0 }}>
-        <Text style={{ fontSize: 18, fontWeight: '600', color: '#111827' }} numberOfLines={1}>
+        <Text style={{ fontSize: 16, fontWeight: '700', color: '#111827' }} numberOfLines={1}>
           {item.venue}
         </Text>
-        <Text style={{ fontSize: 14, fontWeight: '400', color: '#6B7280', marginTop: 2 }} numberOfLines={1}>
+        <Text style={{ fontSize: 12, fontWeight: '400', color: '#6B7280', marginTop: 2 }} numberOfLines={1}>
           {item.location} · {item.checkIn}–{item.checkOut}
         </Text>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 6 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-            <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: item.status === 'completed' ? '#10B981' : '#EF4444' }} />
-            <Text style={{ fontSize: 13, fontWeight: '400', color: '#6B7280' }}>
-              {item.status === 'completed' ? 'Completed' : 'Failed'}
-            </Text>
-          </View>
-        </View>
       </View>
-      <Icon name="chevron" size={20} color={Colors.textFaint} />
+      <View style={{ alignItems: 'flex-end', gap: 6 }}>
+        <View style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 3,
+          backgroundColor: isCompleted ? '#ECFDF5' : '#FEF2F2',
+          borderRadius: 8,
+          paddingHorizontal: 7,
+          paddingVertical: 3,
+        }}>
+          <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: isCompleted ? '#059669' : '#EF4444' }} />
+          <Text style={{ fontSize: 10, fontWeight: '700', color: isCompleted ? '#059669' : '#EF4444' }}>{isCompleted ? 'Completed' : 'Failed'}</Text>
+        </View>
+        <Icon name="chevron" size={16} color={Colors.textFaint} />
+      </View>
     </Pressable>
   );
 });
 
 function BookingSkeleton() {
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: '#FFFFFF', borderRadius: 16, paddingHorizontal: 16, paddingVertical: 14, marginBottom: 10, borderWidth: 1, borderColor: '#E5E7EB' }}>
-      <Skeleton width={72} height={72} radius={14} />
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: '#FFFFFF', borderRadius: 16, paddingHorizontal: 16, paddingVertical: 14, marginBottom: 10, ...Elevation.small }}>
+      <Skeleton width={64} height={64} radius={18} />
       <View style={{ flex: 1, gap: 6 }}>
-        <Skeleton width={160} height={18} radius={4} />
-        <Skeleton width={180} height={14} radius={4} />
-        <Skeleton width={80} height={13} radius={4} />
+        <Skeleton width={160} height={16} radius={6} />
+        <Skeleton width={180} height={12} radius={4} />
       </View>
     </View>
   );
@@ -116,29 +122,29 @@ export default function HistoryScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1" edges={['top']} style={Platform.OS === 'web' ? ({ backgroundImage: 'linear-gradient(180deg, #F8FBFF, #EAF4FF)' } as any) : undefined}>
-      {Platform.OS !== 'web' && (
+    <SafeAreaView className="flex-1" edges={['top']} style={{ backgroundColor: '#F8FBFF' }}>
+      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 200 }}>
         <LinearGradient
-          colors={['#F8FBFF', '#EAF4FF']}
-          style={StyleSheet.absoluteFill}
+          colors={['#39c5fd', '#9ce2fe', '#f5fcff']}
+          style={{ flex: 1 }}
         />
-      )}
+      </View>
       <View className="flex-1">
       <View style={{ paddingHorizontal: 32, paddingTop: 12, paddingBottom: 24 }}>
         <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' }}>
           <View>
-            <Text accessibilityRole="header" style={{ fontSize: 28, fontWeight: '700', color: Colors.ink }}>
+            <Text accessibilityRole="header" style={{ fontSize: 28, fontWeight: '700', color: '#000000' }}>
               My Bookings
             </Text>
-            <Text style={{ fontSize: 14, color: Colors.textMuted, marginTop: 2 }}>
+            <Text style={{ fontSize: 14, color: '#374151', marginTop: 2 }}>
               View your check-in history
             </Text>
           </View>
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Search bookings"
-            style={{ alignItems: 'center', justifyContent: 'center', width: 44, height: 44, borderRadius: 22, backgroundColor: '#EEF2FF' }}>
-            <Icon name="search" size={20} color={Colors.ink} />
+            style={{ alignItems: 'center', justifyContent: 'center', width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.2)' }}>
+            <Icon name="search" size={20} color="#FFFFFF" />
           </Pressable>
         </View>
       </View>

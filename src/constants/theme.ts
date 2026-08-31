@@ -6,12 +6,12 @@
 import { Platform } from 'react-native';
 
 export const Colors = {
-  primary: '#2727d6',
-  primaryPressed: '#1b1b9e',
-  primaryDark: '#1b1b9e',
-  primaryLight: '#4e9af1',
-  surface: '#e8f0fe',
-  surfaceAlt: '#d6e3f8',
+  primary: '#08B6FC',
+  primaryPressed: '#0692ca',
+  primaryDark: '#034965',
+  primaryLight: '#84dbfe',
+  surface: '#e6f8ff',
+  surfaceAlt: '#cef0fe',
   surfaceElevated: '#ffffff',
   bgWhite: '#ffffff',
   bgYellow: '#fff9e6',
@@ -45,10 +45,10 @@ export const Colors = {
 } as const;
 
 export const Gradients = {
-  brand: ['#2727d6', '#4e9af1'] as const,
-  welcome: ['#4e9af1', '#2727d6', '#1b1b9e'] as const,
-  identityCard: ['#1b1b9e', '#1b1b9e'] as const,
-  historyThumb: ['#4e9af1', '#1b1b9e'] as const,
+  brand: ['#08B6FC', '#84dbfe'] as const,
+  welcome: ['#84dbfe', '#08B6FC', '#0692ca'] as const,
+  identityCard: ['#0692ca', '#0692ca'] as const,
+  historyThumb: ['#84dbfe', '#0692ca'] as const,
 };
 
 export const Radius = {

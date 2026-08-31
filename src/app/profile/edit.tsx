@@ -30,7 +30,7 @@ export default function EditProfileScreen() {
           <View>
             <Avatar initials={initials} size={80} />
             <View className="absolute -bottom-[2px] -right-[2px] h-7 w-7 items-center justify-center rounded-full border-2 border-primary-light bg-primary">
-              <Icon name="camera" size={12} color="#4e9af1" />
+              <Icon name="camera" size={12} color="#08B6FC" />
             </View>
           </View>
         </View>

@@ -66,6 +66,7 @@ export interface Booking {
   status: 'completed' | 'failed';
   guests: number;
   amount: number;
+  checkedInMembers?: string[];
 }
 
 export interface IssuedDoc {

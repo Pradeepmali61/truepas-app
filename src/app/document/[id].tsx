@@ -1,7 +1,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { api } from '@/api';
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
@@ -25,19 +25,6 @@ function getTitle(doc: CombinedDoc): string {
   return isIdentityDocument(doc) ? doc.label : doc.name;
 }
 
-function getSubtitle(doc: CombinedDoc): string {
-  return isIdentityDocument(doc) ? doc.number : doc.issuer;
-}
-
-const DOC_ACCENT: Record<string, { bg: string; icon: string }> = {
-  passport:         { bg: '#EEF2FF', icon: '#4F46E5' },
-  drivingLicense:   { bg: '#EFF6FF', icon: '#2563EB' },
-  greenCard:        { bg: '#ECFDF5', icon: '#059669' },
-  birthCertificate: { bg: '#FFF7ED', icon: '#EA580C' },
-  usVisa:           { bg: '#F5F3FF', icon: '#7C3AED' },
-  idCard:           { bg: '#EEF2FF', icon: '#7C3AED' },
-};
-
 function formatDate(dateStr: string): string {
   const d = new Date(dateStr);
   if (isNaN(d.getTime())) return dateStr;
@@ -45,7 +32,6 @@ function formatDate(dateStr: string): string {
 }
 
 export default function DocumentDetailScreen() {
-  const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data: identityDoc, isPending } = useDocument(id ?? '');
   const [issuedDoc, setIssuedDoc] = useState<IssuedDoc | null>(null);
@@ -85,7 +71,6 @@ export default function DocumentDetailScreen() {
   const iconName = getIcon(doc);
   const title = getTitle(doc);
   const status = isIdentityDocument(doc) ? doc.status : doc.status;
-  const accent = DOC_ACCENT[iconName as keyof typeof DOC_ACCENT] ?? { bg: '#EEF2FF', icon: '#4F46E5' };
   const statusLabel = status === 'verified' || status === 'Active' ? 'Valid' : status === 'pending' ? 'Pending' : 'Failed';
   const statusColor = status === 'verified' || status === 'Active' ? '#059669' : status === 'pending' ? '#D97706' : '#EF4444';
   const statusBg = status === 'verified' || status === 'Active' ? '#ECFDF5' : status === 'pending' ? '#FFFBEB' : '#FEF2F2';
@@ -109,11 +94,23 @@ export default function DocumentDetailScreen() {
             width: 72,
             height: 72,
             borderRadius: 36,
-            backgroundColor: accent.bg,
+            backgroundColor: '#EEF2FF',
             alignItems: 'center',
             justifyContent: 'center',
           }}>
-            <Icon name={iconName as any} size={34} color={accent.icon} />
+            {iconName === 'drivingLicense' ? (
+              <Image source={require('@/assets/images/car-3d-3.png')} style={{ width: 50, height: 50 }} resizeMode="contain" />
+            ) : iconName === 'passport' ? (
+              <Image source={require('@/assets/images/passport-3d.png')} style={{ width: 50, height: 50 }} resizeMode="contain" />
+            ) : iconName === 'greenCard' ? (
+              <Image source={require('@/assets/images/statue-of-liberty-3d.png')} style={{ width: 50, height: 50 }} resizeMode="contain" />
+            ) : iconName === 'usVisa' ? (
+              <Image source={require('@/assets/images/usa-flag-3d.png')} style={{ width: 50, height: 50 }} resizeMode="contain" />
+            ) : iconName === 'birthCertificate' ? (
+              <Image source={require('@/assets/images/baby-3d.png')} style={{ width: 56, height: 56 }} resizeMode="contain" />
+            ) : (
+              <Icon name={iconName as any} size={34} color="#4F46E5" />
+            )}
           </View>
           <Text style={{ marginTop: 10, fontSize: 22, fontWeight: '700', color: Colors.ink }}>
             {title}

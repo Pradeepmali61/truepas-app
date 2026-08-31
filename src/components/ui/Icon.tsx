@@ -58,6 +58,7 @@ export type IconName =
   | 'otpcode'
   | 'inbox'
   | 'scanFace'
+  | 'user'
   | 'more';
 
 const IMAGE_SOURCES: Record<string, ImageSourcePropType> = {};

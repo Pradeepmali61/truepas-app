@@ -1,7 +1,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { memo, useMemo, useState } from 'react';
-import { FlatList, Platform, Pressable, RefreshControl, StyleSheet, Text, TextInput, View } from 'react-native';
+import { FlatList, Image, Pressable, RefreshControl, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ErrorState, Icon, Skeleton } from '@/components/ui';
@@ -19,6 +19,7 @@ const DOC_ACCENT: Record<string, { bg: string; icon: string }> = {
 
 const DocCard = memo(function DocCard({ doc, onPress }: { doc: IssuedDoc; onPress: () => void }) {
   const accent = DOC_ACCENT[doc.icon] ?? { bg: '#EEF2FF', icon: '#4F46E5' };
+  const isActive = doc.status === 'Active';
   return (
     <Pressable
       onPress={onPress}
@@ -31,29 +32,55 @@ const DocCard = memo(function DocCard({ doc, onPress }: { doc: IssuedDoc; onPres
         backgroundColor: '#FFFFFF',
         borderRadius: 16,
         paddingHorizontal: 16,
-        paddingVertical: 12,
+        paddingVertical: 14,
         marginBottom: 10,
-        borderWidth: 1,
-        borderColor: '#E5E7EB',
-        ...Elevation.none,
+        ...Elevation.small,
       }}>
       <View style={{
         alignItems: 'center',
         justifyContent: 'center',
-        width: 48,
-        height: 48,
-        borderRadius: 24,
+        width: 64,
+        height: 64,
+        borderRadius: 18,
         backgroundColor: accent.bg,
+        borderWidth: 1,
+        borderColor: accent.icon + '20',
       }}>
-        <Icon name={doc.icon} size={24} color={accent.icon} />
+        {doc.icon === 'drivingLicense' ? (
+          <Image source={require('../../../assets/images/car-simple.png')} style={{ width: 48, height: 48 }} resizeMode="contain" />
+        ) : doc.icon === 'passport' ? (
+          <Image source={require('../../../assets/images/passport-simple.png')} style={{ width: 48, height: 48 }} resizeMode="contain" />
+        ) : doc.icon === 'greenCard' ? (
+          <Image source={require('../../../assets/images/liberty-simple.png')} style={{ width: 48, height: 48 }} resizeMode="contain" />
+        ) : doc.icon === 'usVisa' ? (
+          <Image source={require('../../../assets/images/usa-simple.png')} style={{ width: 48, height: 48 }} resizeMode="contain" />
+        ) : doc.icon === 'birthCertificate' ? (
+          <Image source={require('../../../assets/images/baby-simple.png')} style={{ width: 48, height: 48 }} resizeMode="contain" />
+        ) : (
+          <Icon name={doc.icon} size={34} color={accent.icon} />
+        )}
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={{ fontSize: 17, fontWeight: '600', color: '#111827' }}>{doc.name}</Text>
-        <Text style={{ fontSize: 13, color: '#6B7280', marginTop: 2 }} numberOfLines={1}>
+        <Text style={{ fontSize: 16, fontWeight: '700', color: '#111827' }}>{doc.name}</Text>
+        <Text style={{ fontSize: 12, color: '#6B7280', marginTop: 2 }} numberOfLines={1}>
           {doc.issuer}
         </Text>
       </View>
-      <Icon name="chevron" size={18} color={Colors.textFaint} />
+      <View style={{ alignItems: 'flex-end', gap: 6 }}>
+        <View style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 3,
+          backgroundColor: isActive ? '#ECFDF5' : '#FEF2F2',
+          borderRadius: 8,
+          paddingHorizontal: 7,
+          paddingVertical: 3,
+        }}>
+          <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: isActive ? '#059669' : '#EF4444' }} />
+          <Text style={{ fontSize: 10, fontWeight: '700', color: isActive ? '#059669' : '#EF4444' }}>{doc.status}</Text>
+        </View>
+        <Icon name="chevron" size={16} color={Colors.textFaint} />
+      </View>
     </Pressable>
   );
 });
@@ -87,19 +114,19 @@ export default function DocumentsScreen() {
   const isEmpty = !isPending && !isError && (documents?.length ?? 0) === 0;
 
   return (
-    <SafeAreaView className="flex-1" edges={['top']} style={Platform.OS === 'web' ? ({ backgroundImage: 'linear-gradient(180deg, #F8FBFF, #EAF4FF)' } as any) : undefined}>
-      {Platform.OS !== 'web' && (
+    <SafeAreaView className="flex-1" edges={['top']} style={{ backgroundColor: '#F8FBFF' }}>
+      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 240 }}>
         <LinearGradient
-          colors={['#F8FBFF', '#EAF4FF']}
-          style={StyleSheet.absoluteFill}
+          colors={['#39c5fd', '#9ce2fe', '#f5fcff']}
+          style={{ flex: 1 }}
         />
-      )}
+      </View>
       <View style={{ flex: 1 }}>
       <View style={{ paddingHorizontal: 28, paddingTop: 12, paddingBottom: 24 }}>
-        <Text accessibilityRole="header" style={{ fontSize: 28, fontWeight: '700', color: Colors.ink }}>
+        <Text accessibilityRole="header" style={{ fontSize: 28, fontWeight: '700', color: '#000000' }}>
           Documents
         </Text>
-        <Text style={{ fontSize: 14, color: Colors.textMuted, marginTop: 2 }}>
+        <Text style={{ fontSize: 14, color: '#374151', marginTop: 2 }}>
           Your important documents
         </Text>
       </View>
@@ -131,12 +158,14 @@ export default function DocumentsScreen() {
       </View>
 
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, marginBottom: 12 }}>
-        <Text style={{ fontSize: 20, fontWeight: '700', color: Colors.ink }}>My Documents</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <Text style={{ fontSize: 20, fontWeight: '700', color: Colors.ink }}>My Documents</Text>
+        </View>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Verify new document"
           onPress={() => router.push('/document/select-type' as never)}
-          style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: '#3535D8' }}>
+          style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: '#08B6FC', ...Elevation.small }}>
           <Icon name="plus" size={16} color="#FFFFFF" />
         </Pressable>
       </View>

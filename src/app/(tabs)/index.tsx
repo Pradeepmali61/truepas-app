@@ -1,11 +1,12 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
-import { Dimensions, FlatList, Platform, Pressable, RefreshControl, StyleSheet, Text, TextInput, View } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Dimensions, FlatList, Image, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import Animated, { Easing as REasing, useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Icon, ErrorState as ReusableErrorState, Skeleton } from '@/components/ui';
+import { DocIllustration } from '@/components/ui/DocIllustration';
 import { Colors, Elevation } from '@/constants/theme';
 import { useDocuments } from '@/features/documents/hooks';
 import { useAppSelector } from '@/store';
@@ -17,7 +18,7 @@ const cardWidth = Math.round(SCREEN_WIDTH * 0.44);
 const DOC_ACCENT: Record<IdentityDocument['type'], { bg: string; icon: string; label: string; cardTint: string }> = {
   passport:          { bg: '#EEF2FF', icon: '#4F46E5', label: 'PASSPORT',          cardTint: '#FAFAFF' },
   drivingLicense:    { bg: '#EFF6FF', icon: '#2563EB', label: "DRIVER'S LICENSE",  cardTint: '#FAFCFF' },
-  greenCard:         { bg: '#ECFDF5', icon: '#059669', label: 'GREEN CARD',        cardTint: '#FAFFFB' },
+  greenCard:         { bg: '#ECFDF5', icon: '#059669', label: 'US GREEN CARD',   cardTint: '#FAFFFB' },
   birthCertificate:  { bg: '#FFF7ED', icon: '#EA580C', label: 'BIRTH CERTIFICATE', cardTint: '#FFFCF8' },
   usVisa:            { bg: '#F5F3FF', icon: '#7C3AED', label: 'US VISA',          cardTint: '#FBFAFF' },
   idCard:            { bg: '#EEF2FF', icon: '#7C3AED', label: 'ID CARD',          cardTint: '#FAFAFF' },
@@ -62,10 +63,6 @@ function DocCard({ doc, onPress, width }: { doc: IdentityDocument; onPress: () =
     pressed.value = withSpring(0, { stiffness: 400, damping: 25 });
   };
 
-  const expiryShort = doc.expiresAt
-    ? new Date(doc.expiresAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
-    : null;
-
   const statusLabel = doc.status === 'verified' ? 'Valid' : doc.status === 'pending' ? 'Pending' : 'Failed';
   const statusColor = doc.status === 'verified' ? '#059669' : doc.status === 'pending' ? '#D97706' : '#EF4444';
   const statusBg = doc.status === 'verified' ? '#ECFDF5' : doc.status === 'pending' ? '#FFFBEB' : '#FEF2F2';
@@ -89,130 +86,33 @@ function DocCard({ doc, onPress, width }: { doc: IdentityDocument; onPress: () =
             ...shadowStyle,
           }}>
 
-          {/* Document-specific illustration */}
-          <View style={{
-            backgroundColor: accent.bg,
-            borderRadius: 12,
-            overflow: 'hidden',
-            marginBottom: 8,
-            minHeight: 130,
-          }}>
-            {doc.type === 'passport' || doc.type === 'birthCertificate' || doc.type === 'usVisa' ? (
-              /* Book-style: dark cover, emblem, data fields, MRZ */
-              <View style={{ flex: 1 }}>
-                <View style={{
-                  backgroundColor: accent.icon,
-                  paddingVertical: 6,
-                  paddingHorizontal: 14,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                }}>
-                  <Text style={{ fontSize: 8, fontWeight: '700', color: '#FFFFFF', letterSpacing: 1.5 }}>
-                    {accent.label}
-                  </Text>
-                  <View style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' }}>
-                    <Icon name={doc.type} size={10} color="#FFFFFF" />
-                  </View>
-                </View>
-                <View style={{ paddingVertical: 12, paddingHorizontal: 16, gap: 8 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                    <View style={{
-                      width: 32, height: 32, borderRadius: 16,
-                      backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center',
-                    }}>
-                      <Icon name={doc.type} size={18} color={accent.icon} />
-                    </View>
-                    <View style={{ flex: 1, gap: 4 }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                        <Text style={{ fontSize: 6, fontWeight: '600', color: accent.icon, opacity: 0.5 }}>NAME</Text>
-                        <View style={{ flex: 1, height: 3, borderRadius: 2, backgroundColor: accent.icon, opacity: 0.2 }} />
-                      </View>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                        <Text style={{ fontSize: 6, fontWeight: '600', color: accent.icon, opacity: 0.5 }}>NO.</Text>
-                        <View style={{ flex: 1, height: 3, borderRadius: 2, backgroundColor: accent.icon, opacity: 0.2 }} />
-                      </View>
-                    </View>
-                  </View>
-                </View>
-                <View style={{
-                  backgroundColor: accent.icon, opacity: 0.08,
-                  paddingVertical: 5, paddingHorizontal: 12,
-                  flexDirection: 'row', gap: 3, justifyContent: 'center',
-                  position: 'absolute', bottom: 0, left: 0, right: 0,
-                }}>
-                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((i) => (
-                    <View key={i} style={{ width: 5, height: 3, borderRadius: 1, backgroundColor: accent.icon }} />
-                  ))}
-                </View>
-              </View>
-            ) : (
-              /* Card-style: photo box, field lines, accent bar */
-              <View style={{ flex: 1 }}>
-                <View style={{
-                  backgroundColor: accent.icon,
-                  paddingVertical: 5,
-                  paddingHorizontal: 12,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}>
-                  <Text style={{ fontSize: 7, fontWeight: '700', color: '#FFFFFF', letterSpacing: 1.2 }}>
-                    {accent.label}
-                  </Text>
-                </View>
-                <View style={{ paddingVertical: 12, paddingHorizontal: 14, flexDirection: 'row', gap: 10, alignItems: 'flex-start' }}>
-                  <View style={{
-                    width: 36, height: 44, borderRadius: 4,
-                    backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center',
-                    borderWidth: 1, borderColor: accent.icon, opacity: 0.9,
-                  }}>
-                    <Icon name="face" size={18} color={accent.icon} />
-                  </View>
-                  <View style={{ flex: 1, gap: 5, paddingTop: 2 }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                      <Text style={{ fontSize: 6, fontWeight: '600', color: accent.icon, opacity: 0.5 }}>NAME</Text>
-                      <View style={{ flex: 1, height: 3, borderRadius: 2, backgroundColor: accent.icon, opacity: 0.2 }} />
-                    </View>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                      <Text style={{ fontSize: 6, fontWeight: '600', color: accent.icon, opacity: 0.5 }}>DOB</Text>
-                      <View style={{ flex: 1, height: 3, borderRadius: 2, backgroundColor: accent.icon, opacity: 0.2 }} />
-                    </View>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                      <Text style={{ fontSize: 6, fontWeight: '600', color: accent.icon, opacity: 0.5 }}>ID</Text>
-                      <View style={{ flex: 1, height: 3, borderRadius: 2, backgroundColor: accent.icon, opacity: 0.2 }} />
-                    </View>
-                  </View>
-                </View>
-                <View style={{
-                  height: 4,
-                  backgroundColor: accent.icon,
-                  opacity: 0.15,
-                  position: 'absolute', bottom: 0, left: 0, right: 0,
-                }} />
-              </View>
-            )}
-          </View>
-
-          {/* Line 1: Label + status pill */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-            <Text style={{ fontSize: 15, fontWeight: '600', color: '#111827', textAlign: 'center' }}>
-              {doc.label}
-            </Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: statusBg, borderRadius: 8, paddingHorizontal: 6, paddingVertical: 2 }}>
-              <Icon name="check" size={10} color={statusColor} />
-              <Text style={{ fontSize: 11, fontWeight: '500', color: statusColor }}>{statusLabel}</Text>
-            </View>
-          </View>
-          {/* Line 2: Expiry */}
-          {expiryShort && (
-            <Text style={{ fontSize: 12, fontWeight: '400', color: '#9CA3AF', textAlign: 'center', marginTop: 2 }}>
-              Expires {expiryShort}
-            </Text>
-          )}
+          <DocIllustration type={doc.type} />
         </Animated.View>
       </Animated.View>
     </Pressable>
+  );
+}
+
+function ProgressDot({ active, index }: { active: boolean; index: number }) {
+  const fillWidth = useSharedValue(0);
+
+  useEffect(() => {
+    if (active) {
+      fillWidth.value = 0;
+      fillWidth.value = withTiming(1, { duration: 7500, easing: REasing.linear });
+    } else {
+      fillWidth.value = 0;
+    }
+  }, [active, index]);
+
+  const fillStyle = useAnimatedStyle(() => ({
+    width: `${fillWidth.value * 100}%`,
+  }));
+
+  return (
+    <View style={{ width: 20, height: 4, borderRadius: 2, backgroundColor: '#CBD5E1', overflow: 'hidden' }}>
+      {active && <Animated.View style={[{ height: '100%', backgroundColor: '#08B6FC' }, fillStyle]} />}
+    </View>
   );
 }
 
@@ -222,6 +122,9 @@ export default function IdentityScreen() {
   const { data: documents, isPending, isRefetching, isError, refetch } = useDocuments();
   const user = useAppSelector((state) => state.auth.user);
   const [query, setQuery] = useState('');
+  const [activeFamilyIndex, setActiveFamilyIndex] = useState(0);
+  const [scrollY, setScrollY] = useState(0);
+  const familyListRef = useRef<FlatList>(null);
 
   const greeting = useMemo(() => {
     const hour = new Date().getHours();
@@ -239,31 +142,80 @@ export default function IdentityScreen() {
 
   const isEmpty = !isPending && !isError && (documents?.length ?? 0) === 0;
 
+  // Family image carousel data
+  const familyImages = [
+    { id: 'family-main-home', image: require('@/assets/images/family-main-home.png'), title: 'Airport check-in' },
+    { id: 'family-themepark', image: require('@/assets/images/family-theme-park.png'), title: 'Theme park entry' },
+    { id: 'family-hotel', image: require('@/assets/images/family-hotel.png'), title: 'Hotel check-in' },
+    { id: 'family-tourist', image: require('@/assets/images/family-tourist.png'), title: 'Tourist places' },
+    { id: 'family-cruise', image: require('@/assets/images/family-cruise.png'), title: 'Cruise check-in' },
+  ];
+
+  // Auto-scroll family carousel
+  useEffect(() => {
+    if (familyImages.length <= 1) return;
+    const interval = setInterval(() => {
+      setActiveFamilyIndex((prev) => {
+        const next = (prev + 1) % familyImages.length;
+        familyListRef.current?.scrollToIndex({ index: next, animated: true });
+        return next;
+      });
+    }, 7500);
+    return () => clearInterval(interval);
+  }, [familyImages.length]);
+
   return (
-    <SafeAreaView className="flex-1" edges={['top']} style={Platform.OS === 'web' ? ({ backgroundImage: 'linear-gradient(180deg, #F8FBFF, #EAF4FF)' } as any) : undefined}>
-      {Platform.OS !== 'web' && (
+    <SafeAreaView className="flex-1" edges={['top']} style={{ backgroundColor: '#F8FBFF' }}>
+      {/* Sticky compact header - shows when scrolled */}
+      <View style={{
+        position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10,
+        flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+        paddingHorizontal: 20, paddingVertical: 10,
+        backgroundColor: scrollY > 80 ? 'rgba(39,39,214,0.95)' : 'transparent',
+        opacity: Math.min(1, Math.max(0, (scrollY - 60) / 40)),
+        height: scrollY > 80 ? 50 : 0,
+        overflow: 'hidden',
+      }}>
+        <Text style={{ fontSize: 18, fontWeight: '800', color: '#FFFFFF' }}>
+          {user?.fullName?.split(' ')[0] ?? 'there'}
+        </Text>
+        <Pressable onPress={() => router.push('/profile' as never)} className="items-center justify-center rounded-full bg-white p-2" style={{ ...Elevation.small }}>
+          <Icon name="settings" size={18} color={Colors.ink} />
+        </Pressable>
+      </View>
+
+      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 240 }}>
         <LinearGradient
-          colors={['#F8FBFF', '#EAF4FF']}
-          style={StyleSheet.absoluteFill}
+          colors={['#39c5fd', '#9ce2fe', '#f5fcff']}
+          style={{ flex: 1 }}
         />
-      )}
-      <View style={{ flex: 1 }}>
-      <View className="px-5 pb-3 pt-2">
-        <View className="mb-4 flex-row items-start justify-between">
-          <View>
-            <Text className="text-[16px] font-medium text-muted">{greeting}</Text>
-            <Text accessibilityRole="header" className="mt-1 text-[28px] font-semibold text-ink">
-              {user?.fullName?.split(' ')[0] ?? 'there'}
-            </Text>
-          </View>
-          <View className="items-center justify-center rounded-full bg-white p-2.5" style={{ ...Elevation.small }}>
-            <Icon name="settings" size={20} color={Colors.ink} />
+      </View>
+
+      <ScrollView
+        style={{ flex: 1 }}
+        showsVerticalScrollIndicator={false}
+        onScroll={(e) => setScrollY(e.nativeEvent.contentOffset.y)}
+        scrollEventThrottle={16}>
+      <View style={{ position: 'relative' }}>
+        <View className="px-5 pb-3 pt-2">
+          <View className="mb-4 flex-row items-center justify-between">
+            <Pressable onPress={() => router.push('/profile' as never)} className="items-center justify-center rounded-full bg-white p-2.5" style={{ ...Elevation.small }}>
+              <Icon name="user" size={20} color={Colors.ink} />
+            </Pressable>
+            <View style={{ flex: 1, marginLeft: 12 }}>
+              <Text accessibilityRole="header" className="text-[24px] font-extrabold text-black">
+                {user?.fullName?.split(' ')[0] ?? 'there'}
+              </Text>
+            </View>
+            <Pressable onPress={() => router.push('/profile' as never)} className="items-center justify-center rounded-full bg-white p-2.5" style={{ ...Elevation.small }}>
+              <Icon name="settings" size={20} color={Colors.ink} />
+            </Pressable>
           </View>
         </View>
       </View>
 
       <View style={styles.searchContainer}>
-        <Icon name="search" size={20} color={Colors.textFaint} />
+        <Icon name="search" size={20} color="#1E293B" />
         <TextInput
           value={query}
           onChangeText={setQuery}
@@ -280,7 +232,7 @@ export default function IdentityScreen() {
           accessibilityLabel="Verify new document"
           onPress={() => router.push('/document/select-type' as never)}
           className="h-9 w-9 items-center justify-center rounded-full active:opacity-80"
-          style={{ backgroundColor: '#3535D8' }}>
+          style={{ backgroundColor: '#08B6FC' }}>
           <Icon name="plus" size={16} color={Colors.bgWhite} />
         </Pressable>
       </View>
@@ -322,7 +274,7 @@ export default function IdentityScreen() {
         </View>
       ) : (
         <View>
-        <View style={{ height: 250 }}>
+        <View style={{ height: 200 }}>
         <FlatList
           horizontal
           data={filtered}
@@ -342,48 +294,63 @@ export default function IdentityScreen() {
             <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={Colors.primary} />
           }
         />
-        {/* Right edge fade */}
-        <LinearGradient
-          colors={['transparent', '#EAF4FF']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 32, pointerEvents: 'none' }}
-        />
         </View>
-        <View style={{ paddingHorizontal: 20, paddingTop: 12, paddingBottom: 28, gap: 14 }}>
-          <AddFamilyCard onPress={() => router.push('/family/add' as never)} />
-          <RecentActivity documents={documents ?? []} />
-        </View>
-        </View>
-      )}</View>
-    </SafeAreaView>
-  );
-}
 
-function AddFamilyCard({ onPress }: { onPress: () => void }) {
-  return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel="Add family member"
-      style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 14,
-        backgroundColor: '#ffffff',
-        borderRadius: 14,
-        paddingHorizontal: 16,
-        paddingVertical: 16,
-        ...Elevation.small,
-      }}>
-      <View style={{ alignItems: 'center', justifyContent: 'center', width: 40, height: 40, borderRadius: 20, backgroundColor: Colors.surface }}>
-        <Icon name="plus" size={20} color={Colors.ink} />
-      </View>
-      <View style={{ flex: 1 }}>
-        <Text style={{ fontSize: 15, fontWeight: '600', color: Colors.ink }}>Add a family member</Text>
-        <Text style={{ fontSize: 12, color: Colors.textMuted, marginTop: 2 }}>Share documents securely</Text>
-      </View>
-    </Pressable>
+        {/* Family images carousel */}
+        <View style={{ marginTop: -40 }}>
+          <View style={{ paddingHorizontal: 20, marginBottom: 4, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <View>
+              <Text style={{ fontSize: 18, fontWeight: '700', color: Colors.ink }}>Explore with Family</Text>
+              <Text style={{ fontSize: 13, color: Colors.textMuted, marginTop: 2 }}>Add family members to share documents</Text>
+            </View>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Add family member"
+              onPress={() => router.push('/family/add' as never)}
+              className="h-9 w-9 items-center justify-center rounded-full active:opacity-80"
+              style={{ backgroundColor: '#08B6FC' }}>
+              <Icon name="plus" size={16} color={Colors.bgWhite} />
+            </Pressable>
+          </View>
+          <FlatList
+            ref={familyListRef}
+            horizontal
+            data={familyImages}
+            keyExtractor={(item) => item.id}
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingHorizontal: 16, paddingRight: 16 }}
+            snapToInterval={Dimensions.get('window').width - 32}
+            decelerationRate="fast"
+            snapToAlignment="start"
+            onScrollToIndexFailed={({ index, averageItemLength }) => {
+              familyListRef.current?.scrollToOffset({ offset: index * averageItemLength, animated: true });
+            }}
+            onScroll={(e) => {
+              const x = e.nativeEvent.contentOffset.x;
+              const idx = Math.round(x / (Dimensions.get('window').width - 32));
+              setActiveFamilyIndex(idx);
+            }}
+            scrollEventThrottle={16}
+            renderItem={({ item, index }) => (
+              <Pressable
+                onPress={() => router.push('/family/add' as never)}
+                style={{ width: Dimensions.get('window').width - 44, marginHorizontal: 6, borderRadius: 20, overflow: 'hidden' }}>
+                <Image source={item.image} style={{ width: '100%', height: 190 }} resizeMode="cover" />
+                <View style={{ position: 'absolute', bottom: 8, left: 10, alignSelf: 'flex-start', backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5 }}>
+                  <Text style={{ fontSize: 15, fontWeight: '700', color: '#FFFFFF' }}>{item.title}</Text>
+                </View>
+              </Pressable>
+            )}
+          />
+          <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 5, marginTop: 8 }}>
+            {familyImages.map((_, i) => (
+              <ProgressDot key={i} active={i === activeFamilyIndex} index={i} />
+            ))}
+          </View>
+        </View>
+        </View>
+      )}</ScrollView>
+    </SafeAreaView>
   );
 }
 
@@ -472,11 +439,25 @@ function RecentActivity({ documents }: { documents: IdentityDocument[] }) {
               borderColor: '#F1F5F9',
             }}>
               <View style={{
-                width: 28, height: 28, borderRadius: 14,
+                width: 40, height: 40, borderRadius: 12,
                 backgroundColor: DOC_ACCENT[doc.type].bg,
                 alignItems: 'center', justifyContent: 'center',
+                borderWidth: 1,
+                borderColor: DOC_ACCENT[doc.type].icon + '18',
               }}>
-                <Icon name={doc.type} size={14} color={DOC_ACCENT[doc.type].icon} />
+                {doc.type === 'drivingLicense' ? (
+                  <Image source={require('../../../assets/images/car-simple.png')} style={{ width: 30, height: 30 }} resizeMode="contain" />
+                ) : doc.type === 'passport' ? (
+                  <Image source={require('../../../assets/images/passport-simple.png')} style={{ width: 30, height: 30 }} resizeMode="contain" />
+                ) : doc.type === 'greenCard' ? (
+                  <Image source={require('../../../assets/images/liberty-simple.png')} style={{ width: 30, height: 30 }} resizeMode="contain" />
+                ) : doc.type === 'usVisa' ? (
+                  <Image source={require('../../../assets/images/usa-simple.png')} style={{ width: 30, height: 30 }} resizeMode="contain" />
+                ) : doc.type === 'birthCertificate' ? (
+                  <Image source={require('../../../assets/images/baby-simple.png')} style={{ width: 30, height: 30 }} resizeMode="contain" />
+                ) : (
+                  <Icon name={doc.type} size={20} color={DOC_ACCENT[doc.type].icon} />
+                )}
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={{ fontSize: 13, fontWeight: '500', color: '#111827' }} numberOfLines={1}>

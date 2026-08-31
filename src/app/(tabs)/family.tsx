@@ -2,16 +2,16 @@ import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { memo, useState } from 'react';
-import { Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { EmptyState, ErrorState, Icon, Skeleton } from '@/components/ui';
-import { Colors } from '@/constants/theme';
+import { Colors, Elevation } from '@/constants/theme';
 import { useFamily } from '@/features/family/hooks';
 import type { FamilyMember } from '@/types/domain';
 
 const AVATAR_GRADIENTS = [
-  ['#EEF2FF', '#C7D2FE'],
+  ['#e6f8ff', '#cef0fe'],
   ['#F0FDF4', '#BBF7D0'],
   ['#FFF7ED', '#FED7AA'],
   ['#FDF2F8', '#FBCFE8'],
@@ -27,68 +27,67 @@ function getAvatarGradient(name: string) {
 const MemberCard = memo(function MemberCard({ member, onPress, isLast }: { member: FamilyMember; onPress: () => void; isLast: boolean }) {
   const initials = member.name.split(' ').map((p) => p[0]).join('');
   const [gradStart, gradEnd] = getAvatarGradient(member.name);
+  const isTurning18 = member.turning18Soon;
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={`${member.name}, ${member.relationship}, age ${member.age}`}
+      accessibilityLabel={`${member.name}, age ${member.age}`}
       style={{
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 14,
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        borderBottomWidth: isLast ? 0 : 1,
-        borderBottomColor: '#F1F5F9',
+        gap: 12,
+        backgroundColor: '#FFFFFF',
+        borderRadius: 16,
+        paddingHorizontal: 14,
+        paddingVertical: 10,
+        marginBottom: isLast ? 0 : 10,
+        ...Elevation.small,
       }}>
-      <LinearGradient
-        colors={[gradStart, gradEnd]}
-        style={{ alignItems: 'center', justifyContent: 'center', width: 52, height: 52, borderRadius: 26 }}>
-        <Text style={{ fontSize: 17, fontWeight: '700', color: '#3730A3' }}>
-          {initials}
-        </Text>
-      </LinearGradient>
+      {member.name === 'Max Kim' ? (
+        <Image source={require('@/assets/images/boy-3d.png')} style={{ width: 52, height: 52 }} resizeMode="contain" />
+      ) : member.name === 'Lily Kim' ? (
+        <Image source={require('@/assets/images/girl-3d.png')} style={{ width: 52, height: 52 }} resizeMode="contain" />
+      ) : (
+        <LinearGradient
+          colors={[gradStart, gradEnd]}
+          style={{ alignItems: 'center', justifyContent: 'center', width: 52, height: 52, borderRadius: 16 }}>
+          <Text style={{ fontSize: 18, fontWeight: '700', color: '#3730A3' }}>
+            {initials}
+          </Text>
+        </LinearGradient>
+      )}
       <View style={{ flex: 1 }}>
-        <Text style={{ fontSize: 18, fontWeight: '600', color: '#111827' }}>{member.name}</Text>
-        <Text style={{ fontSize: 14, fontWeight: '400', color: '#6B7280', marginTop: 2 }}>
-          {member.relationship} · {member.age}
+        <Text style={{ fontSize: 16, fontWeight: '700', color: '#111827' }}>
+          {member.name} <Text style={{ fontSize: 12, fontWeight: '400', color: '#6B7280' }}>· {member.age}</Text>
         </Text>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 4 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-            <Icon name="check" size={12} color={'#059669'} />
-            <Text style={{ fontSize: 13, fontWeight: '400', color: '#6B7280' }}>
-              Verified
-            </Text>
-          </View>
-          {member.turning18Soon ? (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-              <Icon name="cake" size={12} color={'#92400E'} />
-              <Text style={{ fontSize: 13, fontWeight: '400', color: '#92400E' }}>
-                Turning 18
-              </Text>
-            </View>
-          ) : (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-              <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: '#10B981' }} />
-              <Text style={{ fontSize: 13, fontWeight: '400', color: '#6B7280' }}>
-                Active
-              </Text>
-            </View>
-          )}
-        </View>
       </View>
-      <Icon name="chevron" size={20} color={Colors.textFaint} />
+      <View style={{ alignItems: 'flex-end', gap: 6 }}>
+        <View style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 3,
+          backgroundColor: isTurning18 ? '#FFFBEB' : '#ECFDF5',
+          borderRadius: 8,
+          paddingHorizontal: 7,
+          paddingVertical: 3,
+        }}>
+          <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: isTurning18 ? '#D97706' : '#059669' }} />
+          <Text style={{ fontSize: 10, fontWeight: '700', color: isTurning18 ? '#D97706' : '#059669' }}>{isTurning18 ? 'Turning 18' : 'Verified'}</Text>
+        </View>
+        <Icon name="chevron" size={16} color={Colors.textFaint} />
+      </View>
     </Pressable>
   );
 });
 
 function MemberSkeleton() {
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' }}>
-      <Skeleton width={52} height={52} radius={26} />
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: '#FFFFFF', borderRadius: 16, paddingHorizontal: 16, paddingVertical: 14, marginBottom: 10, ...Elevation.small }}>
+      <Skeleton width={64} height={64} radius={18} />
       <View style={{ flex: 1, gap: 6 }}>
-        <Skeleton width={120} height={18} radius={6} />
-        <Skeleton width={180} height={14} radius={4} />
+        <Skeleton width={120} height={16} radius={6} />
+        <Skeleton width={60} height={12} radius={4} />
       </View>
     </View>
   );
@@ -108,19 +107,19 @@ export default function FamilyScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1" edges={['top']} style={Platform.OS === 'web' ? ({ backgroundImage: 'linear-gradient(180deg, #F8FBFF, #EAF4FF)' } as any) : undefined}>
-      {Platform.OS !== 'web' && (
+    <SafeAreaView className="flex-1" edges={['top']} style={{ backgroundColor: '#F8FBFF' }}>
+      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 200 }}>
         <LinearGradient
-          colors={['#F8FBFF', '#EAF4FF']}
-          style={StyleSheet.absoluteFill}
+          colors={['#39c5fd', '#9ce2fe', '#f5fcff']}
+          style={{ flex: 1 }}
         />
-      )}
+      </View>
       <View style={{ flex: 1 }}>
       <View style={{ paddingHorizontal: 32, paddingTop: 12, paddingBottom: 32 }}>
-        <Text accessibilityRole="header" style={{ fontSize: 28, fontWeight: '700', color: Colors.ink }}>
+        <Text accessibilityRole="header" style={{ fontSize: 28, fontWeight: '700', color: '#000000' }}>
           Family
         </Text>
-        <Text style={{ fontSize: 14, color: Colors.textMuted, marginTop: 2 }}>
+        <Text style={{ fontSize: 14, color: '#374151', marginTop: 2 }}>
           Manage your dependents
         </Text>
       </View>
@@ -150,15 +149,13 @@ export default function FamilyScreen() {
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: 8,
-                backgroundColor: '#FFFFFF',
+                backgroundColor: '#08B6FC',
                 borderRadius: 16,
-                borderWidth: 1,
-                borderColor: '#E5E7EB',
                 paddingVertical: 16,
                 paddingHorizontal: 24,
               }}>
-              <Icon name="plus" size={18} color={Colors.primary} />
-              <Text style={{ fontSize: 15, fontWeight: '600', color: Colors.primary }}>Add Family Member</Text>
+              <Icon name="plus" size={18} color="#FFFFFF" />
+              <Text style={{ fontSize: 15, fontWeight: '600', color: '#FFFFFF' }}>Add Family Member</Text>
             </Pressable>
           }
         />
@@ -173,51 +170,57 @@ export default function FamilyScreen() {
           {turning18 && !notificationDismissed ? (
             <View
               style={{
-                marginBottom: 28,
-                flexDirection: 'row',
-                alignItems: 'flex-start',
-                gap: 12,
+                marginBottom: 20,
                 borderRadius: 16,
-                backgroundColor: '#FEFCE8',
-                paddingHorizontal: 16,
+                backgroundColor: '#FFFFFF',
                 paddingVertical: 12,
+                paddingHorizontal: 14,
+                ...Elevation.medium,
               }}>
-              <View style={{ alignItems: 'center', justifyContent: 'center', width: 36, height: 36, borderRadius: 18, backgroundColor: '#FDE68A' }}>
-                <Icon name="cake" size={18} color={'#92400E'} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 14, fontWeight: '600', color: Colors.ink }}>
-                  {turning18.name} is turning 18 soon
-                </Text>
-                <Text style={{ marginTop: 2, fontSize: 13, lineHeight: 19, color: Colors.textMuted }}>
-                  They&apos;ll need their own Truepas account when they turn 18.
-                </Text>
-                <View style={{ marginTop: 10, flexDirection: 'row', alignItems: 'center', gap: 16 }}>
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel="Remind later"
-                    onPress={() => setNotificationDismissed(true)}
-                    style={{ alignItems: 'center', justifyContent: 'center', borderRadius: 10, backgroundColor: Colors.primary, paddingVertical: 8, paddingHorizontal: 16 }}>
-                    <Text style={{ fontSize: 13, fontWeight: '600', color: '#FFFFFF' }}>
-                      Remind Later
-                    </Text>
-                  </Pressable>
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel="Remove from family"
-                    onPress={() => setNotificationDismissed(true)}>
-                    <Text style={{ fontSize: 13, fontWeight: '500', color: Colors.error }}>
-                      Remove from Family
-                    </Text>
-                  </Pressable>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <View style={{ alignItems: 'center', justifyContent: 'center', width: 38, height: 38, borderRadius: 19, backgroundColor: '#e6f8ff' }}>
+                  <Icon name="cake" size={20} color="#08B6FC" />
                 </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 15, fontWeight: '700', color: '#059669' }}>
+                    You're eligible for a new Truepas account!
+                  </Text>
+                  <Text style={{ marginTop: 2, fontSize: 12, lineHeight: 17, color: Colors.textMuted }}>
+                    {turning18.name} has turned 18 and can now create an independent account.
+                  </Text>
+                </View>
+              </View>
+
+              <View style={{ marginTop: 12, flexDirection: 'row', gap: 8 }}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Remind me later"
+                  onPress={() => setNotificationDismissed(true)}
+                  style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, borderRadius: 12, borderWidth: 1.5, borderColor: '#cef0fe', paddingVertical: 10 }}>
+                  <Icon name="clock" size={14} color="#08B6FC" />
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#08B6FC' }}>
+                    Remind later
+                  </Text>
+                </Pressable>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Create their account"
+                  onPress={() => setNotificationDismissed(true)}
+                  style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, borderRadius: 12, backgroundColor: '#08B6FC', paddingVertical: 10, ...Elevation.small }}>
+                  <Icon name="plus" size={16} color="#FFFFFF" />
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#FFFFFF' }}>
+                    Create account
+                  </Text>
+                </Pressable>
               </View>
             </View>
           ) : null}
 
-          <Text style={{ fontSize: 20, fontWeight: '700', color: Colors.ink, marginBottom: 12 }}>Your Family</Text>
+          <View style={{ marginBottom: 12 }}>
+            <Text style={{ fontSize: 20, fontWeight: '700', color: Colors.ink, paddingHorizontal: 20 }}>Your Family</Text>
+          </View>
 
-          <View style={{ backgroundColor: '#FFFFFF', borderRadius: 16, overflow: 'hidden' }}>
+          <View style={{ marginTop: 8 }}>
             {members.map((item, index) => (
               <MemberCard
                 key={item.id}
@@ -237,15 +240,23 @@ export default function FamilyScreen() {
                 flexDirection: 'row',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: 8,
-                backgroundColor: '#FFFFFF',
-                borderRadius: 16,
-                borderWidth: 1,
-                borderColor: '#E5E7EB',
+                gap: 10,
                 paddingVertical: 16,
-              }}>
-              <Icon name="plus" size={18} color={Colors.primary} />
-              <Text style={{ fontSize: 15, fontWeight: '600', color: Colors.primary }}>Add Family Member</Text>
+                backgroundColor: '#08B6FC',
+                borderRadius: 16,
+                overflow: 'hidden',
+                ...Elevation.medium }}>
+                <View style={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: 14,
+                  backgroundColor: '#FFFFFF',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}>
+                  <Icon name="plus" size={16} color="#08B6FC" />
+                </View>
+                <Text style={{ fontSize: 15, fontWeight: '700', color: '#FFFFFF' }}>Add Family Member</Text>
             </Pressable>
           </View>
         </ScrollView>

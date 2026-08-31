@@ -242,6 +242,13 @@ export const smartphone: IconRenderer = (c) => (
   </>
 );
 
+export const user: IconRenderer = (c) => (
+  <>
+    <Circle cx="12" cy="7" r="4" stroke={c} strokeWidth={2} fill="none" />
+    <Path d="M4 21c0-4 3.5-7 8-7s8 3 8 7" stroke={c} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" />
+  </>
+);
+
 export const more: IconRenderer = (c) => (
   <>
     <Circle cx="12" cy="12" r="1" fill={c} />

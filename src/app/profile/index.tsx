@@ -45,31 +45,6 @@ export default function ProfileScreen() {
         </View>
       </View>
 
-      <Card>
-        <Text className="mb-2 text-[12px] text-muted">Identity Status</Text>
-        <View className="mb-[6px] flex-row items-center justify-between">
-          <View className="flex-row items-center gap-2">
-            <Icon name="shield" size={18} />
-            <Text className="text-[13px] text-ink">Face Enrolled</Text>
-          </View>
-          <Icon name="check" size={16} color={Colors.primary} />
-        </View>
-        <View className="mb-[6px] flex-row items-center justify-between">
-          <View className="flex-row items-center gap-2">
-            <Icon name="idCard" size={18} />
-            <Text className="text-[13px] text-ink">Documents Verified</Text>
-          </View>
-          <Text className="text-[12px] font-semibold text-primary">{docCount}</Text>
-        </View>
-        <View className="flex-row items-center justify-between">
-          <View className="flex-row items-center gap-2">
-            <Icon name="family" size={18} />
-            <Text className="text-[13px] text-ink">Family Members</Text>
-          </View>
-          <Text className="text-[12px] font-semibold text-primary">{familyCount}</Text>
-        </View>
-      </Card>
-
       <SectionTitle>Account</SectionTitle>
       <Card>
         <ListItem icon="edit" title="Personal Information" showChevron onPress={() => router.push('/profile/edit')} />
