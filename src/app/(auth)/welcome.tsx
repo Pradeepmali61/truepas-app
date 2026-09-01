@@ -36,21 +36,21 @@ const SLIDES: Slide[] = [
     title: 'Your Face is\nYour Identity.',
     description:
       'Enroll once with your face and government ID — securely verified, always trusted.',
-    image: require('@/assets/onboarding/1.png'),
+    image: require('@/assets/onboarding/1_1.png'),
   },
   {
     id: 'verified',
     title: 'Verified Once,\nTrusted Everywhere.',
     description:
       'Your face and document are matched and stored securely — no repeat KYC.',
-    image: require('@/assets/onboarding/2.png'),
+    image: require('@/assets/onboarding/2_1.png'),
   },
   {
     id: 'family',
     title: 'Protect Your\nWhole Family.',
     description:
       'Add and verify identities for dependents — all managed from one account.',
-    image: require('@/assets/onboarding/3.png'),
+    image: require('@/assets/onboarding/3_1.png'),
   },
 ];
 
@@ -131,7 +131,7 @@ export default function WelcomeScreen() {
 
   return (
     <LinearGradient
-      colors={['#e6f8ff', '#cef0fe']}
+      colors={['#b8e8fc', '#7fd8fa']}
       start={{ x: 0, y: 0 }}
       end={{ x: 0, y: 1 }}
       style={styles.container}>

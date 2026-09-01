@@ -13,25 +13,19 @@ interface FloatingInputProps extends TextInputProps {
 
 /** Floating-label input matching the mockup `.floating-input` (56px, radius 8). */
 export const FloatingInput = forwardRef<TextInput, FloatingInputProps>(
-  ({ label, error, rightSlot, gradient, onFocus, onBlur, ...inputProps }, ref) => {
+  ({ label, error, rightSlot, gradient, onFocus, onBlur, value, ...inputProps }, ref) => {
     const [focused, setFocused] = useState(false);
 
     const borderColor = error ? Colors.warning : focused ? Colors.primary : Colors.borderInput;
     const labelColor = error ? Colors.warning : focused ? Colors.primary : Colors.textFaint;
 
-    const labelText = label;
-
-    const labelNode = (
-      <Text allowFontScaling={false} className="text-[11px]" style={{ color: labelColor }}>
-        {labelText}
-      </Text>
-    );
+    const hasValue = value !== undefined && value !== '';
 
     const inputBody = (
       <>
         <TextInput
           ref={ref}
-          accessibilityLabel={labelText}
+          accessibilityLabel={label}
           placeholderTextColor={Colors.textFaint}
           className="flex-1 text-[16px] font-medium text-ink"
           onFocus={(event) => {
@@ -53,7 +47,9 @@ export const FloatingInput = forwardRef<TextInput, FloatingInputProps>(
         {gradient ? (
           <>
             <View className="mb-1">
-              {labelNode}
+              <Text allowFontScaling={false} className="text-[11px]" style={{ color: labelColor }}>
+                {label}
+              </Text>
             </View>
             <View
               className="h-[56px] flex-row items-center rounded-[8px] border bg-transparent px-4"
@@ -68,13 +64,15 @@ export const FloatingInput = forwardRef<TextInput, FloatingInputProps>(
             </View>
           </>
         ) : (
-          <View
-            className="h-[56px] flex-row items-center rounded-[8px] border bg-white px-4"
-            style={{ borderColor }}>
-            <View className="absolute -top-[10px] left-[12px] bg-white px-1">
-              {labelNode}
+          <View style={{ marginBottom: 6 }}>
+            <Text allowFontScaling={false} className="text-[12px] mb-1.5" style={{ color: labelColor, fontWeight: '500' }}>
+              {label}
+            </Text>
+            <View
+              className="h-[56px] flex-row items-center rounded-[12px] border bg-white px-4"
+              style={{ borderColor }}>
+              {inputBody}
             </View>
-            {inputBody}
           </View>
         )}
         {error ? (

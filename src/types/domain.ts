@@ -63,7 +63,7 @@ export interface Booking {
   image: string;
   checkIn: string;
   checkOut: string;
-  status: 'completed' | 'failed';
+  status: 'completed' | 'failed' | 'upcoming';
   guests: number;
   amount: number;
   checkedInMembers?: string[];

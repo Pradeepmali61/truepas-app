@@ -15,9 +15,9 @@ type BookingTab = 'upcoming' | 'past';
 type SortOption = 'recent' | 'oldest';
 
 const BOOKING_IMAGES: Record<string, ReturnType<typeof require>> = {
-  'hayat hotel': require('../../../assets/images/hotel-simple.png'),
-  'theme park': require('../../../assets/images/themepark-simple.png'),
-  'disney cruise': require('../../../assets/images/cruise-simple.png'),
+  'hayat hotel': require('../../../assets/images/hotel-simple1.png'),
+  'theme park': require('../../../assets/images/themepark-simple1.png'),
+  'disney cruise': require('../../../assets/images/cruise-simple1.png'),
 };
 
 const BookingCard = memo(function BookingCard({ item, onPress }: { item: Booking; onPress: () => void }) {
@@ -101,7 +101,7 @@ export default function HistoryScreen() {
     if (tab === 'past') {
       list = list.filter((b) => b.status === 'completed' || b.status === 'failed');
     } else {
-      list = [];
+      list = list.filter((b) => b.status === 'upcoming');
     }
     if (filterStatus !== 'all') {
       list = list.filter((b) => b.status === filterStatus);
@@ -123,6 +123,7 @@ export default function HistoryScreen() {
 
   return (
     <SafeAreaView className="flex-1" edges={['top']} style={{ backgroundColor: '#F8FBFF' }}>
+      <Image source={require('../../../assets/images/background2.png')} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100%', opacity: 0.12 }} contentFit="cover" pointerEvents="none" />
       <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 200 }}>
         <LinearGradient
           colors={['#39c5fd', '#9ce2fe', '#f5fcff']}
@@ -135,9 +136,6 @@ export default function HistoryScreen() {
           <View>
             <Text accessibilityRole="header" style={{ fontSize: 28, fontWeight: '700', color: '#000000' }}>
               My Bookings
-            </Text>
-            <Text style={{ fontSize: 14, color: '#374151', marginTop: 2 }}>
-              View your check-in history
             </Text>
           </View>
           <Pressable

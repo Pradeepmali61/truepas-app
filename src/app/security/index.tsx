@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Alert, Pressable, Text, View } from 'react-native';
 
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
 import { TopBar } from '@/components/layout/TopBar';
@@ -17,7 +17,7 @@ export default function SecurityScreen() {
       <TopBar title="Security" />
 
       <SectionTitle>Login &amp; Access</SectionTitle>
-      <ListItem title="Change Password" showChevron />
+      <ListItem title="Change Password" showChevron onPress={() => router.push('/security/change-password')} />
       <ListItem title="Change PIN" showChevron onPress={() => router.push('/security/change-pin')} />
       <ListItem title="Update Face" showChevron onPress={() => router.push('/face-update/pin')} />
 
@@ -54,7 +54,20 @@ export default function SecurityScreen() {
         <Text className="mt-2 text-[12px] text-muted">
           You consented to biometric enrollment on Jul 29, 2026 at 9:10 AM
         </Text>
-        <Pressable accessibilityRole="button" accessibilityLabel="Withdraw consent" className="mt-2">
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Withdraw consent"
+          className="mt-2"
+          onPress={() => {
+            Alert.alert(
+              'Withdraw Consent?',
+              'Withdrawing biometric consent will disable face verification. You will need to re-enroll to use face-based features.',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Withdraw', style: 'destructive', onPress: () => router.back() },
+              ],
+            );
+          }}>
           <Text className="text-[14px] font-medium text-primary underline">Withdraw Consent</Text>
         </Pressable>
       </Card>

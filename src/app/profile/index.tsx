@@ -61,15 +61,9 @@ export default function ProfileScreen() {
         <ListItem icon="face" title="Update Face" showChevron onPress={() => router.push('/face-update/pin')} />
       </Card>
 
-      <SectionTitle>General</SectionTitle>
+      <SectionTitle>More</SectionTitle>
       <Card>
-        <ListItem icon="document" title="Data & Privacy" showChevron onPress={() => router.push('/legal/data-privacy')} />
-        <View className="my-1 h-px bg-divider" />
-        <ListItem icon="document" title="Privacy Policy" showChevron onPress={() => router.push('/legal/privacy-policy')} />
-        <View className="my-1 h-px bg-divider" />
-        <ListItem icon="document" title="Terms of Service" showChevron onPress={() => router.push('/legal/terms')} />
-        <View className="my-1 h-px bg-divider" />
-        <ListItem icon="info" title="About Truepas" showChevron />
+        <ListItem icon="settings" title="Settings" showChevron onPress={() => router.push('/settings')} />
       </Card>
 
       <View className="px-5 py-4">
@@ -82,14 +76,6 @@ export default function ProfileScreen() {
           <Text className="text-[16px] font-bold text-danger">Log Out</Text>
         </Pressable>
       </View>
-
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="Back to Identity"
-        onPress={() => router.dismissTo('/(tabs)')}
-        className="border-t border-surface bg-white px-5 py-3">
-        <Text className="text-center text-[14px] font-medium text-primary">Back to Identity</Text>
-      </Pressable>
     </ScreenContainer>
   );
 }

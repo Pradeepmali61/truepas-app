@@ -108,6 +108,7 @@ export default function FamilyScreen() {
 
   return (
     <SafeAreaView className="flex-1" edges={['top']} style={{ backgroundColor: '#F8FBFF' }}>
+      <Image source={require('../../../assets/images/background2.png')} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100%', opacity: 0.12 }} resizeMode="cover" pointerEvents="none" />
       <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 200 }}>
         <LinearGradient
           colors={['#39c5fd', '#9ce2fe', '#f5fcff']}
@@ -115,12 +116,9 @@ export default function FamilyScreen() {
         />
       </View>
       <View style={{ flex: 1 }}>
-      <View style={{ paddingHorizontal: 32, paddingTop: 12, paddingBottom: 32 }}>
+      <View style={{ paddingHorizontal: 32, paddingTop: 12, paddingBottom: 20 }}>
         <Text accessibilityRole="header" style={{ fontSize: 28, fontWeight: '700', color: '#000000' }}>
           Family
-        </Text>
-        <Text style={{ fontSize: 14, color: '#374151', marginTop: 2 }}>
-          Manage your dependents
         </Text>
       </View>
 
@@ -215,10 +213,6 @@ export default function FamilyScreen() {
               </View>
             </View>
           ) : null}
-
-          <View style={{ marginBottom: 12 }}>
-            <Text style={{ fontSize: 20, fontWeight: '700', color: Colors.ink, paddingHorizontal: 20 }}>Your Family</Text>
-          </View>
 
           <View style={{ marginTop: 8 }}>
             {members.map((item, index) => (

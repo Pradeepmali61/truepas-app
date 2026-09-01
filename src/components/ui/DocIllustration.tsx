@@ -1,5 +1,5 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { Platform, Text, View } from 'react-native';
+import { Image, Platform, Text, View } from 'react-native';
 import { SvgXml } from 'react-native-svg';
 
 import { Icon } from '@/components/ui/Icon';

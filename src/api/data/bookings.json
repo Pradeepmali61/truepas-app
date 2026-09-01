@@ -102,5 +102,44 @@
     "guests": 3,
     "amount": 8800,
     "checkedInMembers": ["Sarah Johnson", "Emma Johnson", "Liam Johnson"]
+  },
+  {
+    "id": "b9",
+    "venue": "Hilton Garden Inn",
+    "location": "San Francisco, USA",
+    "type": "Hotel",
+    "image": "hayat hotel",
+    "checkIn": "Oct 12",
+    "checkOut": "Oct 15",
+    "status": "upcoming",
+    "guests": 2,
+    "amount": 22000,
+    "checkedInMembers": []
+  },
+  {
+    "id": "b10",
+    "venue": "Six Flags",
+    "location": "Los Angeles, USA",
+    "type": "Theme Park",
+    "image": "theme park",
+    "checkIn": "Nov 05",
+    "checkOut": "Nov 06",
+    "status": "upcoming",
+    "guests": 4,
+    "amount": 15000,
+    "checkedInMembers": []
+  },
+  {
+    "id": "b11",
+    "venue": "Norwegian Cruise Line",
+    "location": "Caribbean",
+    "type": "Cruise",
+    "image": "disney cruise",
+    "checkIn": "Dec 20",
+    "checkOut": "Dec 27",
+    "status": "upcoming",
+    "guests": 3,
+    "amount": 75000,
+    "checkedInMembers": []
   }
 ]

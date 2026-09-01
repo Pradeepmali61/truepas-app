@@ -1,16 +1,17 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Dimensions, FlatList, Image, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Dimensions, FlatList, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import Animated, { Easing as REasing, useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Icon, ErrorState as ReusableErrorState, Skeleton } from '@/components/ui';
+import { Icon, Skeleton } from '@/components/ui';
 import { DocIllustration } from '@/components/ui/DocIllustration';
 import { Colors, Elevation } from '@/constants/theme';
 import { useDocuments } from '@/features/documents/hooks';
+import { useBookings } from '@/features/history/hooks';
 import { useAppSelector } from '@/store';
-import type { IdentityDocument } from '@/types/domain';
+import type { Booking, IdentityDocument } from '@/types/domain';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const cardWidth = Math.round(SCREEN_WIDTH * 0.44);
@@ -120,6 +121,7 @@ function ProgressDot({ active, index }: { active: boolean; index: number }) {
 export default function IdentityScreen() {
   const router = useRouter();
   const { data: documents, isPending, isRefetching, isError, refetch } = useDocuments();
+  const { data: bookings } = useBookings();
   const user = useAppSelector((state) => state.auth.user);
   const [query, setQuery] = useState('');
   const [activeFamilyIndex, setActiveFamilyIndex] = useState(0);
@@ -169,20 +171,19 @@ export default function IdentityScreen() {
       {/* Sticky compact header - shows when scrolled */}
       <View style={{
         position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10,
-        flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+        flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start',
         paddingHorizontal: 20, paddingVertical: 10,
         backgroundColor: scrollY > 80 ? 'rgba(39,39,214,0.95)' : 'transparent',
         opacity: Math.min(1, Math.max(0, (scrollY - 60) / 40)),
         height: scrollY > 80 ? 50 : 0,
         overflow: 'hidden',
       }}>
-        <Text style={{ fontSize: 18, fontWeight: '800', color: '#FFFFFF' }}>
-          {user?.fullName?.split(' ')[0] ?? 'there'}
-        </Text>
         <Pressable onPress={() => router.push('/profile' as never)} className="items-center justify-center rounded-full bg-white p-2" style={{ ...Elevation.small }}>
-          <Icon name="settings" size={18} color={Colors.ink} />
+          <Icon name="user" size={18} color={Colors.ink} />
         </Pressable>
       </View>
+
+      <Image source={require('@/assets/images/background2.png')} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100%', opacity: 0.12 }} resizeMode="cover" pointerEvents="none" />
 
       <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 240 }}>
         <LinearGradient
@@ -198,17 +199,9 @@ export default function IdentityScreen() {
         scrollEventThrottle={16}>
       <View style={{ position: 'relative' }}>
         <View className="px-5 pb-3 pt-2">
-          <View className="mb-4 flex-row items-center justify-between">
+          <View className="mb-4 flex-row items-center justify-start">
             <Pressable onPress={() => router.push('/profile' as never)} className="items-center justify-center rounded-full bg-white p-2.5" style={{ ...Elevation.small }}>
               <Icon name="user" size={20} color={Colors.ink} />
-            </Pressable>
-            <View style={{ flex: 1, marginLeft: 12 }}>
-              <Text accessibilityRole="header" className="text-[24px] font-extrabold text-black">
-                {user?.fullName?.split(' ')[0] ?? 'there'}
-              </Text>
-            </View>
-            <Pressable onPress={() => router.push('/profile' as never)} className="items-center justify-center rounded-full bg-white p-2.5" style={{ ...Elevation.small }}>
-              <Icon name="settings" size={20} color={Colors.ink} />
             </Pressable>
           </View>
         </View>
@@ -226,82 +219,48 @@ export default function IdentityScreen() {
       </View>
 
       <View className="flex-row items-center justify-between px-5 pb-3">
-        <Text className="text-[16px] font-bold text-ink">Scanned documents</Text>
+        <Text className="text-[16px] font-bold text-ink">Upcoming trips</Text>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Verify new document"
-          onPress={() => router.push('/document/select-type' as never)}
+          accessibilityLabel="View all bookings"
+          onPress={() => router.push('/(tabs)/history' as never)}
           className="h-9 w-9 items-center justify-center rounded-full active:opacity-80"
           style={{ backgroundColor: '#08B6FC' }}>
-          <Icon name="plus" size={16} color={Colors.bgWhite} />
+          <Icon name="chevron" size={16} color={Colors.bgWhite} />
         </Pressable>
       </View>
 
-      {isPending ? (
-        <View className="gap-3 px-5 pt-2 flex-row">
-          {[1, 2, 3].map((i) => (
-            <View key={i} style={{ width: cardWidth, marginHorizontal: 6 }}>
-              <DocCardSkeleton />
+      {(() => {
+        const upcoming = (bookings ?? []).filter((b) => b.status === 'upcoming');
+        if (upcoming.length === 0) {
+          return (
+            <View className="flex-1 items-center justify-center px-6">
+              <View className="mb-5 h-24 w-24 items-center justify-center rounded-full bg-surface">
+                <Icon name="hotel" size={52} />
+              </View>
+              <Text accessibilityRole="header" className="mb-2 text-[20px] font-bold text-primary">
+                No upcoming trips
+              </Text>
+              <Text className="mb-6 text-center text-[14px] leading-[21px] text-muted">
+                Your upcoming bookings will appear here.
+              </Text>
             </View>
-          ))}
-        </View>
-      ) : isError ? (
-        <ReusableErrorState
-          title="Could not load documents"
-          message="Something went wrong while fetching your documents. Please try again."
-          onRetry={refetch}
-        />
-      ) : isEmpty ? (
-        <View className="flex-1 items-center justify-center px-6">
-          <View className="mb-5 h-24 w-24 items-center justify-center rounded-full bg-surface">
-            <Icon name="documents" size={52} />
+          );
+        }
+        return (
+          <View style={{ paddingHorizontal: 20 }}>
+            {upcoming.map((booking) => (
+              <TripCard key={booking.id} booking={booking} onPress={() => router.push(`/booking/${booking.id}` as never)} />
+            ))}
           </View>
-          <Text accessibilityRole="header" className="mb-2 text-[20px] font-bold text-primary">
-            No documents yet
-          </Text>
-          <Text className="mb-6 text-center text-[14px] leading-[21px] text-muted">
-            Add your first document to start verifying your identity.
-          </Text>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Verify new document"
-            onPress={() => router.push('/document/select-type' as never)}
-            className="mb-5 w-full flex-row items-center justify-center gap-2 rounded-btn bg-primary p-[14px] active:opacity-80">
-            <Icon name="plus" size={18} color="#ffffff" />
-            <Text className="text-[16px] font-bold text-white">Verify new document</Text>
-          </Pressable>
-          <AddFamilyCard onPress={() => router.push('/family/add' as never)} />
-        </View>
-      ) : (
-        <View>
-        <View style={{ height: 200 }}>
-        <FlatList
-          horizontal
-          data={filtered}
-          keyExtractor={(item) => item.id}
-          ListEmptyComponent={
-            <Text className="mt-8 text-center text-[13px] text-muted">No results found</Text>
-          }
-          renderItem={({ item }) => (
-            <DocCard doc={item} onPress={() => router.push(`/document/${item.id}` as never)} width={cardWidth} />
-          )}
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: 16, paddingRight: 16 }}
-          snapToInterval={cardWidth + 12}
-          decelerationRate="fast"
-          snapToAlignment="start"
-          refreshControl={
-            <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={Colors.primary} />
-          }
-        />
-        </View>
+        );
+      })()}
 
         {/* Family images carousel */}
-        <View style={{ marginTop: -40 }}>
+        <View style={{ marginTop: 20 }}>
           <View style={{ paddingHorizontal: 20, marginBottom: 4, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
             <View>
               <Text style={{ fontSize: 18, fontWeight: '700', color: Colors.ink }}>Explore with Family</Text>
-              <Text style={{ fontSize: 13, color: Colors.textMuted, marginTop: 2 }}>Add family members to share documents</Text>
             </View>
             <Pressable
               accessibilityRole="button"
@@ -348,9 +307,54 @@ export default function IdentityScreen() {
             ))}
           </View>
         </View>
-        </View>
-      )}</ScrollView>
+      </ScrollView>
     </SafeAreaView>
+  );
+}
+
+const BOOKING_IMAGES: Record<string, ReturnType<typeof require>> = {
+  'hayat hotel': require('@/assets/images/hotel-simple1.png'),
+  'theme park': require('@/assets/images/themepark-simple1.png'),
+  'disney cruise': require('@/assets/images/cruise-simple1.png'),
+};
+
+function TripCard({ booking, onPress }: { booking: Booking; onPress: () => void }) {
+  const imageSource = BOOKING_IMAGES[booking.image];
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`${booking.venue}, ${booking.location}`}
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 14,
+        backgroundColor: '#FFFFFF',
+        borderRadius: 16,
+        paddingHorizontal: 16,
+        paddingVertical: 14,
+        marginBottom: 10,
+        ...Elevation.small,
+      }}>
+      {imageSource ? (
+        <View style={{ width: 64, height: 64, borderRadius: 18, overflow: 'hidden' }}>
+          <Image source={imageSource} style={{ width: 64, height: 64 }} resizeMode="cover" />
+        </View>
+      ) : (
+        <View style={{ width: 64, height: 64, borderRadius: 18, backgroundColor: '#E2E8F0', alignItems: 'center', justifyContent: 'center' }}>
+          <Icon name="hotel" size={28} color={Colors.ink} />
+        </View>
+      )}
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Text style={{ fontSize: 16, fontWeight: '700', color: '#111827' }} numberOfLines={1}>
+          {booking.venue}
+        </Text>
+        <Text style={{ fontSize: 12, fontWeight: '400', color: '#6B7280', marginTop: 2 }} numberOfLines={1}>
+          {booking.location} · {booking.checkIn}–{booking.checkOut}
+        </Text>
+      </View>
+      <Icon name="chevron" size={16} color={Colors.textFaint} />
+    </Pressable>
   );
 }
 

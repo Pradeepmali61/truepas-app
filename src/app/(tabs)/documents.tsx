@@ -13,7 +13,7 @@ const DOC_ACCENT: Record<string, { bg: string; icon: string }> = {
   passport:         { bg: '#F5F7FF', icon: '#4F46E5' },
   drivingLicense:   { bg: '#F5F9FF', icon: '#2563EB' },
   greenCard:        { bg: '#F5FBF7', icon: '#059669' },
-  birthCertificate: { bg: '#FFFAF5', icon: '#EA580C' },
+  birthCertificate: { bg: '#F0FAFF', icon: '#08B6FC' },
   usVisa:           { bg: '#FAF9FF', icon: '#7C3AED' },
 };
 
@@ -47,15 +47,15 @@ const DocCard = memo(function DocCard({ doc, onPress }: { doc: IssuedDoc; onPres
         borderColor: accent.icon + '20',
       }}>
         {doc.icon === 'drivingLicense' ? (
-          <Image source={require('../../../assets/images/car-simple.png')} style={{ width: 48, height: 48 }} resizeMode="contain" />
+          <Image source={require('../../../assets/images/car-simple4.png')} style={{ width: 48, height: 48 }} resizeMode="contain" />
         ) : doc.icon === 'passport' ? (
-          <Image source={require('../../../assets/images/passport-simple.png')} style={{ width: 48, height: 48 }} resizeMode="contain" />
+          <Image source={require('../../../assets/images/passport-simple4.png')} style={{ width: 48, height: 48 }} resizeMode="contain" />
         ) : doc.icon === 'greenCard' ? (
           <Image source={require('../../../assets/images/liberty-simple.png')} style={{ width: 48, height: 48 }} resizeMode="contain" />
         ) : doc.icon === 'usVisa' ? (
-          <Image source={require('../../../assets/images/usa-simple.png')} style={{ width: 48, height: 48 }} resizeMode="contain" />
+          <Image source={require('../../../assets/images/visa-simple4.png')} style={{ width: 48, height: 48 }} resizeMode="contain" />
         ) : doc.icon === 'birthCertificate' ? (
-          <Image source={require('../../../assets/images/baby-simple.png')} style={{ width: 48, height: 48 }} resizeMode="contain" />
+          <Image source={require('../../../assets/images/birth-simple4.png')} style={{ width: 48, height: 48 }} resizeMode="contain" />
         ) : (
           <Icon name={doc.icon} size={34} color={accent.icon} />
         )}
@@ -115,6 +115,7 @@ export default function DocumentsScreen() {
 
   return (
     <SafeAreaView className="flex-1" edges={['top']} style={{ backgroundColor: '#F8FBFF' }}>
+      <Image source={require('../../../assets/images/background2.png')} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100%', opacity: 0.12 }} resizeMode="cover" pointerEvents="none" />
       <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 240 }}>
         <LinearGradient
           colors={['#39c5fd', '#9ce2fe', '#f5fcff']}
@@ -122,12 +123,9 @@ export default function DocumentsScreen() {
         />
       </View>
       <View style={{ flex: 1 }}>
-      <View style={{ paddingHorizontal: 28, paddingTop: 12, paddingBottom: 24 }}>
+      <View style={{ paddingHorizontal: 28, paddingTop: 12, paddingBottom: 16 }}>
         <Text accessibilityRole="header" style={{ fontSize: 28, fontWeight: '700', color: '#000000' }}>
           Documents
-        </Text>
-        <Text style={{ fontSize: 14, color: '#374151', marginTop: 2 }}>
-          Your important documents
         </Text>
       </View>
       <View

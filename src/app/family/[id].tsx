@@ -1,56 +1,72 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Modal, Pressable, Text, View } from 'react-native';
+import { Alert, Modal, Pressable, ScrollView, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { ScreenContainer } from '@/components/layout/ScreenContainer';
-import { ScreenHeader } from '@/components/layout/ScreenHeader';
 import { Icon, Skeleton } from '@/components/ui';
-import { Colors, Elevation } from '@/constants/theme';
-import { useFamilyActivity, useFamilyMember } from '@/features/family/hooks';
+import { Colors } from '@/constants/theme';
+import { useFamilyMember } from '@/features/family/hooks';
 
-const AVATAR_GRADIENTS = [
-  ['#EEF2FF', '#C7D2FE'],
-  ['#F0FDF4', '#BBF7D0'],
-  ['#FFF7ED', '#FED7AA'],
-  ['#FDF2F8', '#FBCFE8'],
-  ['#EFF6FF', '#BFDBFE'],
-  ['#FAF5FF', '#DDD6FE'],
-];
-
-function getAvatarGradient(name: string) {
-  const hash = name.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
-  return AVATAR_GRADIENTS[hash % AVATAR_GRADIENTS.length];
+function InfoField({ icon, label, value }: { icon: string; label: string; value: string }) {
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10 }}>
+      <View style={{
+        width: 40, height: 40, borderRadius: 12,
+        backgroundColor: '#F0FAFF',
+        alignItems: 'center', justifyContent: 'center',
+      }}>
+        <Icon name={icon as never} size={20} color={Colors.primary} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={{ fontSize: 12, fontWeight: '400', color: Colors.textMuted }}>{label}</Text>
+        <Text style={{ fontSize: 15, fontWeight: '600', color: Colors.ink, marginTop: 2 }}>{value}</Text>
+      </View>
+    </View>
+  );
 }
 
-/** Family member detail — verification summary, documents, activity log. */
+/** Family member detail — matching Personal Info screen style. */
 export default function FamilyMemberScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data: member, isPending } = useFamilyMember(id);
-  const { data: activity } = useFamilyActivity(id ?? '');
   const [menuOpen, setMenuOpen] = useState(false);
 
   if (isPending) {
     return (
-      <ScreenContainer scroll={false}>
-        <ScreenHeader title="Family Member" />
-        <View className="gap-3 px-5 pt-5">
-          <Skeleton height={72} radius={16} />
-          <Skeleton height={120} radius={16} />
+      <SafeAreaView className="flex-1 bg-white" edges={['top', 'bottom']}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, height: 56 }}>
+          <Pressable onPress={() => router.back()} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
+            <Icon name="back" size={22} color={Colors.ink} />
+          </Pressable>
+          <Text style={{ flex: 1, textAlign: 'center', fontSize: 18, fontWeight: '700', color: Colors.ink, marginRight: 44 }}>
+            Family Member
+          </Text>
         </View>
-      </ScreenContainer>
+        <View style={{ gap: 12, paddingHorizontal: 20, paddingTop: 20 }}>
+          <Skeleton height={100} radius={16} />
+          <Skeleton height={180} radius={16} />
+        </View>
+      </SafeAreaView>
     );
   }
 
   if (!member) {
     return (
-      <ScreenContainer scroll={false}>
-        <ScreenHeader title="Family Member" />
-        <View className="flex-1 items-center justify-center px-6">
-          <Text className="text-[14px] text-muted">Family member not found.</Text>
+      <SafeAreaView className="flex-1 bg-white" edges={['top', 'bottom']}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, height: 56 }}>
+          <Pressable onPress={() => router.back()} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
+            <Icon name="back" size={22} color={Colors.ink} />
+          </Pressable>
+          <Text style={{ flex: 1, textAlign: 'center', fontSize: 18, fontWeight: '700', color: Colors.ink, marginRight: 44 }}>
+            Family Member
+          </Text>
         </View>
-      </ScreenContainer>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+          <Text style={{ fontSize: 14, color: Colors.textMuted }}>Family member not found.</Text>
+        </View>
+      </SafeAreaView>
     );
   }
 
@@ -58,27 +74,26 @@ export default function FamilyMemberScreen() {
     .split(' ')
     .map((part) => part[0])
     .join('');
-  const [gradStart, gradEnd] = getAvatarGradient(member.name);
   const faceEnrolled = member.ageBand !== '0-4';
 
-  const menuButton = (
-    <Pressable
-      onPress={() => setMenuOpen(true)}
-      accessibilityRole="button"
-      accessibilityLabel="More options"
-      style={{
-        width: 48,
-        height: 48,
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}>
-      <Icon name="more" size={24} color={Colors.ink} />
-    </Pressable>
-  );
-
   return (
-    <ScreenContainer>
-      <ScreenHeader title={member.name} rightAction={menuButton} />
+    <SafeAreaView className="flex-1 bg-white" edges={['top', 'bottom']}>
+      {/* Header */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, height: 56 }}>
+        <Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel="Go back" style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
+          <Icon name="back" size={22} color={Colors.ink} />
+        </Pressable>
+        <Text style={{ flex: 1, textAlign: 'center', fontSize: 18, fontWeight: '700', color: Colors.ink }}>
+          {member.name}
+        </Text>
+        <Pressable
+          onPress={() => setMenuOpen(true)}
+          accessibilityRole="button"
+          accessibilityLabel="More options"
+          style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
+          <Icon name="settings" size={22} color={Colors.ink} />
+        </Pressable>
+      </View>
 
       {/* Options menu */}
       <Modal
@@ -110,6 +125,12 @@ export default function FamilyMemberScreen() {
             </Pressable>
             <View style={{ height: 1, backgroundColor: '#F1F5F9' }} />
             <Pressable
+              onPress={() => { setMenuOpen(false); router.push('/face-update/pin' as never); }}
+              style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
+              <Text style={{ fontSize: 15, fontWeight: '500', color: Colors.ink }}>Update face</Text>
+            </Pressable>
+            <View style={{ height: 1, backgroundColor: '#F1F5F9' }} />
+            <Pressable
               onPress={() => { setMenuOpen(false); router.push('/document/select-type'); }}
               style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
               <Text style={{ fontSize: 15, fontWeight: '500', color: Colors.ink }}>Manage documents</Text>
@@ -123,183 +144,140 @@ export default function FamilyMemberScreen() {
           </View>
         </Pressable>
       </Modal>
-      <View className="items-center pt-3 pb-2">
-        <LinearGradient
-          colors={['#08B6FC', '#84dbfe']}
-          style={{ alignItems: 'center', justifyContent: 'center', width: 64, height: 64, borderRadius: 32 }}>
-          <Text style={{ fontSize: 24, fontWeight: '700', color: '#FFFFFF' }}>
-            {initials}
-          </Text>
-        </LinearGradient>
-        <Text style={{ marginTop: 12, fontSize: 24, fontWeight: '700', lineHeight: 29, color: Colors.primary }}>{member.name}</Text>
-        <Text style={{ marginTop: 4, fontSize: 16, fontWeight: '400', color: Colors.textMuted }}>
-          {member.relationship} · Age {member.age}
-        </Text>
-        <View style={{
-          marginTop: 10,
-          height: 32,
-          paddingHorizontal: 12,
-          borderRadius: 8,
-          backgroundColor: '#ECFDF5',
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: 4,
-        }}>
-          <Icon name="check" size={14} color="#059669" />
-          <Text style={{ fontSize: 14, fontWeight: '600', color: '#059669' }}>
-            {faceEnrolled ? 'Fully Verified' : 'Document Only'}
-          </Text>
-        </View>
-      </View>
 
-      <View style={{ marginTop: 12, paddingHorizontal: 20 }}>
-        <Text style={{ fontSize: 16, fontWeight: '700', color: Colors.ink, marginBottom: 6 }}>
-          Verification
-        </Text>
-      </View>
-
-      <View style={{
-        marginHorizontal: 16,
-        height: 84,
-        borderRadius: 16,
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        backgroundColor: '#FFFFFF',
-        justifyContent: 'center',
-        ...Elevation.small,
-      }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', height: 32 }}>
-          <Text style={{ fontSize: 15, fontWeight: '400', color: Colors.textMuted }}>Face enrollment</Text>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-            {faceEnrolled ? <Icon name="check" size={14} color="#059669" /> : null}
-            <Text style={{ fontSize: 15, fontWeight: '600', color: faceEnrolled ? '#059669' : '#F97316' }}>
-              {faceEnrolled ? 'Complete' : 'Pending'}
+      <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
+        {/* Avatar */}
+        <View style={{ alignItems: 'center', paddingTop: 16, paddingBottom: 8 }}>
+          <View>
+            <LinearGradient
+              colors={['#08B6FC', '#84dbfe']}
+              style={{ alignItems: 'center', justifyContent: 'center', width: 88, height: 88, borderRadius: 44 }}>
+              <Text style={{ fontSize: 32, fontWeight: '700', color: '#FFFFFF' }}>
+                {initials}
+              </Text>
+            </LinearGradient>
+            <Pressable
+              onPress={() => router.push('/face-update/pin' as never)}
+              accessibilityRole="button"
+              accessibilityLabel="Update face photo"
+              style={{
+                position: 'absolute',
+                bottom: 0,
+                right: 0,
+                width: 28,
+                height: 28,
+                borderRadius: 14,
+                backgroundColor: Colors.primary,
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderWidth: 2,
+                borderColor: '#FFFFFF',
+              }}>
+              <Icon name="camera" size={14} color="#FFFFFF" />
+            </Pressable>
+          </View>
+          <Text style={{ marginTop: 12, fontSize: 20, fontWeight: '700', color: Colors.ink }}>{member.name}</Text>
+          <Text style={{ marginTop: 2, fontSize: 14, fontWeight: '400', color: Colors.textMuted }}>
+            {member.relationship} · Age {member.age}
+          </Text>
+          <View style={{ marginTop: 6, flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#ECFDF5', paddingHorizontal: 12, paddingVertical: 5, borderRadius: 8 }}>
+            <Icon name="checkCircle" size={14} color="#059669" />
+            <Text style={{ fontSize: 13, fontWeight: '600', color: '#059669' }}>
+              {faceEnrolled ? 'Fully Verified' : 'Document Only'}
             </Text>
           </View>
         </View>
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', height: 32, marginTop: 8 }}>
-          <Text style={{ fontSize: 15, fontWeight: '400', color: Colors.textMuted }}>Documents</Text>
-          <Text style={{ fontSize: 15, fontWeight: '600', color: '#059669' }}>1 verified</Text>
-        </View>
-      </View>
 
-      <Text style={{
-        marginTop: 16,
-        marginHorizontal: 16,
-        fontSize: 16,
-        fontWeight: '700',
-        letterSpacing: 1,
-        color: Colors.ink,
-      }}>
-        DOCUMENTS
-      </Text>
-      <View style={{
-        marginTop: 12,
-        marginHorizontal: 16,
-        height: 72,
-        borderRadius: 16,
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        backgroundColor: '#FFFFFF',
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 12,
-        ...Elevation.small,
-      }}>
-        <View style={{
-          width: 48,
-          height: 48,
-          borderRadius: 24,
-          backgroundColor: '#EEF2FF',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}>
-          <Icon name="idCard" size={24} color={Colors.primary} />
+        {/* Verification */}
+        <View style={{ marginHorizontal: 16, marginTop: 16, backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 8, elevation: 2 }}>
+          <Text style={{ fontSize: 14, fontWeight: '700', color: Colors.ink, marginBottom: 4 }}>Verification</Text>
+          <InfoField
+            icon="scanFace"
+            label="Face Enrollment"
+            value={faceEnrolled ? 'Complete' : 'Pending'}
+          />
+          <View style={{ height: 1, backgroundColor: '#F1F5F9', marginHorizontal: -16 }} />
+          <InfoField
+            icon="documents"
+            label="Documents"
+            value="1 verified"
+          />
         </View>
-        <View style={{ flex: 1, maxWidth: 220 }}>
-          <Text style={{ fontSize: 18, fontWeight: '700', color: Colors.ink }} numberOfLines={1}>Identity Card</Text>
-          <Text style={{ marginTop: 4, fontSize: 14, fontWeight: '400', color: Colors.textMuted }}>Verified · Expires Apr 2027</Text>
-        </View>
-        <View style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: 4,
-          backgroundColor: '#ECFDF5',
-          paddingHorizontal: 10,
-          height: 32,
-          borderRadius: 8,
-        }}>
-          <Icon name="check" size={14} color="#059669" />
-          <Text style={{ fontSize: 14, fontWeight: '600', color: '#059669' }}>Verified</Text>
-        </View>
-      </View>
 
-      <Pressable
-        onPress={() => router.push('/document/select-type')}
-        accessibilityRole="button"
-        accessibilityLabel="Add document"
-        style={{
-          marginTop: 12,
-          marginHorizontal: 16,
-          height: 52,
-          borderRadius: 14,
-          backgroundColor: '#EEF2FF',
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: 8,
-        }}>
-        <Icon name="plus" size={20} color={Colors.primary} />
-        <Text style={{ fontSize: 16, fontWeight: '700', color: Colors.primary }}>Add document</Text>
-      </Pressable>
-
-      <Text style={{
-        marginTop: 16,
-        marginHorizontal: 16,
-        fontSize: 16,
-        fontWeight: '700',
-        letterSpacing: 1,
-        color: Colors.ink,
-      }}>
-        RECENT ACTIVITY
-      </Text>
-      {(activity ?? []).slice(0, 2).map((item) => (
-        <View key={item.id} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 16, paddingHorizontal: 24, paddingVertical: 8 }}>
-          <View style={{ marginTop: 5, width: 12, height: 12, borderRadius: 6, backgroundColor: Colors.primary }} />
-          <View>
-            <Text style={{ fontSize: 16, fontWeight: '600', color: Colors.ink }}>{item.title}</Text>
-            <Text style={{ marginTop: 4, fontSize: 14, fontWeight: '400', color: Colors.textMuted }}>{item.date}</Text>
+        {/* Documents */}
+        <View style={{ marginHorizontal: 16, marginTop: 16, backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 8, elevation: 2 }}>
+          <Text style={{ fontSize: 14, fontWeight: '700', color: Colors.ink, marginBottom: 4 }}>Documents</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10 }}>
+            <View style={{
+              width: 48, height: 48, borderRadius: 12,
+              backgroundColor: '#F0FAFF',
+              alignItems: 'center', justifyContent: 'center',
+            }}>
+              <Icon name="idCard" size={24} color={Colors.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 15, fontWeight: '600', color: Colors.ink }}>Identity Card</Text>
+              <Text style={{ fontSize: 13, fontWeight: '400', color: Colors.textMuted, marginTop: 2 }}>Verified · Expires Apr 2027</Text>
+            </View>
+            <View style={{
+              flexDirection: 'row', alignItems: 'center', gap: 4,
+              backgroundColor: '#ECFDF5', paddingHorizontal: 10, height: 28, borderRadius: 8,
+            }}>
+              <Icon name="check" size={12} color="#059669" />
+              <Text style={{ fontSize: 13, fontWeight: '600', color: '#059669' }}>Verified</Text>
+            </View>
           </View>
         </View>
-      ))}
 
-      <Pressable
-        onPress={() => {
-          Alert.alert(
-            'Remove family member?',
-            `${member.name} will no longer be available in your family.`,
-            [
-              { text: 'Cancel', style: 'cancel' },
-              { text: 'Remove', style: 'destructive', onPress: () => router.back() },
-            ],
-          );
-        }}
-        accessibilityRole="button"
-        accessibilityLabel="Remove family member"
-        style={{
-          marginTop: 8,
-          marginHorizontal: 16,
-          marginBottom: 12,
-          height: 48,
-          borderRadius: 12,
-          backgroundColor: 'transparent',
-          borderWidth: 1,
-          borderColor: '#FECACA',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}>
-        <Text style={{ fontSize: 15, fontWeight: '600', color: '#EF4444' }}>Remove family member</Text>
-      </Pressable>
-    </ScreenContainer>
+        {/* Add document */}
+        <Pressable
+          onPress={() => router.push('/document/select-type')}
+          accessibilityRole="button"
+          accessibilityLabel="Add document"
+          style={{
+            marginTop: 16,
+            marginHorizontal: 16,
+            height: 48,
+            borderRadius: 14,
+            backgroundColor: '#F0FAFF',
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 8,
+          }}>
+          <Icon name="plus" size={18} color={Colors.primary} />
+          <Text style={{ fontSize: 15, fontWeight: '600', color: Colors.primary }}>Add document</Text>
+        </Pressable>
+
+        {/* Remove member */}
+        <Pressable
+          onPress={() => {
+            Alert.alert(
+              'Remove family member?',
+              `${member.name} will no longer be available in your family.`,
+              [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Remove', style: 'destructive', onPress: () => router.back() },
+              ],
+            );
+          }}
+          accessibilityRole="button"
+          accessibilityLabel="Remove family member"
+          style={{
+            marginTop: 12,
+            marginHorizontal: 16,
+            marginBottom: 12,
+            height: 48,
+            borderRadius: 14,
+            backgroundColor: 'transparent',
+            borderWidth: 1,
+            borderColor: '#FECACA',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}>
+          <Text style={{ fontSize: 15, fontWeight: '600', color: '#EF4444' }}>Remove member</Text>
+        </Pressable>
+      </ScrollView>
+    </SafeAreaView>
   );
 }

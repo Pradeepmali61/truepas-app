@@ -75,8 +75,12 @@ function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   return (
     <View
       onLayout={onLayout}
-      className="flex-row items-end bg-white"
+      className="flex-row items-end"
       style={{
+        position: 'absolute',
+        left: 0,
+        right: 0,
+        bottom: 0,
         paddingBottom: insets.bottom,
         height: 64 + insets.bottom,
         borderTopWidth: 1,
@@ -86,6 +90,7 @@ function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
         shadowOpacity: 0.06,
         shadowRadius: 8,
         elevation: 8,
+        backgroundColor: '#FFFFFF',
       }}>
       <View
         style={[
