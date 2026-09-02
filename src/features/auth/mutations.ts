@@ -3,16 +3,21 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/api';
 import type {
     AccountDetailsRequest,
+    BiometricConsentRequest,
     ChangePasswordRequest,
     ChangePinRequest,
+    DeleteAccountRequest,
     FaceEnrollRequest,
     FaceUpdateRequest,
-    FaceVerifyRequest,
     ForgotPasswordRequest,
+    LivenessEvidenceRequest,
     LoginRequest,
+    LogoutRequest,
+    Notification,
     RegisterRequest,
     ResetPasswordRequest,
     UpdateProfileRequest,
+    VerificationSessionRequest,
     VerifyOtpRequest
 } from '@/types/domain';
 
@@ -72,9 +77,15 @@ export function useVerifyPin() {
   });
 }
 
+export function useLogout() {
+  return useMutation({
+    mutationFn: (payload: LogoutRequest) => api.logout(payload),
+  });
+}
+
 export function useDeleteAccount() {
   return useMutation({
-    mutationFn: () => api.deleteAccount(),
+    mutationFn: (payload: DeleteAccountRequest) => api.deleteAccount(payload),
   });
 }
 
@@ -88,22 +99,92 @@ export function useUpdateProfile() {
   });
 }
 
-// ── Face / Liveness operations (liveness-service) ─────────────────────
-
-export function useEnrollFace() {
+export function useBiometricConsent() {
+  const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (payload: FaceEnrollRequest) => api.enrollFace(payload),
+    mutationFn: (payload: BiometricConsentRequest) => api.biometricConsent(payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user'] });
+    },
   });
 }
 
-export function useVerifyFace() {
+// ── Liveness operations (via BFF /cb/liveness/*) ──────────────────────
+
+export function useCreateLivenessChallenge() {
   return useMutation({
-    mutationFn: (payload: FaceVerifyRequest) => api.verifyFace(payload),
+    mutationFn: (personId?: string) => api.createLivenessChallenge(personId),
+  });
+}
+
+export function useSubmitLivenessEvidence() {
+  return useMutation({
+    mutationFn: (params: { sessionId: string; payload: LivenessEvidenceRequest; sessionToken: string }) =>
+      api.submitLivenessEvidence(params.sessionId, params.payload, params.sessionToken),
+  });
+}
+
+export function useFinalizeLiveness() {
+  return useMutation({
+    mutationFn: (params: { sessionId: string; frameBase64: string; sessionToken: string }) =>
+      api.finalizeLiveness(params.sessionId, params.frameBase64, params.sessionToken),
+  });
+}
+
+// ── Face enrollment / update (via BFF /cb/face/*) ─────────────────────
+
+export function useEnrollFace() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: FaceEnrollRequest) => api.enrollFace(payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user'] });
+      queryClient.invalidateQueries({ queryKey: ['identity'] });
+      queryClient.invalidateQueries({ queryKey: ['family'] });
+    },
   });
 }
 
 export function useUpdateFace() {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (payload: FaceUpdateRequest) => api.updateFace(payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user'] });
+      queryClient.invalidateQueries({ queryKey: ['identity'] });
+    },
+  });
+}
+
+// ── Document verification sessions ─────────────────────────────────────
+
+export function useCreateVerificationSession() {
+  return useMutation({
+    mutationFn: (params: { documentId: string; payload: VerificationSessionRequest }) =>
+      api.createVerificationSession(params.documentId, params.payload),
+  });
+}
+
+export function useStartVerification() {
+  return useMutation({
+    mutationFn: (sessionId: string) => api.startVerification(sessionId),
+  });
+}
+
+export function usePollVerification() {
+  return useMutation({
+    mutationFn: (sessionId: string) => api.pollVerification(sessionId),
+  });
+}
+
+// ── Notifications query ────────────────────────────────────────────────
+
+export function useNotifications(params?: { limit?: number; offset?: number; unreadOnly?: boolean }) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.getNotifications(params),
+    onSuccess: (data: Notification[]) => {
+      queryClient.setQueryData(['notifications', params], data);
+    },
   });
 }

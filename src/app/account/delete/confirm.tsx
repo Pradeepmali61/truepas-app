@@ -54,7 +54,7 @@ export default function ConfirmDeletionScreen() {
             loading={deleteAccount.isPending}
             onPress={async () => {
               try {
-                await deleteAccount.mutateAsync();
+                await deleteAccount.mutateAsync({ confirmation, pin });
                 router.push('/account/delete/processing');
               } catch {
                 router.push('/account/delete/processing');

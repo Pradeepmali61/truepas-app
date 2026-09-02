@@ -45,7 +45,10 @@ export default function RegisterScreen() {
         phone: values.phone,
         countryCode: selectedCountry.code,
       });
-      router.push('/(auth)/verify-phone');
+      router.push({
+        pathname: '/(auth)/verify-phone',
+        params: { phone: values.phone, countryCode: selectedCountry.code },
+      });
     } catch (err: any) {
       setSubmitError(err?.message ?? 'Could not send code. Please try again.');
     }

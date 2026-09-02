@@ -1,20 +1,23 @@
 import axios, { AxiosError, AxiosInstance, InternalAxiosRequestConfig } from 'axios';
 
 import { secureStorage } from '@/services/secureStorage';
+import type { AuthResponse } from '@/types/domain';
 
 /**
  * Shared Axios infrastructure for the Truepas REST API.
  *
- * Two clients are exported:
- *  - `apiClient`       → customer-app-bff (EXPO_PUBLIC_API_URL)
- *  - `livenessClient`  → liveness-service  (EXPO_PUBLIC_LIVENESS_URL)
+ * The app calls only the BFF (customer-app-bff) at /cb/*.
+ * Internal services (liveness, face, etc.) are reached through
+ * the BFF — the app never calls them directly.
  *
- * Both share the same in-memory access token, Bearer header injection,
- * and single-flight 401 refresh with request replay (OWASP A02/A07).
+ * Shared infrastructure:
+ *  - In-memory access token (set by auth slice, cleared on logout)
+ *  - In-memory registration token (set after phone OTP, cleared after account-details)
+ *  - Bearer header injection
+ *  - Single-flight 401 refresh with request replay (OWASP A02/A07)
  */
 
 const BFF_BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'https://api.dev.truepas.com/cb';
-const LIVENESS_BASE_URL = process.env.EXPO_PUBLIC_LIVENESS_URL ?? 'https://api.dev.truepas.com/ls';
 
 /** In-memory access token holder; set by the auth slice, cleared on logout. */
 let accessToken: string | null = null;
@@ -27,6 +30,23 @@ export function getAccessToken(): string | null {
   return accessToken;
 }
 
+// ── Registration token (in-memory only, not persisted) ─────────────────
+// Set after phone OTP verification; used as Bearer for the account-details
+// call only; cleared immediately after that call succeeds.
+let registrationToken: string | null = null;
+
+export function setRegistrationToken(token: string | null): void {
+  registrationToken = token;
+}
+
+export function getRegistrationToken(): string | null {
+  return registrationToken;
+}
+
+export function clearRegistrationToken(): void {
+  registrationToken = null;
+}
+
 // ── Token refresh (shared, single-flight) ─────────────────────────────
 let refreshPromise: Promise<string> | null = null;
 
@@ -35,11 +55,12 @@ async function refreshAccessToken(): Promise<string> {
   if (!refreshToken) {
     throw new Error('NO_REFRESH_TOKEN');
   }
-  const response = await axios.post<{ accessToken: string; refreshToken: string }>(
+  const response = await axios.post<AuthResponse>(
     `${BFF_BASE_URL}/auth/refresh`,
     { refreshToken },
     { timeout: 15_000 }
   );
+  // AuthResponse contains the full user + tokens; persist the new refresh token
   await secureStorage.setRefreshToken(response.data.refreshToken);
   setAccessToken(response.data.accessToken);
   return response.data.accessToken;
@@ -59,9 +80,11 @@ function createClient(baseURL: string): AxiosInstance {
     headers: { 'Content-Type': 'application/json' },
   });
 
-  // Attach Bearer token to every request
+  // Attach Bearer token to every request (unless overridden per-request)
   instance.interceptors.request.use((config: InternalAxiosRequestConfig) => {
-    if (accessToken) {
+    // Don't override if a per-request Authorization header was already set
+    // (e.g., registrationToken for account-details)
+    if (accessToken && !config.headers.Authorization) {
       config.headers.Authorization = `Bearer ${accessToken}`;
     }
     return config;
@@ -91,10 +114,8 @@ function createClient(baseURL: string): AxiosInstance {
   return instance;
 }
 
-// ── Exported clients ──────────────────────────────────────────────────
+// ── Exported client ────────────────────────────────────────────────────
 export const apiClient = createClient(BFF_BASE_URL);
-export const livenessClient = createClient(LIVENESS_BASE_URL);
 
-/** Base URLs (used by health checks and error messages). */
+/** Base URL (used by health checks and error messages). */
 export const BFF_URL = BFF_BASE_URL;
-export const LIVENESS_URL = LIVENESS_BASE_URL;

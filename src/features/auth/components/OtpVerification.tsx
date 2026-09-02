@@ -3,12 +3,14 @@ import { useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 import Animated, { useSharedValue, withSequence, withTiming } from 'react-native-reanimated';
 
+import { setRegistrationToken } from '@/api/client';
 import { ScreenContainer, Spacer } from '@/components/layout/ScreenContainer';
 import { TopBar } from '@/components/layout/TopBar';
 import { Button, Icon, IconName, OtpRow, ProgressTrack } from '@/components/ui';
 import { Colors } from '@/constants/theme';
 import { useVerifyOtp } from '@/features/auth/mutations';
 import { formatCountdown, useCountdown } from '@/hooks/useCountdown';
+import type { OtpPurpose, VerifyOtpRequest, VerifyOtpResponse } from '@/types/domain';
 
 interface OtpVerificationProps {
   title: string;
@@ -16,7 +18,15 @@ interface OtpVerificationProps {
   sentTo: string;
   icon: IconName;
   progress: number;
-  onVerified: () => void;
+  purpose: OtpPurpose;
+  /** Identifier fields to send with the OTP verification. */
+  identifier?: { phone?: string; countryCode?: string; email?: string };
+  /**
+   * Called after successful verification. Receives the full response
+   * so the caller can decide what to do (e.g., dispatch sessionStarted
+   * for email purpose, or store registrationToken for phone purpose).
+   */
+  onVerified: (response: VerifyOtpResponse) => void;
 }
 
 const OTP_LENGTH = 6;
@@ -30,6 +40,8 @@ export function OtpVerification({
   sentTo,
   icon,
   progress,
+  purpose,
+  identifier,
   onVerified,
 }: OtpVerificationProps) {
   const [code, setCode] = useState('');
@@ -51,10 +63,21 @@ export function OtpVerification({
     if (code.length !== OTP_LENGTH) return;
     setVerifyState('loading');
     try {
-      await verifyOtp.mutateAsync({ otp: code });
+      const payload: VerifyOtpRequest = {
+        otp: code,
+        purpose,
+        ...identifier,
+      };
+      const response = await verifyOtp.mutateAsync(payload);
+
+      // Store registration token if present (phone verification during registration)
+      if (response.registrationToken) {
+        setRegistrationToken(response.registrationToken);
+      }
+
       setVerifyState('success');
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      setTimeout(onVerified, 600);
+      setTimeout(() => onVerified(response), 600);
     } catch (err: any) {
       setVerifyState('error');
       setErrorMsg(err?.message ?? 'Invalid verification code. Please try again.');
@@ -78,7 +101,7 @@ export function OtpVerification({
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
 
-  const shakeStyle = { transform: [{ translateX: shakeX }] } as const;
+  const shakeStyle = { transform: [{ translateX: shakeX }] };
 
   return (
     <ScreenContainer scroll={false}>

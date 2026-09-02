@@ -41,6 +41,8 @@ export interface IdentityDocument {
   matchScore: number | null;
   addedAt: string;
   expiresAt: string | null;
+  source?: 'uploaded' | 'verified';
+  personId?: string;
 }
 
 export type FamilyAgeBand = '0-4' | '5-17' | '18+';
@@ -53,6 +55,7 @@ export interface FamilyMember {
   ageBand: FamilyAgeBand;
   verification: string;
   turning18Soon: boolean;
+  faceEnrolled: boolean;
 }
 
 export interface Booking {
@@ -104,15 +107,49 @@ export interface RegisterRequest {
   countryCode: string;
 }
 
+export interface RegisterResponse {
+  ok: boolean;
+  message: string;
+  registrationId: string;
+  nextStep: 'verifyPhone';
+}
+
+export type OtpPurpose = 'phone' | 'email' | 'password_reset';
+
 export interface VerifyOtpRequest {
   phone?: string;
+  countryCode?: string;
+  email?: string;
   otp: string;
+  purpose: OtpPurpose;
+}
+
+export interface VerifyOtpResponse {
+  ok: boolean;
+  message: string;
+  /** Present only when purpose === 'phone' (registration flow). */
+  registrationToken?: string;
+  /** Present only when purpose === 'email' (registration or reset). */
+  nextStep?: 'accountDetails' | 'verifyEmail' | 'reset';
+  /** Present when purpose === 'email' during registration (real API returns full AuthResponse). */
+  user?: User;
+  accessToken?: string;
+  refreshToken?: string;
 }
 
 export interface AccountDetailsRequest {
   fullName: string;
   dateOfBirth: string;
   pin: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+}
+
+export interface AccountDetailsResponse {
+  ok: boolean;
+  message: string;
+  nextStep: 'verifyEmail';
 }
 
 export interface ForgotPasswordRequest {
@@ -137,9 +174,8 @@ export interface ChangePinRequest {
 
 export interface UpdateProfileRequest {
   fullName?: string;
-  email?: string;
-  phone?: string;
   dateOfBirth?: string;
+  address?: string;
 }
 
 export interface AddFamilyMemberRequest {
@@ -153,6 +189,20 @@ export interface AddDocumentRequest {
   label: string;
   number: string;
   expiresAt: string | null;
+  personId?: string;
+}
+
+export interface DeleteAccountRequest {
+  confirmation: string;
+  pin: string;
+}
+
+export interface BiometricConsentRequest {
+  accepted: boolean;
+}
+
+export interface LogoutRequest {
+  refreshToken: string;
 }
 
 export interface OkResponse {
@@ -160,29 +210,93 @@ export interface OkResponse {
   message?: string;
 }
 
-// ── Face / Liveness operations ────────────────────────────────────────
-// These go to the liveness-service (EXPO_PUBLIC_LIVENESS_URL), not the BFF.
+// ── Notifications ──────────────────────────────────────────────────────
 
-export interface FaceEnrollRequest {
-  /** Base64-encoded face image (JPEG/PNG). */
-  imageBase64: string;
+export interface Notification {
+  id: string;
+  title: string;
+  body: string;
+  read: boolean;
+  createdAt: string;
+  type?: string;
 }
 
-export interface FaceVerifyRequest {
-  imageBase64: string;
-  /** Template ID from a prior enrollment (optional for first-time verify). */
-  templateId?: string;
+// ── Liveness / Face (all via BFF /cb/liveness/* and /cb/face/*) ────────
+
+export type LivenessChallenge = 'blink' | 'turn_left' | 'turn_right';
+
+export interface LivenessChallengeResponse {
+  success: boolean;
+  session_id: string;
+  session_token: string;
+  challenge_sequence: LivenessChallenge[];
+  expires_in_seconds: number;
+  step_time_limits: { min_ms: number; max_ms: number };
+  ui_copy: Record<LivenessChallenge, string>;
+}
+
+export interface LivenessEvidenceRequest {
+  challenge: LivenessChallenge;
+  step_index: number;
+  client_ts_ms: number;
+  duration_ms: number;
+  frame: string; // base64 JPEG
+}
+
+export interface LivenessEvidenceResponse {
+  success: boolean;
+  step_accepted: boolean;
+  next_challenge?: LivenessChallenge;
+  next_instruction?: string;
+  status: 'in_progress' | 'failed' | 'passed';
+}
+
+export interface LivenessFinalizeResponse {
+  success: boolean;
+  status: 'passed' | 'failed';
+  session_id: string;
+  antispoof_score: number;
+  message: string;
+}
+
+export interface FaceEnrollRequest {
+  livenessSessionId: string;
+  sessionToken: string;
+  personId?: string;
 }
 
 export interface FaceUpdateRequest {
-  imageBase64: string;
+  livenessSessionId: string;
+  sessionToken: string;
+  personId?: string;
 }
 
 export interface FaceResponse {
-  success: boolean;
-  matchScore?: number;
-  templateId?: string;
-  message?: string;
+  ok: boolean;
+  faceEnrolled: boolean;
+  faceId?: string;
+}
+
+// ── Document verification sessions ─────────────────────────────────────
+
+export interface VerificationSessionRequest {
+  requestId?: string;
+  frontObjectKey: string;
+  backObjectKey?: string;
+  selfieObjectKey?: string;
+  livenessSessionId?: string;
+}
+
+export type VerificationSessionStatus = 'created' | 'completed';
+export type VerificationOutcome = 'approved' | 'rejected' | 'review';
+
+export interface VerificationSession {
+  id: string;
+  status: VerificationSessionStatus;
+  outcome?: VerificationOutcome;
+  documentId: string;
+  createdAt: string;
+  completedAt?: string;
 }
 
 // ── Health check ──────────────────────────────────────────────────────

@@ -144,7 +144,7 @@ function HealthRow({ label, url, status }: { label: string; url: string; status?
 export default function DevScreen() {
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const [health, setHealth] = useState<{ bff: HealthStatus; liveness: HealthStatus } | null>(null);
+  const [health, setHealth] = useState<{ bff: HealthStatus } | null>(null);
 
   const refreshHealth = useCallback(async () => {
     const result = await checkAllHealth();
@@ -199,11 +199,6 @@ export default function DevScreen() {
               label="customer-app-bff"
               url="https://api.dev.truepas.com/cb"
               status={health?.bff}
-            />
-            <HealthRow
-              label="liveness-service"
-              url="https://api.dev.truepas.com/ls"
-              status={health?.liveness}
             />
           </View>
         </View>

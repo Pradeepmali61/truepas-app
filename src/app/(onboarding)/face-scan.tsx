@@ -4,9 +4,27 @@ import { Text, View } from 'react-native';
 import { ScreenContainer, Spacer } from '@/components/layout/ScreenContainer';
 import { TopBar } from '@/components/layout/TopBar';
 import { Button, Icon, InfoBanner, ProgressTrack } from '@/components/ui';
+import { LivenessCamera } from '@/features/liveness/LivenessCamera';
 
-/** Face scan intro — mandatory gate, no skip (PRD v2.0). */
+/** Face scan — mandatory liveness + face enrollment gate (no skip, PRD v2.0).
+ *  Uses server-provided challenge sequence via the LivenessCamera component. */
 export default function FaceScanScreen() {
+  const router = useRouter();
+
+  return (
+    <LivenessCamera
+      mode="enroll"
+      onSuccess={() => router.replace('/(onboarding)/face-enrolled')}
+      onError={(msg) => {
+        // Navigate to error screen; the LivenessCamera itself shows retry UI
+        router.push({ pathname: '/face-update/error', params: { message: msg } });
+      }}
+    />
+  );
+}
+
+/** Static intro screen (kept for reference — the live camera replaces it). */
+export function FaceScanIntro() {
   const router = useRouter();
 
   return (
@@ -31,7 +49,7 @@ export default function FaceScanScreen() {
       </View>
       <Spacer />
       <View className="px-6 pb-6">
-        <Button label="Start Face Scan" onPress={() => router.push('/(onboarding)/face-enrolled')} />
+        <Button label="Start Face Scan" onPress={() => router.push('/(onboarding)/face-scan')} />
       </View>
     </ScreenContainer>
   );

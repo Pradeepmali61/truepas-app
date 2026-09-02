@@ -12,6 +12,7 @@ import { ScreenContainer, Spacer } from '@/components/layout/ScreenContainer';
 import { Button, FloatingInput, Icon } from '@/components/ui';
 import { LoginForm, loginSchema } from '@/features/auth/schemas';
 import { sessionStarted } from '@/features/auth/slice';
+import { secureStorage } from '@/services/secureStorage';
 import { useAppDispatch } from '@/store';
 
 /** Login (returning user) — pixel-match of `auth/login.tsx` mockup. */
@@ -31,11 +32,12 @@ export default function LoginScreen() {
     setSubmitting(true);
     setLoginError('');
     try {
-      const { user, accessToken } = await api.login({
+      const { user, accessToken, refreshToken } = await api.login({
         identifier: values.identifier,
         password: values.password,
       });
-      dispatch(sessionStarted({ user, accessToken }));
+      await secureStorage.setRefreshToken(refreshToken);
+      dispatch(sessionStarted({ user, accessToken, refreshToken }));
     } catch (error) {
       setLoginError(toApiError(error).message);
     } finally {

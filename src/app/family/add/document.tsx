@@ -8,7 +8,9 @@ import { Button, FloatingInput, Icon, InfoBanner, Pill, Stepper } from '@/compon
 import { useAddFamilyMember } from '@/features/family/hooks';
 import type { FamilyAgeBand } from '@/types/domain';
 
-/** Add family — step 2: document. 5-17 → doc + selfie + face; 0-4 → doc only (PRD). */
+/** Add family — step 2: document. 5-17 → doc + selfie + face; 0-4 → doc only (PRD).
+ *  For 5-17, the family member is created here and the personId is passed
+ *  to the face-capture screen for liveness + face enrollment. */
 export default function FamilyDocumentScreen() {
   const router = useRouter();
   const { name, band, dob, relationship } = useLocalSearchParams<{
@@ -27,9 +29,18 @@ export default function FamilyDocumentScreen() {
       return;
     }
     try {
-      await addFamilyMember.mutateAsync({ name, dateOfBirth: dob, relationship });
-      router.dismissTo('/(tabs)/family');
-    } catch (err) {
+      // For 0-4: create the family member and go back
+      // For 5-17: create the family member and pass personId to face-capture
+      const member = await addFamilyMember.mutateAsync({ name, dateOfBirth: dob, relationship });
+      if (isMinorWithFace) {
+        router.push({
+          pathname: '/family/add/face-capture',
+          params: { name: firstName, personId: member.id },
+        });
+      } else {
+        router.dismissTo('/(tabs)/family');
+      }
+    } catch {
       router.dismissTo('/(tabs)/family');
     }
   };
@@ -84,11 +95,7 @@ export default function FamilyDocumentScreen() {
           <Button
             label={isMinorWithFace ? 'Scan Document' : 'Upload Document'}
             loading={addFamilyMember.isPending}
-            onPress={() =>
-              isMinorWithFace
-                ? router.push({ pathname: '/family/add/face-capture', params: { name: firstName, fullName: name, dob, relationship } })
-                : handleComplete()
-            }
+            onPress={handleComplete}
           />
         </View>
       </View>

@@ -6,21 +6,35 @@ import { Alert, StyleSheet, Text, View } from 'react-native';
 import { ScreenContainer, Spacer } from '@/components/layout/ScreenContainer';
 import { TopBar } from '@/components/layout/TopBar';
 import { Button, CheckboxRow, Icon, ListItem, ProgressTrack } from '@/components/ui';
+import { useBiometricConsent } from '@/features/auth/mutations';
 import { biometricConsentGiven } from '@/features/auth/slice';
 import { useAppDispatch } from '@/store';
 
-/** Biometric consent — explicit consent before face capture (PRD requirement). */
+/** Biometric consent — explicit consent before face capture (PRD requirement).
+ *  Calls POST /user/me/biometric-consent with { accepted: true }. */
 export default function ConsentScreen() {
   const router = useRouter();
   const dispatch = useAppDispatch();
   const [checked, setChecked] = useState(false);
+  const biometricConsent = useBiometricConsent();
 
-  const agree = () => {
-    dispatch(biometricConsentGiven());
-    router.push('/(onboarding)/face-scan');
+  const agree = async () => {
+    try {
+      await biometricConsent.mutateAsync({ accepted: true });
+      dispatch(biometricConsentGiven());
+      router.push('/(onboarding)/face-scan');
+    } catch (err: any) {
+      Alert.alert('Error', err?.message ?? 'Could not record consent. Please try again.');
+    }
   };
 
-  const decline = () => {
+  const decline = async () => {
+    // Best-effort: notify backend of withdrawal
+    try {
+      await biometricConsent.mutateAsync({ accepted: false });
+    } catch {
+      // Ignore — we show the alert regardless
+    }
     Alert.alert(
       'Face enrollment required',
       'Face enrollment is required to use Truepas. You cannot continue without providing biometric consent.'
@@ -59,7 +73,7 @@ export default function ConsentScreen() {
       </View>
       <Spacer />
       <View className="px-6 pb-6">
-        <Button label="Agree & Continue" onPress={agree} disabled={!checked} />
+        <Button label="Agree & Continue" onPress={agree} disabled={!checked} loading={biometricConsent.isPending} />
         <View className="mt-[14px]">
           <Button
             label="Decline (Face enrollment is required to use Truepas)"

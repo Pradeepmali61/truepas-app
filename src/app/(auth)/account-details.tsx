@@ -1,16 +1,16 @@
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 
+import { clearRegistrationToken } from '@/api/client';
 import { ScreenContainer, Spacer } from '@/components/layout/ScreenContainer';
 import { TopBar } from '@/components/layout/TopBar';
 import { Button, FloatingInput, Icon, InfoBanner, ProgressTrack } from '@/components/ui';
 import { Colors } from '@/constants/theme';
 import { useCompleteAccountDetails } from '@/features/auth/mutations';
 import { AccountDetailsForm, accountDetailsSchema } from '@/features/auth/schemas';
-import { sessionStarted } from '@/features/auth/slice';
-import { useAppDispatch } from '@/store';
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
@@ -18,19 +18,21 @@ function getDaysInMonth(year: number, month: number) {
   return new Date(year, month + 1, 0).getDate();
 }
 
-/** Register — account details + PIN (PRD FR-03). Ends the auth flow; face gate follows. */
+/** Register — account details + PIN + email + password (contract v1.1.0).
+ *  After submission, navigates to verify-email (NOT sessionStarted). */
 export default function AccountDetailsScreen() {
-  const dispatch = useAppDispatch();
+  const router = useRouter();
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedYear, setSelectedYear] = useState(2000);
   const [selectedMonth, setSelectedMonth] = useState(0);
   const [selectedDay, setSelectedDay] = useState(1);
+  const [showPassword, setShowPassword] = useState(false);
   const completeAccount = useCompleteAccountDetails();
 
   const { control, handleSubmit, setValue } = useForm<AccountDetailsForm>({
     resolver: zodResolver(accountDetailsSchema),
-    defaultValues: { fullName: '', dateOfBirth: '', pin: '' },
+    defaultValues: { fullName: '', dateOfBirth: '', pin: '', email: '', password: '', confirmPassword: '' },
   });
 
   const formatDate = (month: number, day: number, year: number) => {
@@ -47,17 +49,21 @@ export default function AccountDetailsScreen() {
   const onSubmit = handleSubmit(async (values) => {
     setSubmitError(null);
     try {
-      const res = await completeAccount.mutateAsync({
+      await completeAccount.mutateAsync({
         fullName: values.fullName,
         dateOfBirth: values.dateOfBirth,
         pin: values.pin,
+        email: values.email,
+        password: values.password,
+        confirmPassword: values.confirmPassword,
       });
-      dispatch(
-        sessionStarted({
-          user: res.user,
-          accessToken: res.accessToken,
-        })
-      );
+      // Registration token is consumed; clear it. Navigate to verify-email.
+      clearRegistrationToken();
+      // Pass email to verify-email screen for the OTP request
+      router.push({
+        pathname: '/(auth)/verify-email',
+        params: { email: values.email },
+      });
     } catch (err: any) {
       setSubmitError(err?.message ?? 'Could not save details. Please try again.');
     }
@@ -121,6 +127,22 @@ export default function AccountDetailsScreen() {
           />
           <Controller
             control={control}
+            name="email"
+            render={({ field: { onChange, value }, fieldState }) => (
+              <FloatingInput
+                label="Email"
+                placeholder="jane.doe@email.com"
+                autoComplete="email"
+                autoCapitalize="none"
+                keyboardType="email-address"
+                value={value}
+                onChangeText={onChange}
+                error={fieldState.error?.message}
+              />
+            )}
+          />
+          <Controller
+            control={control}
             name="pin"
             render={({ field: { onChange, value }, fieldState }) => (
               <FloatingInput
@@ -129,6 +151,45 @@ export default function AccountDetailsScreen() {
                 keyboardType="number-pad"
                 secureTextEntry
                 maxLength={4}
+                value={value}
+                onChangeText={onChange}
+                error={fieldState.error?.message}
+              />
+            )}
+          />
+          <Controller
+            control={control}
+            name="password"
+            render={({ field: { onChange, value }, fieldState }) => (
+              <FloatingInput
+                label="Password"
+                placeholder="••••••••"
+                secureTextEntry={!showPassword}
+                autoCapitalize="none"
+                value={value}
+                onChangeText={onChange}
+                error={fieldState.error?.message}
+                rightSlot={
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
+                    onPress={() => setShowPassword((v) => !v)}
+                    className="h-9 w-9 items-center justify-center">
+                    <Icon name={showPassword ? 'eyeClosed' : 'eye'} size={20} color="#999" />
+                  </Pressable>
+                }
+              />
+            )}
+          />
+          <Controller
+            control={control}
+            name="confirmPassword"
+            render={({ field: { onChange, value }, fieldState }) => (
+              <FloatingInput
+                label="Confirm Password"
+                placeholder="••••••••"
+                secureTextEntry={!showPassword}
+                autoCapitalize="none"
                 value={value}
                 onChangeText={onChange}
                 error={fieldState.error?.message}
@@ -236,3 +297,4 @@ export default function AccountDetailsScreen() {
     </ScreenContainer>
   );
 }
+

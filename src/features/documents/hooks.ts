@@ -9,8 +9,8 @@ export const documentKeys = {
   issued: ['documents', 'issued'] as const,
 };
 
-export function useDocuments() {
-  return useQuery({ queryKey: documentKeys.all, queryFn: api.getDocuments });
+export function useDocuments(personId?: string) {
+  return useQuery({ queryKey: documentKeys.all, queryFn: () => api.getDocuments(personId) });
 }
 
 export function useDocument(id: string) {

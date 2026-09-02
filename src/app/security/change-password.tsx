@@ -1,3 +1,4 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Text, View } from 'react-native';
@@ -6,10 +7,14 @@ import { ScreenContainer } from '@/components/layout/ScreenContainer';
 import { ScreenHeader } from '@/components/layout/ScreenHeader';
 import { Button, FloatingInput } from '@/components/ui';
 import { useChangePassword } from '@/features/auth/mutations';
+import { sessionEnded } from '@/features/auth/slice';
+import { useAppDispatch } from '@/store';
 
 /** Change Password — verify current, enter new password. */
 export default function ChangePasswordScreen() {
   const router = useRouter();
+  const dispatch = useAppDispatch();
+  const queryClient = useQueryClient();
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -32,8 +37,12 @@ export default function ChangePasswordScreen() {
     setError('');
     try {
       await changePassword.mutateAsync({ currentPassword, newPassword });
-      Alert.alert('Success', 'Your password has been updated.', [
-        { text: 'OK', onPress: () => router.back() },
+      // Contract: change-password revokes refresh sessions and the current
+      // access token becomes stale. Clear local state and send to login.
+      queryClient.clear();
+      dispatch(sessionEnded());
+      Alert.alert('Success', 'Your password has been updated. Please log in again.', [
+        { text: 'OK', onPress: () => router.replace('/(auth)/login') },
       ]);
     } catch (err: any) {
       setError(err?.message ?? 'Could not update password. Please try again.');

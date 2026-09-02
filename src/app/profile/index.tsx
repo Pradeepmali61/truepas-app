@@ -3,19 +3,24 @@ import { Pressable, Text, View } from 'react-native';
 
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
 import { Avatar, Card, Icon, ListItem, SectionTitle } from '@/components/ui';
+import { useLogout } from '@/features/auth/mutations';
 import { sessionEnded } from '@/features/auth/slice';
 import { useDocuments } from '@/features/documents/hooks';
 import { useFamily } from '@/features/family/hooks';
 import { useToast } from '@/hooks/useToast';
+import { secureStorage } from '@/services/secureStorage';
 import { useAppDispatch, useAppSelector } from '@/store';
+import { useQueryClient } from '@tanstack/react-query';
 
 export default function ProfileScreen() {
   const router = useRouter();
   const dispatch = useAppDispatch();
+  const queryClient = useQueryClient();
   const user = useAppSelector((state) => state.auth.user);
   const { data: documents } = useDocuments();
   const { data: family } = useFamily();
   const toast = useToast();
+  const logout = useLogout();
 
   const initials =
     user?.fullName
@@ -26,7 +31,18 @@ export default function ProfileScreen() {
   const docCount = documents?.length ?? 0;
   const familyCount = family?.length ?? 0;
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    // Best-effort logout API call — clear local state even on error
+    try {
+      const refreshToken = await secureStorage.getRefreshToken();
+      if (refreshToken) {
+        await logout.mutateAsync({ refreshToken });
+      }
+    } catch {
+      // Ignore — we clear local state regardless
+    }
+    // Clear all React Query caches containing customer data
+    queryClient.clear();
     dispatch(sessionEnded());
     toast.show('success', 'Logged out successfully');
   };

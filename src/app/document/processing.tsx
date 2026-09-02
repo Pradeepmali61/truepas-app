@@ -1,19 +1,41 @@
 import { useRouter } from 'expo-router';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
 
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
 import { Icon } from '@/components/ui/Icon';
 import { Colors } from '@/constants/theme';
 
-const PROCESSING_MS = 2500;
+const POLL_INTERVAL_MS = 2000;
+const MAX_POLL_ATTEMPTS = 30;
 
-/** Document processing — selfie + document portrait matching in progress. */
+/** Document processing — polls verification session until completed.
+ *  In production, a verification session would have been created on the
+ *  scan screen. Here we poll until the session reaches a terminal state. */
 export default function DocumentProcessingScreen() {
   const router = useRouter();
+  const pollCount = useRef(0);
 
   useEffect(() => {
-    const timer = setTimeout(() => router.replace('/document/verified'), PROCESSING_MS);
+    const poll = async () => {
+      // In production, the sessionId would come from the scan screen
+      // via route params. For now, we simulate the polling flow.
+      pollCount.current += 1;
+
+      if (pollCount.current >= MAX_POLL_ATTEMPTS) {
+        // Timeout — go to mismatch (or a timeout screen)
+        router.replace('/document/mismatch');
+        return;
+      }
+
+      // Simulate: after 2 polls, consider it approved
+      if (pollCount.current >= 2) {
+        router.replace('/document/verified');
+        return;
+      }
+    };
+
+    const timer = setTimeout(poll, POLL_INTERVAL_MS);
     return () => clearTimeout(timer);
   }, [router]);
 

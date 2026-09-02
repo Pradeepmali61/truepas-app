@@ -35,7 +35,7 @@ export default function ForgotPasswordScreen() {
     if (otp.length !== 6) { setError('Enter 6-digit OTP'); return; }
     setError('');
     try {
-      await verifyOtp.mutateAsync({ otp });
+      await verifyOtp.mutateAsync({ otp, email, purpose: 'password_reset' });
       setStep('reset');
     } catch (err: any) {
       setError(err?.message ?? 'Invalid OTP. Please try again.');

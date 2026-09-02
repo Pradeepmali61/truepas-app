@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Text, View } from 'react-native';
 
 import { ScreenContainer, Spacer } from '@/components/layout/ScreenContainer';
@@ -7,6 +7,7 @@ import { Button, Icon, InfoBanner } from '@/components/ui';
 /** Update face — ROC retry error. Never marks success on failure (PRD). */
 export default function FaceUpdateErrorScreen() {
   const router = useRouter();
+  const { message } = useLocalSearchParams<{ message?: string }>();
 
   return (
     <ScreenContainer scroll={false}>
@@ -18,7 +19,7 @@ export default function FaceUpdateErrorScreen() {
           Registration Failed
         </Text>
         <Text className="mb-4 max-w-[270px] text-center text-[14px] leading-[21px] text-muted">
-          We couldn&apos;t complete your face update. Please try again later.
+          {message ?? "We couldn't complete your face update. Please try again later."}
         </Text>
         <View className="max-w-[280px]">
           <InfoBanner variant="danger" leading="warning">
@@ -28,7 +29,7 @@ export default function FaceUpdateErrorScreen() {
       </View>
       <Spacer />
       <View className="px-6 pb-6">
-        <Button label="Retry Now" onPress={() => router.replace('/face-update/success')} />
+        <Button label="Retry Now" onPress={() => router.replace('/face-update/camera')} />
         <View className="mt-3">
           <Button label="Try Again Later" variant="link" onPress={() => router.dismissTo('/(tabs)')} />
         </View>
