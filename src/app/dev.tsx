@@ -1,10 +1,13 @@
 import { useRouter } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { checkAllHealth } from '@/api/health';
 import { mockUser } from '@/api/mock';
 import { faceEnrollmentCompleted, sessionEnded, sessionStarted } from '@/features/auth/slice';
 import { useAppDispatch } from '@/store';
+import type { HealthStatus } from '@/types/domain';
 
 type AuthPreset = 'unauth' | 'auth-no-face' | 'auth-face';
 
@@ -120,9 +123,37 @@ const PRESET_COLORS: Record<AuthPreset, string> = {
   'auth-face': '#059669',
 };
 
+function HealthRow({ label, url, status }: { label: string; url: string; status?: HealthStatus }) {
+  const loading = status === undefined;
+  const healthy = status?.healthy === true;
+  const dotColor = loading ? '#d1d5db' : healthy ? '#059669' : '#ef4444';
+  return (
+    <View className="flex-row items-center gap-2">
+      <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: dotColor }} />
+      <View className="flex-1">
+        <Text className="text-[12px] font-medium text-ink">{label}</Text>
+        <Text className="text-[10px] text-muted" numberOfLines={1}>{url}</Text>
+      </View>
+      <Text style={{ fontSize: 11, fontWeight: '600', color: dotColor }}>
+        {loading ? '…' : healthy ? 'Healthy' : 'Down'}
+      </Text>
+    </View>
+  );
+}
+
 export default function DevScreen() {
   const router = useRouter();
   const dispatch = useAppDispatch();
+  const [health, setHealth] = useState<{ bff: HealthStatus; liveness: HealthStatus } | null>(null);
+
+  const refreshHealth = useCallback(async () => {
+    const result = await checkAllHealth();
+    setHealth(result);
+  }, []);
+
+  useEffect(() => {
+    refreshHealth();
+  }, [refreshHealth]);
 
   const applyPreset = (preset: AuthPreset) => {
     if (preset === 'unauth') {
@@ -153,6 +184,28 @@ export default function DevScreen() {
           <Text className="mt-1 text-[13px] text-white/70">
             Tap any screen to jump directly to it
           </Text>
+        </View>
+
+        {/* Backend status */}
+        <View className="mx-5 mt-3 rounded-btn border border-gray-200 bg-white p-3">
+          <View className="flex-row items-center justify-between">
+            <Text className="text-[13px] font-semibold text-ink">Backend Status</Text>
+            <Pressable onPress={refreshHealth} hitSlop={8}>
+              <Text className="text-[12px] font-medium text-primary">Refresh</Text>
+            </Pressable>
+          </View>
+          <View className="mt-2 gap-1.5">
+            <HealthRow
+              label="customer-app-bff"
+              url="https://api.dev.truepas.com/cb"
+              status={health?.bff}
+            />
+            <HealthRow
+              label="liveness-service"
+              url="https://api.dev.truepas.com/ls"
+              status={health?.liveness}
+            />
+          </View>
         </View>
 
         <View className="flex-row gap-2 px-5 py-3">

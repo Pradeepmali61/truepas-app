@@ -1,4 +1,4 @@
-import { apiClient } from '@/api/client';
+import { apiClient, livenessClient } from '@/api/client';
 import type {
     AccountDetailsRequest,
     ActivityLogItem,
@@ -8,6 +8,10 @@ import type {
     Booking,
     ChangePasswordRequest,
     ChangePinRequest,
+    FaceEnrollRequest,
+    FaceResponse,
+    FaceUpdateRequest,
+    FaceVerifyRequest,
     FamilyMember,
     ForgotPasswordRequest,
     IdentityDocument,
@@ -135,6 +139,20 @@ export const realApi = {
   },
   removeDocument: async (id: string): Promise<OkResponse> => {
     const { data } = await apiClient.delete<OkResponse>(`/documents/${id}`);
+    return data;
+  },
+
+  // ── Face / Liveness (liveness-service via livenessClient) ───────────
+  enrollFace: async (payload: FaceEnrollRequest): Promise<FaceResponse> => {
+    const { data } = await livenessClient.post<FaceResponse>('/enroll', payload);
+    return data;
+  },
+  verifyFace: async (payload: FaceVerifyRequest): Promise<FaceResponse> => {
+    const { data } = await livenessClient.post<FaceResponse>('/verify', payload);
+    return data;
+  },
+  updateFace: async (payload: FaceUpdateRequest): Promise<FaceResponse> => {
+    const { data } = await livenessClient.post<FaceResponse>('/update', payload);
     return data;
   },
 };

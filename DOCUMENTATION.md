@@ -812,41 +812,124 @@ const { control, handleSubmit } = useForm<LoginForm>({
 
 ## 15. Backend Integration Guide
 
-### When the backend is ready:
+### Dev Backend Services
 
-1. **Set environment variables** in `.env`:
-   ```
-   EXPO_PUBLIC_USE_MOCK_API=false
-   EXPO_PUBLIC_API_URL=https://api.yourbackend.com
-   ```
+The Truepas dev backend runs on AWS EKS with a microservice architecture. The mobile app talks to two public services:
 
-2. **Verify endpoint paths** in `src/api/endpoints.ts` match the backend's actual routes. Update paths as needed.
+| Service | Base URL | Health Check | Purpose |
+|---|---|---|---|
+| **customer-app-bff** | `https://api.dev.truepas.com/cb` | `/health` | BFF gateway — auth, user, family, documents, bookings, profile, security |
+| **liveness-service** | `https://api.dev.truepas.com/ls` | `/health` | Face enrollment, face verification, face update, liveness check |
 
-3. **Verify request/response shapes** match `src/types/domain.ts`. The mock API and types define the contract. If the backend uses different field names, either:
+Internal services (EKS-only, not accessible externally):
+- `customer-account-service` (port 8017) — user accounts
+- `identity-proofing-service` (port 8014) — identity verification
+- `notification-service` (port 8013) — notifications
+- `checkin-consent-service` (port 8012) — check-in consent
+- `kiosk-service` (port 8011) — kiosk
+- `merchant-account-service` (port 8018) — merchant accounts
+- `event-relay-service` (port 8019) — events
+- `service-auth-service` (port 8020) — service auth
+
+### Environment Variables
+
+```bash
+# .env file
+EXPO_PUBLIC_API_URL=https://api.dev.truepas.com/cb          # BFF
+EXPO_PUBLIC_LIVENESS_URL=https://api.dev.truepas.com/ls      # Liveness
+EXPO_PUBLIC_USE_MOCK_API=false                               # Use real API
+EXPO_PUBLIC_FALLBACK_TO_MOCK=true                            # Fall back to mock on 503
+```
+
+| Variable | Values | Effect |
+|---|---|---|
+| `EXPO_PUBLIC_USE_MOCK_API` | `true` (default) / `false` | `true` = JSON mock, `false` = real REST API |
+| `EXPO_PUBLIC_FALLBACK_TO_MOCK` | `true` / `false` | If `true`, 503/network errors fall back to mock data |
+| `EXPO_PUBLIC_API_URL` | URL | BFF base URL |
+| `EXPO_PUBLIC_LIVENESS_URL` | URL | Liveness service base URL |
+
+### Two Axios Clients
+
+| Client | File | Base URL | Used for |
+|---|---|---|---|
+| `apiClient` | `src/api/client.ts` | `EXPO_PUBLIC_API_URL` | All BFF calls (auth, user, family, documents, bookings) |
+| `livenessClient` | `src/api/client.ts` | `EXPO_PUBLIC_LIVENESS_URL` | Face operations (enroll, verify, update) |
+
+Both share:
+- In-memory access token (set by auth slice)
+- Bearer token injection (request interceptor)
+- Single-flight 401 refresh with request replay (response interceptor)
+- 15s timeout, JSON content type
+
+### Health Checks
+
+Use `src/api/health.ts`:
+
+```typescript
+import { checkAllHealth } from '@/api/health';
+
+const { bff, liveness } = await checkAllHealth();
+// bff: { healthy: true, service: 'truepass-customer-app-bff', version: '1.0.0' }
+// liveness: { healthy: true, service: 'liveness-service' }
+```
+
+The dev screen (`/dev`) shows live backend status indicators.
+
+### Error Handling
+
+`src/api/errors.ts` provides `toApiError(error)` which normalizes errors:
+
+| Error | Code | Message | Retryable |
+|---|---|---|---|
+| 503 | `SERVICE_UNAVAILABLE` | "Backend service is starting up. Please try again in a moment." | Yes |
+| No response | `NETWORK` | "Cannot reach the server. Check your internet connection." | Yes |
+| Timeout | `TIMEOUT` | "Request timed out. Please try again." | Yes |
+| 401 | `UNAUTHORIZED` | "Your session expired. Please log in again." | No |
+| 429 | `RATE_LIMITED` | "Too many attempts. Please wait and try again." | Yes |
+| 5xx | `SERVER` | "Something went wrong on our side. Please retry." | Yes |
+| 4xx | `REQUEST` | Server message or "Request failed." | No |
+
+`isBackendDown(error)` returns `true` for 503/network errors (used by fallback logic).
+
+### Mock Fallback
+
+When `EXPO_PUBLIC_FALLBACK_TO_MOCK=true` and the real API returns 503 or a network error, the call is automatically retried against `mockApi`. This allows UI development to continue even when the backend is down.
+
+Set `EXPO_PUBLIC_FALLBACK_TO_MOCK=false` for strict real-only mode (errors surface to the user).
+
+### When the API spec arrives:
+
+1. **Update endpoint paths** in `src/api/endpoints.ts` to match the backend's actual routes.
+2. **Verify request/response shapes** match `src/types/domain.ts`. If the backend uses different field names, either:
    - Ask backend team to match these shapes, OR
    - Add a mapping layer in `endpoints.ts`
-
-4. **Test each flow:**
+3. **Test each flow:**
    - Login → check `AuthResponse` shape
    - Register → check `OkResponse`
    - OTP → check `OkResponse`
    - Family add/remove → check `FamilyMember` shape
    - Document add/remove → check `IdentityDocument` shape
-
-5. **Token refresh:** Ensure backend implements `POST /auth/refresh` returning `{ accessToken, refreshToken }`.
+   - Face enroll/verify/update → check `FaceResponse` shape
+4. **Token refresh:** Ensure backend implements `POST /auth/refresh` returning `{ accessToken, refreshToken }`.
 
 ### Mock API → Real API mapping
 
 Every function in `mockApi` has a 1:1 counterpart in `realApi`:
 
-| Mock function | Real endpoint |
-|---|---|
-| `mockApi.login(payload)` | `POST /auth/login` |
-| `mockApi.register(payload)` | `POST /auth/register` |
-| `mockApi.getFamily()` | `GET /family` |
-| `mockApi.addFamilyMember(payload)` | `POST /family` |
-| `mockApi.removeFamilyMember(id)` | `DELETE /family/:id` |
-| ... | ... |
+| Mock function | Real endpoint | Client |
+|---|---|---|
+| `mockApi.login(payload)` | `POST /auth/login` | `apiClient` |
+| `mockApi.register(payload)` | `POST /auth/register` | `apiClient` |
+| `mockApi.verifyOtp(payload)` | `POST /auth/verify-otp` | `apiClient` |
+| `mockApi.getFamily()` | `GET /family` | `apiClient` |
+| `mockApi.addFamilyMember(payload)` | `POST /family` | `apiClient` |
+| `mockApi.removeFamilyMember(id)` | `DELETE /family/:id` | `apiClient` |
+| `mockApi.getDocuments()` | `GET /documents` | `apiClient` |
+| `mockApi.addDocument(payload)` | `POST /documents` | `apiClient` |
+| `mockApi.enrollFace(payload)` | `POST /enroll` | `livenessClient` |
+| `mockApi.verifyFace(payload)` | `POST /verify` | `livenessClient` |
+| `mockApi.updateFace(payload)` | `POST /update` | `livenessClient` |
+| ... | ... | ... |
 
 No screen or hook needs to change — they all call `api.*` which routes to mock or real based on env.
 
@@ -867,14 +950,17 @@ No screen or hook needs to change — they all call `api.*` which routes to mock
 
 ### TODO
 
+- [ ] Update endpoint paths in `endpoints.ts` when API spec arrives (currently guessed)
 - [ ] Wire document scan/verify flow to real API (`useAddDocument`)
 - [ ] Wire profile edit to `useUpdateProfile` (currently read-only)
-- [ ] Implement camera capture (currently placeholder screens)
+- [ ] Implement camera capture with `expo-camera` (currently placeholder screens)
+- [ ] Wire face scan screens to `useEnrollFace` / `useUpdateFace` mutations
 - [ ] Implement file upload for documents
 - [ ] Add push notifications
 - [ ] Add offline support (React Query persistence)
 - [ ] Add deep linking for OTP auto-fill
 - [ ] Add biometric authentication (Face ID / Touch ID) for app unlock
+- [ ] Verify CORS settings for web platform dev
 
 ---
 

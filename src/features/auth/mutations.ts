@@ -5,6 +5,9 @@ import type {
     AccountDetailsRequest,
     ChangePasswordRequest,
     ChangePinRequest,
+    FaceEnrollRequest,
+    FaceUpdateRequest,
+    FaceVerifyRequest,
     ForgotPasswordRequest,
     LoginRequest,
     RegisterRequest,
@@ -82,5 +85,25 @@ export function useUpdateProfile() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['user'] });
     },
+  });
+}
+
+// ── Face / Liveness operations (liveness-service) ─────────────────────
+
+export function useEnrollFace() {
+  return useMutation({
+    mutationFn: (payload: FaceEnrollRequest) => api.enrollFace(payload),
+  });
+}
+
+export function useVerifyFace() {
+  return useMutation({
+    mutationFn: (payload: FaceVerifyRequest) => api.verifyFace(payload),
+  });
+}
+
+export function useUpdateFace() {
+  return useMutation({
+    mutationFn: (payload: FaceUpdateRequest) => api.updateFace(payload),
   });
 }

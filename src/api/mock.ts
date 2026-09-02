@@ -7,6 +7,10 @@ import type {
     Booking,
     ChangePasswordRequest,
     ChangePinRequest,
+    FaceEnrollRequest,
+    FaceResponse,
+    FaceUpdateRequest,
+    FaceVerifyRequest,
     FamilyMember,
     ForgotPasswordRequest,
     IdentityDocument,
@@ -201,5 +205,17 @@ export const mockApi = {
   removeDocument: (id: string): Promise<OkResponse> => {
     documents = documents.filter((d) => d.id !== id);
     return respond({ ok: true, message: 'Document removed' });
+  },
+
+  // ── Face / Liveness ──────────────────────────────────────────────────
+  enrollFace: (_payload: FaceEnrollRequest): Promise<FaceResponse> => {
+    user = { ...user, faceEnrolled: true };
+    return respond({ success: true, templateId: 'tpl-mock-001', matchScore: 0.98 });
+  },
+  verifyFace: (_payload: FaceVerifyRequest): Promise<FaceResponse> => {
+    return respond({ success: true, matchScore: 0.95, templateId: 'tpl-mock-001' });
+  },
+  updateFace: (_payload: FaceUpdateRequest): Promise<FaceResponse> => {
+    return respond({ success: true, templateId: 'tpl-mock-002', matchScore: 0.97 });
   },
 };

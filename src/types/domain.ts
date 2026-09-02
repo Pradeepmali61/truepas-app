@@ -159,3 +159,36 @@ export interface OkResponse {
   ok: boolean;
   message?: string;
 }
+
+// ── Face / Liveness operations ────────────────────────────────────────
+// These go to the liveness-service (EXPO_PUBLIC_LIVENESS_URL), not the BFF.
+
+export interface FaceEnrollRequest {
+  /** Base64-encoded face image (JPEG/PNG). */
+  imageBase64: string;
+}
+
+export interface FaceVerifyRequest {
+  imageBase64: string;
+  /** Template ID from a prior enrollment (optional for first-time verify). */
+  templateId?: string;
+}
+
+export interface FaceUpdateRequest {
+  imageBase64: string;
+}
+
+export interface FaceResponse {
+  success: boolean;
+  matchScore?: number;
+  templateId?: string;
+  message?: string;
+}
+
+// ── Health check ──────────────────────────────────────────────────────
+
+export interface HealthStatus {
+  healthy: boolean;
+  service?: string;
+  version?: string;
+}
