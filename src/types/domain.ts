@@ -84,3 +84,78 @@ export interface ActivityLogItem {
   title: string;
   date: string;
 }
+
+// ── Write operation payloads & responses ──────────────────────────────
+// These shapes define the API contract shared with the backend team.
+
+export interface AuthResponse {
+  user: User;
+  accessToken: string;
+  refreshToken: string;
+}
+
+export interface LoginRequest {
+  identifier: string;
+  password: string;
+}
+
+export interface RegisterRequest {
+  phone: string;
+  countryCode: string;
+}
+
+export interface VerifyOtpRequest {
+  phone?: string;
+  otp: string;
+}
+
+export interface AccountDetailsRequest {
+  fullName: string;
+  dateOfBirth: string;
+  pin: string;
+}
+
+export interface ForgotPasswordRequest {
+  email: string;
+}
+
+export interface ResetPasswordRequest {
+  email: string;
+  otp: string;
+  newPassword: string;
+}
+
+export interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
+}
+
+export interface ChangePinRequest {
+  currentPin: string;
+  newPin: string;
+}
+
+export interface UpdateProfileRequest {
+  fullName?: string;
+  email?: string;
+  phone?: string;
+  dateOfBirth?: string;
+}
+
+export interface AddFamilyMemberRequest {
+  name: string;
+  dateOfBirth: string;
+  relationship: string;
+}
+
+export interface AddDocumentRequest {
+  type: DocumentType;
+  label: string;
+  number: string;
+  expiresAt: string | null;
+}
+
+export interface OkResponse {
+  ok: boolean;
+  message?: string;
+}

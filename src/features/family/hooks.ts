@@ -1,7 +1,7 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { api } from '@/api';
-import type { FamilyAgeBand } from '@/types/domain';
+import type { AddFamilyMemberRequest, FamilyAgeBand } from '@/types/domain';
 
 export const familyKeys = {
   all: ['family'] as const,
@@ -19,6 +19,26 @@ export function useFamilyMember(id: string) {
 
 export function useFamilyActivity(id: string) {
   return useQuery({ queryKey: familyKeys.activity(id), queryFn: () => api.getFamilyActivity(id) });
+}
+
+export function useAddFamilyMember() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: AddFamilyMemberRequest) => api.addFamilyMember(payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: familyKeys.all });
+    },
+  });
+}
+
+export function useRemoveFamilyMember() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.removeFamilyMember(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: familyKeys.all });
+    },
+  });
 }
 
 /** PRD age rules: 0-4 doc only · 5-17 doc + selfie + face · 18+ rejected. */

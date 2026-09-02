@@ -1,6 +1,7 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { api } from '@/api';
+import type { AddDocumentRequest } from '@/types/domain';
 
 export const documentKeys = {
   all: ['documents'] as const,
@@ -18,4 +19,24 @@ export function useDocument(id: string) {
 
 export function useIssuedDocuments() {
   return useQuery({ queryKey: documentKeys.issued, queryFn: api.getIssuedDocuments });
+}
+
+export function useAddDocument() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: AddDocumentRequest) => api.addDocument(payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: documentKeys.all });
+    },
+  });
+}
+
+export function useRemoveDocument() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.removeDocument(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: documentKeys.all });
+    },
+  });
 }

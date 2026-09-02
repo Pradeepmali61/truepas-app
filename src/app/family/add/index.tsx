@@ -41,7 +41,10 @@ export default function AddFamilyScreen() {
       router.push({ pathname: '/family/add/rejected', params: { name: values.fullName, age: String(age) } });
       return;
     }
-    router.push({ pathname: '/family/add/document', params: { name: values.fullName, band } });
+    router.push({
+      pathname: '/family/add/document',
+      params: { name: values.fullName, band, dob: values.dateOfBirth, relationship },
+    });
   });
 
   return (

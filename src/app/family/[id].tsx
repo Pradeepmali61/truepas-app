@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Icon, Skeleton } from '@/components/ui';
 import { Colors } from '@/constants/theme';
-import { useFamilyMember } from '@/features/family/hooks';
+import { useFamilyMember, useRemoveFamilyMember } from '@/features/family/hooks';
 
 function InfoField({ icon, label, value }: { icon: string; label: string; value: string }) {
   return (
@@ -31,7 +31,30 @@ export default function FamilyMemberScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data: member, isPending } = useFamilyMember(id);
+  const removeMember = useRemoveFamilyMember();
   const [menuOpen, setMenuOpen] = useState(false);
+
+  const handleRemove = () => {
+    Alert.alert(
+      'Remove family member?',
+      `${member?.name ?? 'This member'} will no longer be available in your family.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await removeMember.mutateAsync(id);
+            } catch {
+              // proceed even if mock fails
+            }
+            router.back();
+          },
+        },
+      ],
+    );
+  };
 
   if (isPending) {
     return (
@@ -137,7 +160,7 @@ export default function FamilyMemberScreen() {
             </Pressable>
             <View style={{ height: 1, backgroundColor: '#F1F5F9' }} />
             <Pressable
-              onPress={() => { setMenuOpen(false); router.back(); }}
+              onPress={() => { setMenuOpen(false); handleRemove(); }}
               style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
               <Text style={{ fontSize: 15, fontWeight: '500', color: '#EF4444' }}>Remove member</Text>
             </Pressable>
@@ -251,16 +274,7 @@ export default function FamilyMemberScreen() {
 
         {/* Remove member */}
         <Pressable
-          onPress={() => {
-            Alert.alert(
-              'Remove family member?',
-              `${member.name} will no longer be available in your family.`,
-              [
-                { text: 'Cancel', style: 'cancel' },
-                { text: 'Remove', style: 'destructive', onPress: () => router.back() },
-              ],
-            );
-          }}
+          onPress={handleRemove}
           accessibilityRole="button"
           accessibilityLabel="Remove family member"
           style={{

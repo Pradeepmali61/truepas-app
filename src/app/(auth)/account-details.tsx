@@ -3,11 +3,11 @@ import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 
-import { api } from '@/api';
 import { ScreenContainer, Spacer } from '@/components/layout/ScreenContainer';
 import { TopBar } from '@/components/layout/TopBar';
 import { Button, FloatingInput, Icon, InfoBanner, ProgressTrack } from '@/components/ui';
 import { Colors } from '@/constants/theme';
+import { useCompleteAccountDetails } from '@/features/auth/mutations';
 import { AccountDetailsForm, accountDetailsSchema } from '@/features/auth/schemas';
 import { sessionStarted } from '@/features/auth/slice';
 import { useAppDispatch } from '@/store';
@@ -21,11 +21,12 @@ function getDaysInMonth(year: number, month: number) {
 /** Register — account details + PIN (PRD FR-03). Ends the auth flow; face gate follows. */
 export default function AccountDetailsScreen() {
   const dispatch = useAppDispatch();
-  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedYear, setSelectedYear] = useState(2000);
   const [selectedMonth, setSelectedMonth] = useState(0);
   const [selectedDay, setSelectedDay] = useState(1);
+  const completeAccount = useCompleteAccountDetails();
 
   const { control, handleSubmit, setValue } = useForm<AccountDetailsForm>({
     resolver: zodResolver(accountDetailsSchema),
@@ -44,15 +45,22 @@ export default function AccountDetailsScreen() {
   };
 
   const onSubmit = handleSubmit(async (values) => {
-    setSubmitting(true);
-    const user = await api.getUser();
-    dispatch(
-      sessionStarted({
-        user: { ...user, fullName: values.fullName, faceEnrolled: false, biometricConsentAt: null },
-        accessToken: 'mock-access-token',
-      })
-    );
-    setSubmitting(false);
+    setSubmitError(null);
+    try {
+      const res = await completeAccount.mutateAsync({
+        fullName: values.fullName,
+        dateOfBirth: values.dateOfBirth,
+        pin: values.pin,
+      });
+      dispatch(
+        sessionStarted({
+          user: res.user,
+          accessToken: res.accessToken,
+        })
+      );
+    } catch (err: any) {
+      setSubmitError(err?.message ?? 'Could not save details. Please try again.');
+    }
   });
 
   const daysInMonth = getDaysInMonth(selectedYear, selectedMonth);
@@ -132,8 +140,13 @@ export default function AccountDetailsScreen() {
           </InfoBanner>
         </View>
         <Spacer />
+        {submitError ? (
+          <Text className="mb-3 text-center text-[13px]" style={{ color: '#EF4444' }}>
+            {submitError}
+          </Text>
+        ) : null}
         <View className="pb-6 pt-4">
-          <Button label="Continue" onPress={onSubmit} loading={submitting} />
+          <Button label="Continue" onPress={onSubmit} loading={completeAccount.isPending} />
         </View>
       </View>
       </KeyboardAvoidingView>

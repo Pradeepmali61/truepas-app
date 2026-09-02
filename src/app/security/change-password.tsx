@@ -1,10 +1,11 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Text, View } from 'react-native';
+import { Alert, Text, View } from 'react-native';
 
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
 import { ScreenHeader } from '@/components/layout/ScreenHeader';
 import { Button, FloatingInput } from '@/components/ui';
+import { useChangePassword } from '@/features/auth/mutations';
 
 /** Change Password — verify current, enter new password. */
 export default function ChangePasswordScreen() {
@@ -13,8 +14,9 @@ export default function ChangePasswordScreen() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
+  const changePassword = useChangePassword();
 
-  const handleChange = () => {
+  const handleChange = async () => {
     if (!currentPassword || !newPassword || !confirmPassword) {
       setError('All fields are required');
       return;
@@ -28,7 +30,14 @@ export default function ChangePasswordScreen() {
       return;
     }
     setError('');
-    router.back();
+    try {
+      await changePassword.mutateAsync({ currentPassword, newPassword });
+      Alert.alert('Success', 'Your password has been updated.', [
+        { text: 'OK', onPress: () => router.back() },
+      ]);
+    } catch (err: any) {
+      setError(err?.message ?? 'Could not update password. Please try again.');
+    }
   };
 
   return (
@@ -67,7 +76,7 @@ export default function ChangePasswordScreen() {
         <View style={{ flex: 1 }} />
 
         <View style={{ paddingBottom: 24, paddingTop: 16 }}>
-          <Button label="Update Password" onPress={handleChange} />
+          <Button label="Update Password" onPress={handleChange} loading={changePassword.isPending} />
         </View>
       </View>
     </ScreenContainer>

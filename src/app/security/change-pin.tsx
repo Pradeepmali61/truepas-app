@@ -1,10 +1,11 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Text, View } from 'react-native';
+import { Alert, Text, View } from 'react-native';
 
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
 import { TopBar } from '@/components/layout/TopBar';
 import { Icon, PinDots, PinPad } from '@/components/ui';
+import { useChangePin } from '@/features/auth/mutations';
 
 const PIN_LENGTH = 4;
 
@@ -15,17 +16,29 @@ export default function ChangePinScreen() {
   const router = useRouter();
   const [step, setStep] = useState<Step>('verify');
   const [pin, setPin] = useState('');
+  const [currentPin, setCurrentPin] = useState('');
+  const changePin = useChangePin();
 
   const handleDigit = (digit: string) => {
     const next = (pin + digit).slice(0, PIN_LENGTH);
     setPin(next);
     if (next.length === PIN_LENGTH) {
-      setTimeout(() => {
+      setTimeout(async () => {
         if (step === 'verify') {
+          setCurrentPin(next);
           setStep('create');
           setPin('');
         } else {
-          router.back();
+          try {
+            await changePin.mutateAsync({ currentPin, newPin: next });
+            Alert.alert('Success', 'Your PIN has been updated.', [
+              { text: 'OK', onPress: () => router.back() },
+            ]);
+          } catch (err: any) {
+            Alert.alert('Error', err?.message ?? 'Could not update PIN. Please try again.', [
+              { text: 'OK', onPress: () => router.back() },
+            ]);
+          }
         }
       }, 250);
     }

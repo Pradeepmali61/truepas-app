@@ -8,6 +8,7 @@ import { ScreenContainer, Spacer } from '@/components/layout/ScreenContainer';
 import { TopBar } from '@/components/layout/TopBar';
 import { Button, ProgressTrack } from '@/components/ui';
 import { Colors } from '@/constants/theme';
+import { useRegister } from '@/features/auth/mutations';
 import { PhoneForm, phoneSchema } from '@/features/auth/schemas';
 
 const COUNTRIES = [
@@ -30,12 +31,25 @@ export default function RegisterScreen() {
   const router = useRouter();
   const [selectedCountry, setSelectedCountry] = useState(COUNTRIES[0]);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const register = useRegister();
   const { control, handleSubmit } = useForm<PhoneForm>({
     resolver: zodResolver(phoneSchema),
     defaultValues: { phone: '' },
   });
 
-  const onSubmit = handleSubmit(() => router.push('/(auth)/verify-phone'));
+  const onSubmit = handleSubmit(async (values) => {
+    setSubmitError(null);
+    try {
+      await register.mutateAsync({
+        phone: values.phone,
+        countryCode: selectedCountry.code,
+      });
+      router.push('/(auth)/verify-phone');
+    } catch (err: any) {
+      setSubmitError(err?.message ?? 'Could not send code. Please try again.');
+    }
+  });
 
   return (
     <ScreenContainer scroll={false}>
@@ -92,8 +106,13 @@ export default function RegisterScreen() {
             </View>
           </View>
           <Spacer />
+          {submitError ? (
+            <Text className="mb-3 text-center text-[13px]" style={{ color: '#EF4444' }}>
+              {submitError}
+            </Text>
+          ) : null}
           <View className="pb-6">
-            <Button label="Send Code" onPress={onSubmit} />
+            <Button label="Send Code" onPress={onSubmit} loading={register.isPending} />
           </View>
         </View>
       </KeyboardAvoidingView>

@@ -7,6 +7,7 @@ import { Controller, useForm } from 'react-hook-form';
 import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { api } from '@/api';
+import { toApiError } from '@/api/errors';
 import { ScreenContainer, Spacer } from '@/components/layout/ScreenContainer';
 import { Button, FloatingInput, Icon } from '@/components/ui';
 import { LoginForm, loginSchema } from '@/features/auth/schemas';
@@ -19,17 +20,27 @@ export default function LoginScreen() {
   const dispatch = useAppDispatch();
   const [submitting, setSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [loginError, setLoginError] = useState('');
 
   const { control, handleSubmit } = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
     defaultValues: { identifier: '', password: '' },
   });
 
-  const onSubmit = handleSubmit(async () => {
+  const onSubmit = handleSubmit(async (values) => {
     setSubmitting(true);
-    const user = await api.getUser();
-    dispatch(sessionStarted({ user, accessToken: 'mock-access-token' }));
-    setSubmitting(false);
+    setLoginError('');
+    try {
+      const { user, accessToken } = await api.login({
+        identifier: values.identifier,
+        password: values.password,
+      });
+      dispatch(sessionStarted({ user, accessToken }));
+    } catch (error) {
+      setLoginError(toApiError(error).message);
+    } finally {
+      setSubmitting(false);
+    }
   });
 
   return (
@@ -100,6 +111,11 @@ export default function LoginScreen() {
               <Text className="text-[14px] font-medium text-primary underline">Forgot password?</Text>
             </Pressable>
           </View>
+          {loginError ? (
+            <Text className="mt-3 px-6 text-center text-[13px]" style={{ color: '#EF4444' }}>
+              {loginError}
+            </Text>
+          ) : null}
         </View>
 
         <Spacer />

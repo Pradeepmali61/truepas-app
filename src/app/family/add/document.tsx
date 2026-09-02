@@ -5,14 +5,34 @@ import { Platform, StyleSheet, Text, View } from 'react-native';
 import { ScreenContainer, Spacer } from '@/components/layout/ScreenContainer';
 import { ScreenHeader } from '@/components/layout/ScreenHeader';
 import { Button, FloatingInput, Icon, InfoBanner, Pill, Stepper } from '@/components/ui';
+import { useAddFamilyMember } from '@/features/family/hooks';
 import type { FamilyAgeBand } from '@/types/domain';
 
 /** Add family — step 2: document. 5-17 → doc + selfie + face; 0-4 → doc only (PRD). */
 export default function FamilyDocumentScreen() {
   const router = useRouter();
-  const { name, band } = useLocalSearchParams<{ name?: string; band?: FamilyAgeBand }>();
+  const { name, band, dob, relationship } = useLocalSearchParams<{
+    name?: string;
+    band?: FamilyAgeBand;
+    dob?: string;
+    relationship?: string;
+  }>();
+  const addFamilyMember = useAddFamilyMember();
   const isMinorWithFace = band !== '0-4';
   const firstName = (name ?? 'Member').split(' ')[0];
+
+  const handleComplete = async () => {
+    if (!name || !dob || !relationship) {
+      router.dismissTo('/(tabs)/family');
+      return;
+    }
+    try {
+      await addFamilyMember.mutateAsync({ name, dateOfBirth: dob, relationship });
+      router.dismissTo('/(tabs)/family');
+    } catch (err) {
+      router.dismissTo('/(tabs)/family');
+    }
+  };
 
   return (
     <ScreenContainer scroll={false}>
@@ -63,10 +83,11 @@ export default function FamilyDocumentScreen() {
         <View className="pb-6 pt-4">
           <Button
             label={isMinorWithFace ? 'Scan Document' : 'Upload Document'}
+            loading={addFamilyMember.isPending}
             onPress={() =>
               isMinorWithFace
-                ? router.push({ pathname: '/family/add/face-capture', params: { name: firstName } })
-                : router.dismissTo('/(tabs)/family')
+                ? router.push({ pathname: '/family/add/face-capture', params: { name: firstName, fullName: name, dob, relationship } })
+                : handleComplete()
             }
           />
         </View>

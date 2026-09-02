@@ -7,6 +7,7 @@ import { ScreenContainer, Spacer } from '@/components/layout/ScreenContainer';
 import { TopBar } from '@/components/layout/TopBar';
 import { Button, Icon, IconName, OtpRow, ProgressTrack } from '@/components/ui';
 import { Colors } from '@/constants/theme';
+import { useVerifyOtp } from '@/features/auth/mutations';
 import { formatCountdown, useCountdown } from '@/hooks/useCountdown';
 
 interface OtpVerificationProps {
@@ -36,6 +37,7 @@ export function OtpVerification({
   const [errorMsg, setErrorMsg] = useState('');
   const { seconds, reset } = useCountdown(RESEND_SECONDS);
   const shakeX = useSharedValue(0);
+  const verifyOtp = useVerifyOtp();
 
   const handleChange = (value: string) => {
     setCode(value.replace(/\D/g, '').slice(0, OTP_LENGTH));
@@ -45,29 +47,27 @@ export function OtpVerification({
     }
   };
 
-  const handleVerify = () => {
+  const handleVerify = async () => {
     if (code.length !== OTP_LENGTH) return;
     setVerifyState('loading');
-
-    setTimeout(() => {
-      if (code === '000000' || code === '123456') {
-        setVerifyState('success');
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        setTimeout(onVerified, 600);
-      } else {
-        setVerifyState('error');
-        setErrorMsg('Invalid verification code. Please try again.');
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-        shakeX.value = withSequence(
-          withTiming(-10, { duration: 50 }),
-          withTiming(10, { duration: 50 }),
-          withTiming(-6, { duration: 50 }),
-          withTiming(6, { duration: 50 }),
-          withTiming(0, { duration: 50 }),
-        );
-        setCode('');
-      }
-    }, 1200);
+    try {
+      await verifyOtp.mutateAsync({ otp: code });
+      setVerifyState('success');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setTimeout(onVerified, 600);
+    } catch (err: any) {
+      setVerifyState('error');
+      setErrorMsg(err?.message ?? 'Invalid verification code. Please try again.');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      shakeX.value = withSequence(
+        withTiming(-10, { duration: 50 }),
+        withTiming(10, { duration: 50 }),
+        withTiming(-6, { duration: 50 }),
+        withTiming(6, { duration: 50 }),
+        withTiming(0, { duration: 50 }),
+      );
+      setCode('');
+    }
   };
 
   const handleResend = () => {

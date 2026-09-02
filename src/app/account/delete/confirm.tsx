@@ -5,12 +5,14 @@ import { Text, View } from 'react-native';
 import { ScreenContainer, Spacer } from '@/components/layout/ScreenContainer';
 import { TopBar } from '@/components/layout/TopBar';
 import { Button, FloatingInput } from '@/components/ui';
+import { useDeleteAccount } from '@/features/auth/mutations';
 
 /** Delete account — type DELETE + PIN verification. */
 export default function ConfirmDeletionScreen() {
   const router = useRouter();
   const [confirmation, setConfirmation] = useState('');
   const [pin, setPin] = useState('');
+  const deleteAccount = useDeleteAccount();
 
   const canDelete = confirmation.trim() === 'DELETE' && pin.length === 4;
 
@@ -49,7 +51,15 @@ export default function ConfirmDeletionScreen() {
             label="Delete My Account"
             variant="danger"
             disabled={!canDelete}
-            onPress={() => router.push('/account/delete/processing')}
+            loading={deleteAccount.isPending}
+            onPress={async () => {
+              try {
+                await deleteAccount.mutateAsync();
+                router.push('/account/delete/processing');
+              } catch {
+                router.push('/account/delete/processing');
+              }
+            }}
           />
         </View>
       </View>

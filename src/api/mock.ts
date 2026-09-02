@@ -1,11 +1,24 @@
 import type {
+    AccountDetailsRequest,
     ActivityLogItem,
+    AddDocumentRequest,
+    AddFamilyMemberRequest,
+    AuthResponse,
     Booking,
+    ChangePasswordRequest,
+    ChangePinRequest,
     FamilyMember,
+    ForgotPasswordRequest,
     IdentityDocument,
     IdentitySummary,
     IssuedDoc,
-    User
+    LoginRequest,
+    OkResponse,
+    RegisterRequest,
+    ResetPasswordRequest,
+    UpdateProfileRequest,
+    User,
+    VerifyOtpRequest
 } from '@/types/domain';
 
 import bookingsData from './data/bookings.json';
@@ -19,9 +32,14 @@ import userData from './data/user.json';
 /**
  * Mock API layer — mirrors the future REST contract with realistic latency.
  * Data is sourced from JSON fixtures in `src/api/data/` (not hardcoded here),
- * so it maps 1:1 onto the real backend JSON response shape. Swap each
- * function body for an `apiClient` call (see `src/api/endpoints.ts`) once
- * the backend endpoint is ready — done automatically via `src/api/index.ts`.
+ * so it maps 1:1 onto the real backend JSON response shape.
+ *
+ * Write operations mutate an in-memory copy of the fixtures so the whole
+ * app flow (add/edit/delete) works end-to-end without a backend. On app
+ * restart, state resets to the original JSON fixtures.
+ *
+ * The function signatures here define the API contract — `endpoints.ts`
+ * implements the same signatures against the real backend.
  */
 const LATENCY_MS = 450;
 
@@ -29,22 +47,52 @@ function respond<T>(data: T): Promise<T> {
   return new Promise((resolve) => setTimeout(() => resolve(data), LATENCY_MS));
 }
 
-export const mockUser: User = userData as User;
+function fail(message: string): Promise<never> {
+  return new Promise((_, reject) => setTimeout(() => reject(new Error(message)), LATENCY_MS));
+}
+
+let uid = 100;
+const nextId = (prefix: string) => `${prefix}${uid++}`;
+
+// ── In-memory state (initialized from JSON fixtures) ──────────────────
+let user: User = { ...(userData as User) };
+let userPassword = 'password123';
+let userPin = '1234';
 
 const identitySummary: IdentitySummary = identitySummaryData as IdentitySummary;
-
-const documents: IdentityDocument[] = documentsData as IdentityDocument[];
-
-const family: FamilyMember[] = familyData as FamilyMember[];
-
+let documents: IdentityDocument[] = [...(documentsData as IdentityDocument[])];
+let family: FamilyMember[] = [...(familyData as FamilyMember[])];
 const bookings: Booking[] = bookingsData as Booking[];
-
 const issuedDocuments: IssuedDoc[] = issuedDocumentsData as IssuedDoc[];
-
 const familyActivity: ActivityLogItem[] = familyActivityData as ActivityLogItem[];
 
+export const mockUser: User = user;
+
+function authResponse(): AuthResponse {
+  return {
+    user,
+    accessToken: 'mock-access-token',
+    refreshToken: 'mock-refresh-token',
+  };
+}
+
+function ageFromDob(dob: string): number {
+  const match = dob.match(/^(\d{2})\s*\/\s*(\d{2})\s*\/\s*(\d{4})$/);
+  if (!match) return 0;
+  const [, month, day, year] = match;
+  const birth = new Date(Number(year), Number(month) - 1, Number(day));
+  const now = new Date();
+  let age = now.getFullYear() - birth.getFullYear();
+  const beforeBirthday =
+    now.getMonth() < birth.getMonth() ||
+    (now.getMonth() === birth.getMonth() && now.getDate() < birth.getDate());
+  if (beforeBirthday) age -= 1;
+  return age;
+}
+
 export const mockApi = {
-  getUser: () => respond(mockUser),
+  // ── Reads ────────────────────────────────────────────────────────────
+  getUser: () => respond(user),
   getIdentitySummary: () => respond(identitySummary),
   getDocuments: () => respond(documents),
   getDocument: (id: string) => respond(documents.find((d) => d.id === id) ?? null),
@@ -54,4 +102,104 @@ export const mockApi = {
   getFamilyActivity: (_id: string) => respond(familyActivity),
   getBookings: () => respond(bookings),
   getBooking: (id: string) => respond(bookings.find((b) => b.id === id) ?? null),
+
+  // ── Auth ─────────────────────────────────────────────────────────────
+  login: (payload: LoginRequest): Promise<AuthResponse> => {
+    if (!payload.identifier || !payload.password) {
+      return fail('Invalid credentials');
+    }
+    return respond(authResponse());
+  },
+  register: (payload: RegisterRequest): Promise<OkResponse> => {
+    user = { ...user, phone: `${payload.countryCode} ${payload.phone}` };
+    return respond({ ok: true, message: 'OTP sent' });
+  },
+  verifyOtp: (payload: VerifyOtpRequest): Promise<OkResponse> => {
+    if (payload.otp.length !== 6 && payload.otp.length !== 4) {
+      return fail('Invalid OTP');
+    }
+    return respond({ ok: true });
+  },
+  completeAccountDetails: (payload: AccountDetailsRequest): Promise<AuthResponse> => {
+    user = { ...user, fullName: payload.fullName, faceEnrolled: false, biometricConsentAt: null };
+    userPin = payload.pin;
+    return respond(authResponse());
+  },
+  forgotPassword: (_payload: ForgotPasswordRequest): Promise<OkResponse> => {
+    return respond({ ok: true, message: 'OTP sent to email' });
+  },
+  resetPassword: (payload: ResetPasswordRequest): Promise<OkResponse> => {
+    userPassword = payload.newPassword;
+    return respond({ ok: true, message: 'Password reset' });
+  },
+  changePassword: (payload: ChangePasswordRequest): Promise<OkResponse> => {
+    if (payload.currentPassword !== userPassword) {
+      return fail('Current password is incorrect');
+    }
+    userPassword = payload.newPassword;
+    return respond({ ok: true, message: 'Password changed' });
+  },
+  changePin: (payload: ChangePinRequest): Promise<OkResponse> => {
+    if (payload.currentPin !== userPin) {
+      return fail('Current PIN is incorrect');
+    }
+    userPin = payload.newPin;
+    return respond({ ok: true, message: 'PIN changed' });
+  },
+  verifyPin: (pin: string): Promise<OkResponse> => {
+    if (pin !== userPin) {
+      return fail('Incorrect PIN');
+    }
+    return respond({ ok: true });
+  },
+  deleteAccount: (): Promise<OkResponse> => {
+    return respond({ ok: true, message: 'Account deleted' });
+  },
+
+  // ── Profile ──────────────────────────────────────────────────────────
+  updateProfile: (payload: UpdateProfileRequest): Promise<User> => {
+    user = { ...user, ...payload };
+    return respond(user);
+  },
+
+  // ── Family ───────────────────────────────────────────────────────────
+  addFamilyMember: (payload: AddFamilyMemberRequest): Promise<FamilyMember> => {
+    const age = ageFromDob(payload.dateOfBirth);
+    const ageBand = age >= 18 ? '18+' : age >= 5 ? '5-17' : '0-4';
+    const member: FamilyMember = {
+      id: nextId('f'),
+      name: payload.name,
+      relationship: payload.relationship,
+      age,
+      ageBand: ageBand as FamilyMember['ageBand'],
+      verification: ageBand === '0-4' ? 'Doc Verified' : 'Face + Doc Verified',
+      turning18Soon: age === 17,
+    };
+    family = [...family, member];
+    return respond(member);
+  },
+  removeFamilyMember: (id: string): Promise<OkResponse> => {
+    family = family.filter((f) => f.id !== id);
+    return respond({ ok: true, message: 'Member removed' });
+  },
+
+  // ── Documents ────────────────────────────────────────────────────────
+  addDocument: (payload: AddDocumentRequest): Promise<IdentityDocument> => {
+    const doc: IdentityDocument = {
+      id: nextId('d'),
+      type: payload.type,
+      label: payload.label,
+      number: payload.number,
+      status: 'pending',
+      matchScore: null,
+      addedAt: new Date().toISOString().slice(0, 10),
+      expiresAt: payload.expiresAt,
+    };
+    documents = [...documents, doc];
+    return respond(doc);
+  },
+  removeDocument: (id: string): Promise<OkResponse> => {
+    documents = documents.filter((d) => d.id !== id);
+    return respond({ ok: true, message: 'Document removed' });
+  },
 };

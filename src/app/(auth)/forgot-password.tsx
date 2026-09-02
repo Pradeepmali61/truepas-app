@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button, FloatingInput } from '@/components/ui';
 import { Colors } from '@/constants/theme';
+import { useForgotPassword, useResetPassword, useVerifyOtp } from '@/features/auth/mutations';
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
@@ -15,26 +16,45 @@ export default function ForgotPasswordScreen() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
 
-  const handleSendOtp = () => {
+  const forgotPassword = useForgotPassword();
+  const verifyOtp = useVerifyOtp();
+  const resetPassword = useResetPassword();
+
+  const handleSendOtp = async () => {
     if (!email) { setError('Enter your email'); return; }
     setError('');
-    setStep('otp');
+    try {
+      await forgotPassword.mutateAsync({ email });
+      setStep('otp');
+    } catch (err: any) {
+      setError(err?.message ?? 'Could not send code. Please try again.');
+    }
   };
 
-  const handleVerifyOtp = () => {
+  const handleVerifyOtp = async () => {
     if (otp.length !== 6) { setError('Enter 6-digit OTP'); return; }
     setError('');
-    setStep('reset');
+    try {
+      await verifyOtp.mutateAsync({ otp });
+      setStep('reset');
+    } catch (err: any) {
+      setError(err?.message ?? 'Invalid OTP. Please try again.');
+    }
   };
 
-  const handleReset = () => {
+  const handleReset = async () => {
     if (!newPassword || !confirmPassword) { setError('All fields are required'); return; }
     if (newPassword.length < 8) { setError('Password must be at least 8 characters'); return; }
     if (newPassword !== confirmPassword) { setError('Passwords do not match'); return; }
     setError('');
-    Alert.alert('Success', 'Your password has been reset successfully.', [
-      { text: 'OK', onPress: () => router.replace('/(auth)/login') },
-    ]);
+    try {
+      await resetPassword.mutateAsync({ email, otp, newPassword });
+      Alert.alert('Success', 'Your password has been reset successfully.', [
+        { text: 'OK', onPress: () => router.replace('/(auth)/login') },
+      ]);
+    } catch (err: any) {
+      setError(err?.message ?? 'Could not reset password. Please try again.');
+    }
   };
 
   return (
@@ -54,7 +74,7 @@ export default function ForgotPasswordScreen() {
             </Text>
             <FloatingInput label="Email" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
             {error ? <Text style={{ fontSize: 13, color: '#EF4444', textAlign: 'center', marginBottom: 12 }}>{error}</Text> : null}
-            <Button label="Send Code" onPress={handleSendOtp} />
+            <Button label="Send Code" onPress={handleSendOtp} loading={forgotPassword.isPending} />
           </>
         )}
 
@@ -65,7 +85,7 @@ export default function ForgotPasswordScreen() {
             </Text>
             <FloatingInput label="OTP Code" value={otp} onChangeText={(v) => setOtp(v.replace(/\D/g, '').slice(0, 6))} keyboardType="number-pad" />
             {error ? <Text style={{ fontSize: 13, color: '#EF4444', textAlign: 'center', marginBottom: 12 }}>{error}</Text> : null}
-            <Button label="Verify" onPress={handleVerifyOtp} />
+            <Button label="Verify" onPress={handleVerifyOtp} loading={verifyOtp.isPending} />
           </>
         )}
 
@@ -77,7 +97,7 @@ export default function ForgotPasswordScreen() {
             <FloatingInput label="New Password" value={newPassword} onChangeText={setNewPassword} secureTextEntry />
             <FloatingInput label="Confirm Password" value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry />
             {error ? <Text style={{ fontSize: 13, color: '#EF4444', textAlign: 'center', marginBottom: 12 }}>{error}</Text> : null}
-            <Button label="Reset Password" onPress={handleReset} />
+            <Button label="Reset Password" onPress={handleReset} loading={resetPassword.isPending} />
           </>
         )}
       </ScrollView>

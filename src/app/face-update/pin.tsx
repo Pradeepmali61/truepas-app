@@ -1,10 +1,11 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Text, View } from 'react-native';
+import { Alert, Text, View } from 'react-native';
 
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
 import { ScreenHeader } from '@/components/layout/ScreenHeader';
 import { Icon, PinDots, PinPad } from '@/components/ui';
+import { useVerifyPin } from '@/features/auth/mutations';
 
 const PIN_LENGTH = 4;
 
@@ -12,12 +13,22 @@ const PIN_LENGTH = 4;
 export default function FaceUpdatePinScreen() {
   const router = useRouter();
   const [pin, setPin] = useState('');
+  const verifyPin = useVerifyPin();
 
   const handleDigit = (digit: string) => {
     const next = (pin + digit).slice(0, PIN_LENGTH);
     setPin(next);
     if (next.length === PIN_LENGTH) {
-      setTimeout(() => router.push('/face-update/camera'), 250);
+      setTimeout(async () => {
+        try {
+          await verifyPin.mutateAsync(next);
+          router.push('/face-update/camera');
+        } catch (err: any) {
+          Alert.alert('Incorrect PIN', err?.message ?? 'Please try again.', [
+            { text: 'OK', onPress: () => setPin('') },
+          ]);
+        }
+      }, 250);
     }
   };
 

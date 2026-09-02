@@ -5,12 +5,30 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ScreenHeader } from '@/components/layout/ScreenHeader';
 import { Icon } from '@/components/ui/Icon';
 import { Colors } from '@/constants/theme';
+import { useAddFamilyMember } from '@/features/family/hooks';
 
 /** Add family — step 3: selfie + face enrollment for ages 5-17 (PRD). */
 export default function FamilyFaceCaptureScreen() {
   const router = useRouter();
-  const { name } = useLocalSearchParams<{ name?: string }>();
+  const { name, fullName, dob, relationship } = useLocalSearchParams<{
+    name?: string;
+    fullName?: string;
+    dob?: string;
+    relationship?: string;
+  }>();
   const firstName = name ?? 'Member';
+  const addFamilyMember = useAddFamilyMember();
+
+  const handleCapture = async () => {
+    if (fullName && dob && relationship) {
+      try {
+        await addFamilyMember.mutateAsync({ name: fullName, dateOfBirth: dob, relationship });
+      } catch {
+        // proceed even if mock fails
+      }
+    }
+    router.dismissTo('/(tabs)/family');
+  };
 
   return (
     <SafeAreaView className="flex-1 bg-[#111111]" edges={['top', 'bottom']}>
@@ -34,7 +52,7 @@ export default function FamilyFaceCaptureScreen() {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Capture face"
-          onPress={() => router.dismissTo('/(tabs)/family')}
+          onPress={handleCapture}
           className="h-16 w-16 rounded-full border-4 border-primary bg-white active:opacity-80"
         />
       </View>
