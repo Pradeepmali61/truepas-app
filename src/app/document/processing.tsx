@@ -2,14 +2,13 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
 
+import { api } from '@/api';
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
 import { Icon } from '@/components/ui/Icon';
 import { Colors } from '@/constants/theme';
 import { useAddDocument } from '@/features/documents/hooks';
+import { clearScanResult, getScanResult } from '@/services/scanStore';
 import type { DocumentType } from '@/types/domain';
-
-const POLL_INTERVAL_MS = 2000;
-const MAX_POLL_ATTEMPTS = 30;
 
 const DOC_LABELS: Record<DocumentType, string> = {
   passport: 'Passport',
@@ -20,69 +19,94 @@ const DOC_LABELS: Record<DocumentType, string> = {
   idCard: 'Identity Card',
 };
 
-/** Document processing — adds the document via API using OCR data from
- *  Regula Document Reader scan, then polls verification session until
- *  completed. */
+type ProcessingStatus = 'adding' | 'creating_session' | 'verifying' | 'done' | 'error';
+
+/** Document processing — per REACT_NATIVE_KYC_INTEGRATION_GUIDE.md §6:
+ *  1. POST /documents → documentId
+ *  2. POST /documents/{id}/verification-sessions → sessionId
+ *  3. POST /document-verification-sessions/{sessionId}/verify
+ *     with { frontImageBase64, selfieImageBase64? } → SYNCHRONOUS result
+ *  4. No polling needed — verify returns final outcome directly */
 export default function DocumentProcessingScreen() {
   const router = useRouter();
-  const { type, docNumber, docLabel, dateOfExpiry, issuingCountry } = useLocalSearchParams<{
-    type?: string;
-    docNumber?: string;
-    docLabel?: string;
-    dateOfExpiry?: string;
-    issuingCountry?: string;
-  }>();
+  const { type } = useLocalSearchParams<{ type?: string }>();
   const docType = (type ?? 'passport') as DocumentType;
-  const pollCount = useRef(0);
-  const [status, setStatus] = useState<'adding' | 'verifying' | 'done' | 'error'>('adding');
-  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [status, setStatus] = useState<ProcessingStatus>('adding');
+  const [error, setError] = useState<string | null>(null);
+  const hasStarted = useRef(false);
   const addDocument = useAddDocument();
 
-  // Step 1: Add the document to the user's account with real OCR data
   useEffect(() => {
-    const addDoc = async () => {
+    if (hasStarted.current) return;
+    hasStarted.current = true;
+
+    const process = async () => {
+      const scanResult = getScanResult();
+      const frontImage = scanResult?.documentImageBase64 ?? '';
+      const selfieImage = scanResult?.selfieBase64;
+
+      if (!frontImage) {
+        setError('No document image captured. Please scan again.');
+        setStatus('error');
+        clearScanResult();
+        return;
+      }
+
       try {
-        await addDocument.mutateAsync({
+        // Step 1: Add document (metadata only)
+        setStatus('adding');
+        const doc = await addDocument.mutateAsync({
           type: docType,
-          label: docLabel || DOC_LABELS[docType],
-          number: docNumber || '****' + Math.floor(1000 + Math.random() * 9000),
-          expiresAt: dateOfExpiry || null,
+          label: DOC_LABELS[docType],
+          number: '****' + Math.floor(1000 + Math.random() * 9000),
+          expiresAt: null,
         });
+
+        // Step 2: Create verification session (requestId = idempotency key)
+        setStatus('creating_session');
+        const session = await api.createVerificationSession(doc.id, {
+          requestId: `req-${Date.now()}`,
+          frontObjectKey: '', // Not used for base64 — per guide §6.3
+        });
+
+        // Step 3: Verify — SYNCHRONOUS result with images as base64
+        // Per guide §6.3: frontImageBase64 is required, selfieImageBase64 for face match
         setStatus('verifying');
+        const result = await api.startVerificationWithImages(
+          session.id,
+          {
+            frontImageBase64: frontImage,
+            selfieImageBase64: selfieImage,
+          },
+          { timeout: 90_000 } // Regula processing can take a while
+        );
+
+        clearScanResult();
+
+        // Step 4: Handle outcome — verify is synchronous, no polling
+        if (result.outcome === 'approved') {
+          setStatus('done');
+          router.replace('/document/verified');
+        } else if (result.outcome === 'review') {
+          setStatus('done');
+          router.replace('/document/verified'); // Show "under review" state
+        } else {
+          setStatus('error');
+          setError(result.reasonCode ?? 'Document verification failed');
+          router.replace('/document/mismatch');
+        }
       } catch (err: any) {
-        // Even if API fails (backend down), proceed to verifying
-        // so the user isn't stuck. Mock fallback will handle it.
-        setSubmitError(err?.message ?? null);
-        setStatus('verifying');
+        clearScanResult();
+        setError(err?.message ?? 'Verification failed');
+        setStatus('error');
+        // Even on error, navigate after a brief delay so user sees the error
+        setTimeout(() => router.replace('/document/mismatch'), 2000);
       }
     };
-    addDoc();
+
+    process();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [docType]);
-
-  // Step 2: Poll verification status (simulated until backend exposes polling)
-  useEffect(() => {
-    if (status !== 'verifying') return;
-
-    const poll = async () => {
-      pollCount.current += 1;
-
-      if (pollCount.current >= MAX_POLL_ATTEMPTS) {
-        router.replace('/document/mismatch');
-        return;
-      }
-
-      // Simulate: after 3 polls (~6 seconds), consider it approved
-      if (pollCount.current >= 3) {
-        setStatus('done');
-        router.replace('/document/verified');
-        return;
-      }
-    };
-
-    const interval = setInterval(poll, POLL_INTERVAL_MS);
-    return () => clearInterval(interval);
-  }, [status, router]);
 
   return (
     <ScreenContainer scroll={false}>
@@ -92,30 +116,15 @@ export default function DocumentProcessingScreen() {
           accessibilityRole="header"
           accessibilityLiveRegion="polite"
           className="mb-1 mt-5 text-[16px] font-bold text-primary">
-          {status === 'adding' ? 'Adding document…' : 'Verifying document…'}
+          {status === 'adding' && 'Adding document…'}
+          {status === 'creating_session' && 'Creating verification session…'}
+          {status === 'verifying' && 'Verifying document…'}
+          {status === 'done' && 'Verified!'}
+          {status === 'error' && 'Verification failed'}
         </Text>
-        <Text className="text-[14px] text-muted">Extracting details &amp; matching your face</Text>
-
-        {/* Show OCR data from Regula scan */}
-        {(docNumber || issuingCountry) && (
-          <View className="mt-4 px-4 py-3 rounded-btn bg-surface border border-[#e0e0e0]">
-            {docNumber ? (
-              <Text className="text-[13px] text-muted">
-                Document No: <Text className="text-ink font-medium">{docNumber}</Text>
-              </Text>
-            ) : null}
-            {issuingCountry ? (
-              <Text className="text-[13px] text-muted mt-1">
-                Issued by: <Text className="text-ink font-medium">{issuingCountry}</Text>
-              </Text>
-            ) : null}
-            {docLabel ? (
-              <Text className="text-[13px] text-muted mt-1">
-                Name: <Text className="text-ink font-medium">{docLabel}</Text>
-              </Text>
-            ) : null}
-          </View>
-        )}
+        <Text className="text-[14px] text-muted">
+          {status === 'verifying' ? 'Regula processing — this may take a moment' : 'Extracting details & matching your face'}
+        </Text>
 
         <View className="mt-4">
           <View className="my-1 flex-row items-center gap-2">
@@ -124,17 +133,28 @@ export default function DocumentProcessingScreen() {
           </View>
           <View className="my-1 flex-row items-center gap-2">
             <Icon name={status === 'adding' ? 'hourglass' : 'check'} size={14} color={Colors.primary} />
-            <Text className="text-[12px] text-muted">{status === 'adding' ? 'Adding to account…' : 'Document added'}</Text>
+            <Text className="text-[12px] text-muted">
+              {status === 'adding' ? 'Adding to account…' : 'Document added'}
+            </Text>
           </View>
           <View className="my-1 flex-row items-center gap-2">
-            <Icon name={status === 'verifying' ? 'hourglass' : 'check'} size={14} color={Colors.primary} />
-            <Text className="text-[12px] text-muted">{status === 'verifying' ? 'Matching faces…' : status === 'done' ? 'Verified' : 'Pending'}</Text>
+            <Icon
+              name={status === 'verifying' || status === 'creating_session' ? 'hourglass' : 'check'}
+              size={14}
+              color={Colors.primary}
+            />
+            <Text className="text-[12px] text-muted">
+              {status === 'creating_session' ? 'Creating session…' :
+               status === 'verifying' ? 'Matching faces…' :
+               status === 'done' ? 'Verified' :
+               status === 'error' ? 'Failed' : 'Pending'}
+            </Text>
           </View>
         </View>
 
-        {submitError ? (
-          <Text className="mt-3 text-[12px] text-muted text-center">
-            Note: Using fallback data (backend unreachable)
+        {error ? (
+          <Text className="mt-3 text-[12px] text-center" style={{ color: Colors.error }}>
+            {error}
           </Text>
         ) : null}
       </View>

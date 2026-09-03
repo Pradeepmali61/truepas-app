@@ -34,6 +34,8 @@ import type {
     User,
     VerificationSession,
     VerificationSessionRequest,
+    VerifyDocumentRequest,
+    VerifyDocumentResponse,
     VerifyOtpRequest,
     VerifyOtpResponse
 } from '@/types/domain';
@@ -296,13 +298,27 @@ export const mockApi = {
       status: 'created',
       documentId,
       createdAt: new Date().toISOString(),
+      expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+    });
+  },
+  startVerificationWithImages: (_sessionId: string, _payload: VerifyDocumentRequest): Promise<VerifyDocumentResponse> => {
+    // Per guide §6.3: verify is SYNCHRONOUS — returns final outcome
+    return respond({
+      id: _sessionId,
+      status: 'completed',
+      outcome: 'approved',
+      reasonCode: null,
+      documentId: 'mock-doc',
+      createdAt: new Date().toISOString(),
+      completedAt: new Date().toISOString(),
+      matchScore: 95,
     });
   },
   startVerification: (sessionId: string): Promise<OkResponse> => {
     return respond({ ok: true, message: `Verification started for ${sessionId}` });
   },
   pollVerification: (sessionId: string): Promise<VerificationSession> => {
-    // Simulate completion after a short delay
+    // Per guide §6.7: recovery poll only — not a wait loop
     return respond({
       id: sessionId,
       status: 'completed',

@@ -48,20 +48,15 @@
         }
       ],
       "expo-secure-store",
-      "./plugins/withRegulaMaven",
-      "./plugins/withRegulaLicense",
       [
         "expo-build-properties",
         {
           "ios": {
-            "deploymentTarget": "15.1"
+            "deploymentTarget": "16.4"
           },
           "android": {
             "minSdkVersion": 29,
-            "allowBackup": false,
-            "extraMavenRepos": [
-              "https://maven.regulaforensics.com/RegulaDocumentReader"
-            ]
+            "allowBackup": false
           }
         }
       ]
@@ -73,9 +68,9 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "88e77b4a-dd32-4158-af1e-cf218d2edbbd"
+        "projectId": "e1b66378-7754-4354-89d4-633ca8e89ebe"
       }
     },
-    "owner": "pradeepmali"
+    "owner": "facepeai"
   }
 }

@@ -1,12 +1,12 @@
-import { Camera } from 'expo-camera';
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, Text, View } from 'react-native';
+import { CameraView, useCameraPermissions } from 'expo-camera';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Colors } from '@/constants/theme';
 import { useEnrollFace, useUpdateFace } from '@/features/auth/mutations';
 import { faceEnrollmentCompleted } from '@/features/auth/slice';
-import RegulaFaceService, { isRegulaFaceAvailable } from '@/services/RegulaFaceService';
+import { useLivenessSession } from '@/features/liveness/useLivenessSession';
 import { useAppDispatch } from '@/store';
 
 interface LivenessCameraProps {
@@ -21,75 +21,92 @@ interface LivenessCameraProps {
 }
 
 /**
- * Liveness camera component using Regula Face SDK.
+ * Full liveness challenge camera component using expo-camera.
  *
- * Flow:
- *  1. Initialize Regula Face SDK with license
- *  2. Request camera permission
- *  3. Call startLiveness() — Regula opens native camera UI automatically
- *  4. Regula runs random challenges (blink, smile, head turn) + anti-spoofing
- *  5. Auto-captures selfie when all checks pass
- *  6. Call face enroll/update with captured selfie base64
+ * Flow (per REACT_NATIVE_KYC_INTEGRATION_GUIDE.md §4):
+ *  1. Request camera permissions
+ *  2. Create liveness challenge (server-provided sequence)
+ *  3. For each challenge step: capture frame → submit evidence
+ *  4. After all steps: capture high-res frame → finalize
+ *  5. Call face enroll/update with session credentials
  *
- * Falls back to a message if Regula native module is unavailable (Expo Go).
+ * The selfie is NEVER uploaded by the app — the server-side finalize
+ * frame is used for enrollment. We only send livenessSessionId + sessionToken.
  */
 export function LivenessCamera({ mode, personId, onSuccess, onError }: LivenessCameraProps) {
-  const [initializing, setInitializing] = useState(true);
-  const [livenessRunning, setLivenessRunning] = useState(false);
-  const [nativeAvailable, setNativeAvailable] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
+  const [permission, requestPermission] = useCameraPermissions();
+  const cameraRef = useRef<CameraView>(null);
+  const [capturing, setCapturing] = useState(false);
+  const stepStartTime = useRef<number>(Date.now());
   const dispatch = useAppDispatch();
+
+  const liveness = useLivenessSession();
   const enrollFace = useEnrollFace();
   const updateFace = useUpdateFace();
 
-  // Initialize Regula Face SDK on mount
+  // Request camera permission on mount
   useEffect(() => {
-    if (!isRegulaFaceAvailable()) {
-      setNativeAvailable(false);
-      setInitializing(false);
-      return;
+    if (permission === null) {
+      requestPermission();
     }
+  }, [permission, requestPermission]);
 
-    (async () => {
-      try {
-        await RegulaFaceService.initialize();
-      } catch (err: any) {
-        setError(err?.message ?? 'Failed to initialize Face SDK');
-      } finally {
-        setInitializing(false);
-      }
-    })();
-  }, []);
-
-  const startLivenessCheck = async () => {
-    // Check camera permission first
-    const { status } = await Camera.getCameraPermissionsAsync();
-    if (status !== 'granted') {
-      const { status: newStatus } = await Camera.requestCameraPermissionsAsync();
-      if (newStatus !== 'granted') {
-        Alert.alert('Permission Denied', 'Camera permission is required for face verification.');
-        return;
-      }
+  // Start liveness challenge when permission is granted
+  const phaseRef = useRef(liveness.phase);
+  phaseRef.current = liveness.phase;
+  useEffect(() => {
+    if (permission?.granted && phaseRef.current === 'idle') {
+      liveness.startSession(personId).catch((err) => {
+        onError(err?.message ?? 'Failed to start liveness challenge');
+      });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [permission, personId]);
 
-    setLivenessRunning(true);
-    setError(null);
+  const captureAndSubmit = useCallback(async () => {
+    if (!cameraRef.current || capturing || liveness.phase !== 'challenging') return;
+    setCapturing(true);
+    stepStartTime.current = Date.now();
 
     try {
-      // Regula opens native camera UI, runs challenges, auto-captures selfie
-      const result = await RegulaFaceService.startLiveness();
+      const photo = await cameraRef.current.takePictureAsync({
+        quality: 0.7,
+        base64: true,
+      });
+      const frameBase64 = photo.base64 ?? '';
+      const durationMs = Date.now() - stepStartTime.current;
 
-      if (!result.passed) {
-        setError('Liveness check failed. Please try again.');
-        setLivenessRunning(false);
+      await liveness.submitEvidence(frameBase64, durationMs);
+    } catch (err: any) {
+      onError(err?.message ?? 'Failed to capture frame');
+    } finally {
+      setCapturing(false);
+    }
+  }, [capturing, liveness, onError]);
+
+  const captureAndFinalize = useCallback(async () => {
+    if (!cameraRef.current || capturing || liveness.phase !== 'finalizing') return;
+    setCapturing(true);
+
+    try {
+      const photo = await cameraRef.current.takePictureAsync({
+        quality: 1,
+        base64: true,
+      });
+      const frameBase64 = photo.base64 ?? '';
+
+      const result = await liveness.finalize(frameBase64);
+      if (result.status !== 'passed') {
+        onError(result.message || 'Liveness verification failed');
         return;
       }
 
-      // Enroll or update face with captured selfie
+      // Enroll or update face with session credentials
+      // Per guide §5.2: send only livenessSessionId + sessionToken + personId
+      // The selfie is NEVER uploaded — server uses the finalize frame
       const facePayload = {
-        selfieBase64: result.image,
-        livenessPassed: true,
+        livenessSessionId: result.session_id,
+        sessionToken: liveness.sessionToken ?? '',
         personId,
       };
 
@@ -104,51 +121,53 @@ export function LivenessCamera({ mode, personId, onSuccess, onError }: LivenessC
 
       onSuccess();
     } catch (err: any) {
-      const msg = err?.message ?? 'Face enrollment failed';
-      setError(msg);
-      onError(msg);
+      onError(err?.message ?? 'Face enrollment failed');
     } finally {
-      setLivenessRunning(false);
+      setCapturing(false);
     }
-  };
+  }, [capturing, liveness, mode, personId, enrollFace, updateFace, dispatch, onSuccess, onError]);
 
-  // Initializing state
-  if (initializing) {
+  // Permission not yet determined — show loading (not camera)
+  if (permission === null) {
     return (
       <SafeAreaView className="flex-1 items-center justify-center bg-[#111111]" edges={['top', 'bottom']}>
         <ActivityIndicator size="large" color={Colors.primary} />
-        <Text className="mt-4 text-[14px] text-white">Initializing Face SDK...</Text>
+        <Text className="mt-4 text-[14px] text-white">Requesting camera permission...</Text>
       </SafeAreaView>
     );
   }
 
-  // Native module not available (Expo Go)
-  if (!nativeAvailable) {
+  // Permission denied
+  if (!permission.granted) {
     return (
       <SafeAreaView className="flex-1 items-center justify-center bg-[#111111]" edges={['top', 'bottom']}>
-        <View className="px-6 items-center">
-          <Text className="text-center text-[16px] font-bold text-white">
-            Development Build Required
-          </Text>
-          <Text className="mt-2 text-center text-[14px] text-white/70">
-            Regula Face SDK requires a development build.{"\n"}
-            Run: npx expo run:android
-          </Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  // Error state with retry
-  if (error && !livenessRunning) {
-    return (
-      <SafeAreaView className="flex-1 items-center justify-center bg-[#111111]" edges={['top', 'bottom']}>
-        <Text className="mb-4 text-center text-[16px] text-white px-6">{error}</Text>
+        <Text className="mb-4 text-center text-[16px] text-white">Camera permission is required for face verification.</Text>
         <Pressable
-          onPress={() => {
-            setError(null);
-            startLivenessCheck();
-          }}
+          onPress={requestPermission}
+          className="rounded-btn bg-primary px-6 py-3">
+          <Text className="text-[14px] font-bold text-white">Grant Permission</Text>
+        </Pressable>
+      </SafeAreaView>
+    );
+  }
+
+  // Loading
+  if (liveness.phase === 'creating' || liveness.phase === 'idle') {
+    return (
+      <SafeAreaView className="flex-1 items-center justify-center bg-[#111111]" edges={['top', 'bottom']}>
+        <ActivityIndicator size="large" color={Colors.primary} />
+        <Text className="mt-4 text-[14px] text-white">Preparing liveness challenge...</Text>
+      </SafeAreaView>
+    );
+  }
+
+  // Error state
+  if (liveness.phase === 'failed') {
+    return (
+      <SafeAreaView className="flex-1 items-center justify-center bg-[#111111]" edges={['top', 'bottom']}>
+        <Text className="mb-4 text-center text-[16px] text-white px-6">{liveness.error ?? 'Liveness check failed'}</Text>
+        <Pressable
+          onPress={() => liveness.reset()}
           className="rounded-btn bg-primary px-6 py-3">
           <Text className="text-[14px] font-bold text-white">Try Again</Text>
         </Pressable>
@@ -156,51 +175,53 @@ export function LivenessCamera({ mode, personId, onSuccess, onError }: LivenessC
     );
   }
 
-  // Ready state — show start button (Regula will open its own camera UI)
+  const isChallenging = liveness.phase === 'challenging';
+  const isFinalizing = liveness.phase === 'finalizing';
+
   return (
     <SafeAreaView className="flex-1 bg-[#111111]" edges={['top', 'bottom']}>
-      <View className="flex-1 items-center justify-center px-6">
-        <View
-          style={{
-            width: 120,
-            height: 120,
-            borderRadius: 60,
-            backgroundColor: '#F5F3FF',
-            alignItems: 'center',
-            justifyContent: 'center',
-            marginBottom: 24,
-          }}>
-          <Text style={{ fontSize: 48 }}>🤳</Text>
+      <View className="flex-1">
+        <CameraView
+          ref={cameraRef}
+          facing="front"
+          active={true}
+          style={{ flex: 1 }}
+          mirror
+        />
+
+        {/* Face overlay guide */}
+        <View className="absolute inset-0 items-center justify-center pointer-events-none">
+          <View className="h-[220px] w-[220px] items-center justify-center rounded-full border-4 border-white/60" />
         </View>
 
-        <Text accessibilityRole="header" className="mb-2 text-[22px] font-bold text-white text-center">
-          Face Liveness Check
-        </Text>
-        <Text className="mb-8 text-center text-[15px] text-white/70">
-          The camera will open automatically and guide you.{"\n"}
-          Follow the prompts: blink, smile, or turn your head.{"\n"}
-          Your selfie will be captured automatically.
-        </Text>
-
-        {livenessRunning ? (
-          <View className="items-center">
-            <ActivityIndicator size="large" color={Colors.primary} />
-            <Text className="mt-4 text-[14px] text-white">Liveness check in progress...</Text>
+        {/* Instruction overlay */}
+        <View className="absolute top-[60px] left-0 right-0 items-center px-6">
+          <View className="rounded-btn bg-black/60 px-4 py-2">
+            <Text className="text-[15px] font-semibold text-white text-center">
+              {isFinalizing ? 'Hold still...' : liveness.instruction}
+            </Text>
           </View>
-        ) : null}
+          {isChallenging && liveness.challenge && (
+            <Text className="mt-2 text-[12px] text-white/70">
+              Step {liveness.currentStepIndex + 1} of {liveness.challenge.challenge_sequence.length}
+            </Text>
+          )}
+        </View>
       </View>
 
-      {!livenessRunning ? (
-        <View className="px-6 pb-[30px]">
+      {/* Capture button */}
+      <View className="items-center pb-[30px]">
+        {capturing ? (
+          <ActivityIndicator size="large" color={Colors.primary} />
+        ) : (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Start liveness check"
-            onPress={startLivenessCheck}
-            className="rounded-btn bg-primary py-4 items-center active:opacity-80">
-            <Text className="text-[16px] font-bold text-white">Start Face Scan</Text>
-          </Pressable>
-        </View>
-      ) : null}
+            accessibilityLabel={isFinalizing ? "Capture final photo" : "Capture liveness frame"}
+            onPress={isFinalizing ? captureAndFinalize : captureAndSubmit}
+            className="h-16 w-16 rounded-full border-4 border-primary bg-white active:opacity-80"
+          />
+        )}
+      </View>
     </SafeAreaView>
   );
 }

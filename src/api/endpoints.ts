@@ -34,6 +34,8 @@ import type {
     User,
     VerificationSession,
     VerificationSessionRequest,
+    VerifyDocumentRequest,
+    VerifyDocumentResponse,
     VerifyOtpRequest,
     VerifyOtpResponse
 } from '@/types/domain';
@@ -191,10 +193,28 @@ export const realApi = {
     );
     return data;
   },
+  /** POST /document-verification-sessions/{sessionId}/verify
+   *  Per guide §6.3: SYNCHRONOUS result — no polling needed.
+   *  Images sent as base64 in the body (NOT as object keys). */
+  startVerificationWithImages: async (
+    sessionId: string,
+    payload: VerifyDocumentRequest,
+    config?: { timeout?: number },
+  ): Promise<VerifyDocumentResponse> => {
+    const { data } = await apiClient.post<VerifyDocumentResponse>(
+      `/document-verification-sessions/${sessionId}/verify`,
+      payload,
+      config,
+    );
+    return data;
+  },
+  /** Legacy: start verification without images (not per guide — kept for compatibility) */
   startVerification: async (sessionId: string): Promise<OkResponse> => {
     const { data } = await apiClient.post<OkResponse>(`/document-verification-sessions/${sessionId}/verify`);
     return data;
   },
+  /** GET /document-verification-sessions/{sessionId} — recovery poll only
+   *  Per guide §6.7: use only to recover from crash/app-kill, not as a wait loop */
   pollVerification: async (sessionId: string): Promise<VerificationSession> => {
     const { data } = await apiClient.get<VerificationSession>(`/document-verification-sessions/${sessionId}`);
     return data;

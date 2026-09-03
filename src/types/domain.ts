@@ -260,18 +260,14 @@ export interface LivenessFinalizeResponse {
 }
 
 export interface FaceEnrollRequest {
-  /** Captured selfie from Regula liveness check (base64) */
-  selfieBase64: string;
-  /** Whether Regula liveness check passed */
-  livenessPassed: boolean;
+  livenessSessionId: string;
+  sessionToken: string;
   personId?: string;
 }
 
 export interface FaceUpdateRequest {
-  /** Captured selfie from Regula liveness check (base64) */
-  selfieBase64: string;
-  /** Whether Regula liveness check passed */
-  livenessPassed: boolean;
+  livenessSessionId: string;
+  sessionToken: string;
   personId?: string;
 }
 
@@ -285,7 +281,7 @@ export interface FaceResponse {
 
 export interface VerificationSessionRequest {
   requestId?: string;
-  frontObjectKey: string;
+  frontObjectKey?: string;
   backObjectKey?: string;
   selfieObjectKey?: string;
   livenessSessionId?: string;
@@ -298,9 +294,29 @@ export interface VerificationSession {
   id: string;
   status: VerificationSessionStatus;
   outcome?: VerificationOutcome;
+  reasonCode?: string | null;
   documentId: string;
   createdAt: string;
   completedAt?: string;
+  expiresAt?: string;
+}
+
+/** Body for POST /document-verification-sessions/{sessionId}/verify
+ *  Per REACT_NATIVE_KYC_INTEGRATION_GUIDE.md §6.3:
+ *  - frontImageBase64 is required
+ *  - selfieImageBase64 for face match (omit for birthCertificate)
+ *  - backImageBase64 optional
+ */
+export interface VerifyDocumentRequest {
+  frontImageBase64: string;
+  backImageBase64?: string;
+  selfieImageBase64?: string;
+}
+
+/** Response from /verify — synchronous result with outcome + document */
+export interface VerifyDocumentResponse extends VerificationSession {
+  document?: IdentityDocument;
+  matchScore?: number | null;
 }
 
 // ── Health check ──────────────────────────────────────────────────────
