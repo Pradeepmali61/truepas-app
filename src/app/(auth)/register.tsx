@@ -40,14 +40,15 @@ export default function RegisterScreen() {
 
   const onSubmit = handleSubmit(async (values) => {
     setSubmitError(null);
+    const cleanPhone = values.phone.replace(/\D/g, '');
     try {
       await register.mutateAsync({
-        phone: values.phone,
+        phone: cleanPhone,
         countryCode: selectedCountry.code,
       });
       router.push({
         pathname: '/(auth)/verify-phone',
-        params: { phone: values.phone, countryCode: selectedCountry.code },
+        params: { phone: cleanPhone, countryCode: selectedCountry.code },
       });
     } catch (err: any) {
       setSubmitError(err?.message ?? 'Could not send code. Please try again.');

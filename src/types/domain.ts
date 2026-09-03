@@ -260,14 +260,18 @@ export interface LivenessFinalizeResponse {
 }
 
 export interface FaceEnrollRequest {
-  livenessSessionId: string;
-  sessionToken: string;
+  /** Captured selfie from Regula liveness check (base64) */
+  selfieBase64: string;
+  /** Whether Regula liveness check passed */
+  livenessPassed: boolean;
   personId?: string;
 }
 
 export interface FaceUpdateRequest {
-  livenessSessionId: string;
-  sessionToken: string;
+  /** Captured selfie from Regula liveness check (base64) */
+  selfieBase64: string;
+  /** Whether Regula liveness check passed */
+  livenessPassed: boolean;
   personId?: string;
 }
 

@@ -108,7 +108,7 @@ export default function SelectTypeScreen() {
         </View>
         <Spacer />
         <View className="pb-6 pt-4">
-          <Button label="Continue to Scan" onPress={() => router.push('/document/scan')} />
+          <Button label="Continue to Scan" onPress={() => router.push({ pathname: '/document/scan', params: { type: selected } })} />
         </View>
       </View>
     </ScreenContainer>

@@ -27,7 +27,7 @@ export const accountDetailsSchema = z.object({
   dateOfBirth: z
     .string()
     .trim()
-    .regex(/^(0[1-9]|1[0-2])\s*\/\s*(0[1-9]|[12][0-9]|3[01])\s*\/\s*(19|20)\d{2}$/, 'Use MM / DD / YYYY'),
+    .regex(/^(0[1-9]|1[0-2])\/(0[1-9]|[12][0-9]|3[01])\/(19|20)\d{2}$/, 'Use MM/DD/YYYY'),
   pin: z.string().regex(/^\d{4}$/, 'PIN must be exactly 4 digits'),
   email: z
     .string()
@@ -41,7 +41,8 @@ export const accountDetailsSchema = z.object({
     .max(128, 'Too long')
     .regex(/[A-Z]/, 'Must contain at least one uppercase letter')
     .regex(/[a-z]/, 'Must contain at least one lowercase letter')
-    .regex(/[0-9]/, 'Must contain at least one number'),
+    .regex(/[0-9]/, 'Must contain at least one number')
+    .regex(/[^A-Za-z0-9]/, 'Must contain at least one special character'),
   confirmPassword: z.string().min(1, 'Confirm your password'),
 }).refine((data) => data.password === data.confirmPassword, {
   message: 'Passwords do not match',

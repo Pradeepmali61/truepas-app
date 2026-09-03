@@ -38,11 +38,14 @@ export default function AccountDetailsScreen() {
   const formatDate = (month: number, day: number, year: number) => {
     const mm = String(month + 1).padStart(2, '0');
     const dd = String(day).padStart(2, '0');
-    return `${mm} / ${dd} / ${year}`;
+    return `${mm}/${dd}/${year}`;
   };
 
   const confirmDate = () => {
-    setValue('dateOfBirth', formatDate(selectedMonth, selectedDay, selectedYear), { shouldValidate: true });
+    setValue('dateOfBirth', formatDate(selectedMonth, selectedDay, selectedYear), {
+      shouldValidate: true,
+      shouldDirty: true,
+    });
     setShowDatePicker(false);
   };
 
@@ -77,8 +80,13 @@ export default function AccountDetailsScreen() {
   return (
     <ScreenContainer scroll={false}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        className="flex-1">
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        className="flex-1"
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{ flexGrow: 1 }}>
         <TopBar title="Sign Up" />
       <ProgressTrack percent={45} />
       <View className="flex-1 px-6">
@@ -105,25 +113,54 @@ export default function AccountDetailsScreen() {
           <Controller
             control={control}
             name="dateOfBirth"
-            render={({ field: { onChange, value }, fieldState }) => (
-              <Pressable onPress={() => setShowDatePicker(true)}>
-                <View pointerEvents="none">
-                  <FloatingInput
-                    label="Date of Birth"
-                    placeholder="MM / DD / YYYY"
-                    keyboardType="numbers-and-punctuation"
-                    value={value}
-                    onChangeText={onChange}
-                    error={fieldState.error?.message}
-                    rightSlot={
-                      <Pressable onPress={() => setShowDatePicker(true)} hitSlop={8}>
-                        <Icon name="calendar" size={20} color={Colors.primary} />
-                      </Pressable>
-                    }
-                  />
+            render={({ field: { value }, fieldState }) => {
+              const hasValue = value !== undefined && value !== '';
+              const borderColor = fieldState.error?.message
+                ? Colors.warning
+                : hasValue
+                  ? Colors.primary
+                  : Colors.borderInput;
+              const labelColor = fieldState.error?.message
+                ? Colors.warning
+                : hasValue
+                  ? Colors.primary
+                  : Colors.textFaint;
+              return (
+                <View style={{ marginBottom: 6, marginHorizontal: 24 }}>
+                  <Text allowFontScaling={false} style={{ fontSize: 12, marginBottom: 6, color: labelColor, fontWeight: '500' }}>
+                    Date of Birth
+                  </Text>
+                  <Pressable
+                    onPress={() => setShowDatePicker(true)}
+                    style={{
+                      height: 56,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      borderRadius: 12,
+                      borderWidth: 1,
+                      borderColor,
+                      backgroundColor: '#FFFFFF',
+                      paddingHorizontal: 16,
+                    }}>
+                    <Text
+                      style={{
+                        flex: 1,
+                        fontSize: 16,
+                        fontWeight: '500',
+                        color: hasValue ? Colors.ink : Colors.textFaint,
+                      }}>
+                      {hasValue ? value : 'MM/DD/YYYY'}
+                    </Text>
+                    <Icon name="calendar" size={20} color={Colors.primary} />
+                  </Pressable>
+                  {fieldState.error?.message ? (
+                    <Text style={{ marginTop: 4, paddingHorizontal: 4, fontSize: 11, color: Colors.warning }}>
+                      {fieldState.error?.message}
+                    </Text>
+                  ) : null}
                 </View>
-              </Pressable>
-            )}
+              );
+            }}
           />
           <Controller
             control={control}
@@ -210,6 +247,7 @@ export default function AccountDetailsScreen() {
           <Button label="Continue" onPress={onSubmit} loading={completeAccount.isPending} />
         </View>
       </View>
+        </ScrollView>
       </KeyboardAvoidingView>
 
       {/* Date Picker Modal */}

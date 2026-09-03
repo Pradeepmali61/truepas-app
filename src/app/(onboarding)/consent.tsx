@@ -28,19 +28,6 @@ export default function ConsentScreen() {
     }
   };
 
-  const decline = async () => {
-    // Best-effort: notify backend of withdrawal
-    try {
-      await biometricConsent.mutateAsync({ accepted: false });
-    } catch {
-      // Ignore — we show the alert regardless
-    }
-    Alert.alert(
-      'Face enrollment required',
-      'Face enrollment is required to use Truepas. You cannot continue without providing biometric consent.'
-    );
-  };
-
   return (
     <ScreenContainer scroll={false}>
       <LinearGradient
@@ -74,13 +61,6 @@ export default function ConsentScreen() {
       <Spacer />
       <View className="px-6 pb-6">
         <Button label="Agree & Continue" onPress={agree} disabled={!checked} loading={biometricConsent.isPending} />
-        <View className="mt-[14px]">
-          <Button
-            label="Decline (Face enrollment is required to use Truepas)"
-            variant="link"
-            onPress={decline}
-          />
-        </View>
       </View>
     </ScreenContainer>
   );

@@ -1,6 +1,6 @@
 import * as Haptics from 'expo-haptics';
 import { useState } from 'react';
-import { Pressable, Text, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import Animated, { useSharedValue, withSequence, withTiming } from 'react-native-reanimated';
 
 import { setRegistrationToken } from '@/api/client';
@@ -105,6 +105,13 @@ export function OtpVerification({
 
   return (
     <ScreenContainer scroll={false}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        className="flex-1">
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{ flexGrow: 1 }}>
       <TopBar title={title} />
       <ProgressTrack percent={progress} />
       <View className="flex-1 items-center justify-center p-5">
@@ -166,6 +173,8 @@ export function OtpVerification({
           disabled={code.length !== OTP_LENGTH || verifyState === 'loading' || verifyState === 'success'}
         />
       </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </ScreenContainer>
   );
 }
