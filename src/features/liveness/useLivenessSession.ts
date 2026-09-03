@@ -1,11 +1,11 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useState } from 'react';
 
 import { api } from '@/api';
 import type {
-  LivenessChallenge,
-  LivenessChallengeResponse,
-  LivenessEvidenceResponse,
-  LivenessFinalizeResponse,
+    LivenessChallenge,
+    LivenessChallengeResponse,
+    LivenessEvidenceResponse,
+    LivenessFinalizeResponse,
 } from '@/types/domain';
 
 type LivenessPhase = 'idle' | 'creating' | 'challenging' | 'finalizing' | 'passed' | 'failed';
@@ -61,11 +61,12 @@ export function useLivenessSession() {
   }, []);
 
   const submitEvidence = useCallback(
-    async (frameBase64: string, durationMs: number): Promise<LivenessEvidenceResponse> => {
+    async (durationMs: number): Promise<LivenessEvidenceResponse> => {
       if (!state.challenge || !state.currentChallenge) {
         throw new Error('No active liveness session');
       }
 
+      // Per KYC guide §4.2: Evidence carries NO image — only step metadata.
       const evidence = await api.submitLivenessEvidence(
         state.challenge.session_id,
         {
@@ -73,7 +74,6 @@ export function useLivenessSession() {
           step_index: state.currentStepIndex,
           client_ts_ms: Date.now(),
           duration_ms: durationMs,
-          frame: frameBase64,
         },
         state.challenge.session_token,
       );

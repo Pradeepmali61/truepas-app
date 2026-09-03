@@ -240,7 +240,8 @@ export interface LivenessEvidenceRequest {
   step_index: number;
   client_ts_ms: number;
   duration_ms: number;
-  frame: string; // base64 JPEG
+  // Per KYC guide §4.2: Evidence carries NO image — only step metadata.
+  // The only image sent is the final high-res frame at finalize.
 }
 
 export interface LivenessEvidenceResponse {

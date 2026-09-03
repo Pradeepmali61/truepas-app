@@ -233,24 +233,19 @@ export const realApi = {
     payload: LivenessEvidenceRequest,
     sessionToken: string,
   ): Promise<LivenessEvidenceResponse> => {
-    const formData = new FormData();
-    formData.append('challenge', payload.challenge);
-    formData.append('step_index', String(payload.step_index));
-    formData.append('client_ts_ms', String(payload.client_ts_ms));
-    formData.append('duration_ms', String(payload.duration_ms));
-    formData.append('frame', {
-      uri: `data:image/jpeg;base64,${payload.frame}`,
-      type: 'image/jpeg',
-      name: 'frame.jpg',
-    } as any);
-
+    // Per KYC guide §4.2: Evidence carries NO image — only step metadata.
+    // Send as JSON, not multipart.
     const { data } = await apiClient.post<LivenessEvidenceResponse>(
       `/liveness/v2/challenge/${sessionId}/evidence`,
-      formData,
+      {
+        challenge: payload.challenge,
+        step_index: payload.step_index,
+        client_ts_ms: payload.client_ts_ms,
+        duration_ms: payload.duration_ms,
+      },
       {
         headers: {
           'X-Session-Token': sessionToken,
-          'Content-Type': 'multipart/form-data',
         },
       },
     );
