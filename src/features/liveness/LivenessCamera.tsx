@@ -11,7 +11,7 @@ import {
     type CameraRef,
 } from 'react-native-vision-camera';
 import { useFaceDetector } from 'react-native-vision-camera-face-detector';
-import { Worklets } from 'react-native-worklets-core';
+import { runOnJS } from 'react-native-worklets';
 
 import { Colors } from '@/constants/theme';
 import { useEnrollFace, useUpdateFace } from '@/features/auth/mutations';
@@ -157,7 +157,7 @@ export function LivenessCamera({ mode, personId, onSuccess, onError }: LivenessC
   }, [liveness, onError]);
 
   // Create a runOnJS wrapper for the face sample handler
-  const onFaceSampleJS = useRef(Worklets.createRunOnJS(onFaceSample)).current;
+  const onFaceSampleJS = useRef(runOnJS(onFaceSample)).current;
 
   // Frame output — runs on every camera frame, detects faces via ML Kit
   const frameOutput = useFrameOutput({
@@ -181,11 +181,11 @@ export function LivenessCamera({ mode, personId, onSuccess, onError }: LivenessC
 
           onFaceSampleJS(leftEyeOpen, rightEyeOpen, yaw);
         } finally {
-          frame.dispose();
+          (frame as any).dispose();
         }
       });
       if (!wasHandled) {
-        frame.dispose();
+        (frame as any).dispose();
       }
     },
   });
