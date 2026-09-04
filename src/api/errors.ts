@@ -24,6 +24,17 @@ export function toApiError(error: unknown): ApiError {
   if (error instanceof AxiosError) {
     const status = error.response?.status ?? null;
 
+    // Log the full request context so 404s / unexpected failures can be
+    // diagnosed from Metro logs (method + URL + status + server body).
+    if (__DEV__) {
+      const url = `${error.config?.baseURL ?? ''}${error.config?.url ?? ''}`;
+      console.warn(
+        `[API] ${error.config?.method?.toUpperCase() ?? '?'} ${url} → ${status ?? 'no-response'}`,
+        typeof error.response?.data === 'object' ? JSON.stringify(error.response.data) : error.response?.data,
+      );
+    }
+
+
     // ── Timeout ────────────────────────────────────────────────────
     if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
       return {

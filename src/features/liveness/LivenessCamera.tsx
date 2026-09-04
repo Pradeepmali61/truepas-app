@@ -1,16 +1,17 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
     Camera,
-    useAsyncRunner,
     useCameraDevice,
     useCameraPermission,
-    useFrameOutput,
     usePhotoOutput,
     type CameraRef,
 } from 'react-native-vision-camera';
-import { useFaceDetector } from 'react-native-vision-camera-face-detector';
+import {
+    createFaceDetectorOutput,
+    type Face,
+} from 'react-native-vision-camera-face-detector';
 import { runOnJS } from 'react-native-worklets';
 
 import { Colors } from '@/constants/theme';
@@ -59,15 +60,7 @@ export function LivenessCamera({ mode, personId, onSuccess, onError }: LivenessC
   const updateFace = useUpdateFace();
 
   const device = useCameraDevice('front');
-  // runClassifications = true for eye open probability
-  // runLandmarks = false (we don't need landmark points)
-  const faceDetector = useFaceDetector({
-    performanceMode: 'fast',
-    runClassifications: true,
-    runLandmarks: false,
-  });
   const photoOutput = usePhotoOutput();
-  const asyncRunner = useAsyncRunner();
 
   const cameraRef = useRef<CameraRef>(null);
 
@@ -159,36 +152,42 @@ export function LivenessCamera({ mode, personId, onSuccess, onError }: LivenessC
   // Create a runOnJS wrapper for the face sample handler
   const onFaceSampleJS = useRef(runOnJS(onFaceSample)).current;
 
-  // Frame output — runs on every camera frame, detects faces via ML Kit
-  const frameOutput = useFrameOutput({
-    onFrame: (frame) => {
-      'worklet';
-      const wasHandled = asyncRunner.runAsync(() => {
-        'worklet';
-        try {
-          const faces = faceDetector.detectFaces(frame);
-          const face = faces[0];
-          if (!face) return;
+  // Face detection via a dedicated CameraOutput (NOT a frame processor).
+  // The library manages its own YUV output stream so ML Kit always gets a
+  // supported frame format — the useFrameOutput + detectFaces(frame) path
+  // crashes on Android with "Only JPEG and YUV_420_888 are supported now"
+  // because frame output buffers are RGBA.
+  // Created once; the latest handler is read through a ref.
+  const handleFacesRef = useRef<(faces: Face[]) => void>(() => {});
+  handleFacesRef.current = (faces) => {
+    const face = faces[0];
+    if (!face) return;
 
-          // Throttle: ~10 samples/sec
-          const now = Date.now();
-          if (now - lastSampleTs.current < 100) return;
-          lastSampleTs.current = now;
+    // Throttle: ~10 samples/sec
+    const now = Date.now();
+    if (now - lastSampleTs.current < 100) return;
+    lastSampleTs.current = now;
 
-          const leftEyeOpen = face.leftEyeOpenProbability ?? 1;
-          const rightEyeOpen = face.rightEyeOpenProbability ?? 1;
-          const yaw = face.yawAngle ?? 0;
+    onFaceSampleJS(
+      face.leftEyeOpenProbability ?? 1,
+      face.rightEyeOpenProbability ?? 1,
+      face.yawAngle ?? 0,
+    );
+  };
 
-          onFaceSampleJS(leftEyeOpen, rightEyeOpen, yaw);
-        } finally {
-          (frame as any).dispose();
-        }
-      });
-      if (!wasHandled) {
-        (frame as any).dispose();
-      }
-    },
-  });
+  const faceDetectorOutput = useMemo(
+    () =>
+      createFaceDetectorOutput({
+        performanceMode: 'fast',
+        runClassifications: true,
+        runLandmarks: false,
+        onFacesDetected: (faces) => handleFacesRef.current(faces),
+        onError: (error) => {
+          console.warn('Face detection error:', error.message);
+        },
+      }),
+    [],
+  );
 
   // Capture high-res photo for finalize
   const captureAndFinalize = useCallback(async () => {
@@ -313,7 +312,7 @@ export function LivenessCamera({ mode, personId, onSuccess, onError }: LivenessC
         style={{ flex: 1 }}
         device={device}
         isActive
-        outputs={[photoOutput, frameOutput]}
+        outputs={[photoOutput, faceDetectorOutput]}
         mirrorMode="auto"
       />
 
