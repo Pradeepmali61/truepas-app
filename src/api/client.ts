@@ -53,6 +53,7 @@ let refreshPromise: Promise<string> | null = null;
 async function refreshAccessToken(): Promise<string> {
   const refreshToken = await secureStorage.getRefreshToken();
   if (!refreshToken) {
+    console.warn('[DEBUG] refreshAccessToken: no stored refresh token');
     throw new Error('NO_REFRESH_TOKEN');
   }
   const response = await axios.post<AuthResponse>(
@@ -100,6 +101,7 @@ function createClient(baseURL: string): AxiosInstance {
     async (error: AxiosError) => {
       const original = error.config as (InternalAxiosRequestConfig & { _retried?: boolean }) | undefined;
       if (error.response?.status === 401 && original && !original._retried) {
+        console.warn('[DEBUG] 401 for', original.url, '— trying refresh');
         original._retried = true;
         try {
           const token = await getOrRefreshAccessToken();

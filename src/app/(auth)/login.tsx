@@ -36,6 +36,9 @@ export default function LoginScreen() {
         identifier: values.identifier,
         password: values.password,
       });
+      // DEBUG: show exact login response on phone + Metro
+      console.warn('[DEBUG] login.tsx tokens:', { accessToken, refreshToken });
+      Alert.alert('Login response (DEBUG)', `accessToken: ${accessToken ? 'yes' : 'NO'}\nrefreshToken: ${refreshToken ? 'yes' : 'NO'}`);
       await secureStorage.setRefreshToken(refreshToken);
       dispatch(sessionStarted({ user, accessToken, refreshToken }));
     } catch (error) {
