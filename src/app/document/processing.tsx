@@ -8,6 +8,7 @@ import { Icon } from '@/components/ui/Icon';
 import { Colors } from '@/constants/theme';
 import { useAddDocument } from '@/features/documents/hooks';
 import { clearScanResult, getScanResult } from '@/services/scanStore';
+import { useAppSelector } from '@/store';
 import type { DocumentType } from '@/types/domain';
 
 const DOC_LABELS: Record<DocumentType, string> = {
@@ -35,6 +36,8 @@ export default function DocumentProcessingScreen() {
   const [error, setError] = useState<string | null>(null);
   const hasStarted = useRef(false);
   const addDocument = useAddDocument();
+  const profileName = useAppSelector((state) => state.auth.user?.fullName ?? 'User');
+  const profileDob = useAppSelector((state) => state.auth.user?.dateOfBirth ?? '');
 
   useEffect(() => {
     if (hasStarted.current) return;
@@ -93,14 +96,34 @@ export default function DocumentProcessingScreen() {
         } else {
           setStatus('error');
           setError(result.reasonCode ?? 'Document verification failed');
-          router.replace('/document/mismatch');
+          router.replace({
+            pathname: '/document/mismatch',
+            params: {
+              profileName,
+              profileDob,
+              docName: result.extractedName ?? '',
+              docDob: result.extractedDob ?? '',
+              reason: result.reasonCode ?? '',
+            },
+          });
         }
       } catch (err: any) {
         clearScanResult();
         setError(err?.message ?? 'Verification failed');
         setStatus('error');
         // Even on error, navigate after a brief delay so user sees the error
-        setTimeout(() => router.replace('/document/mismatch'), 2000);
+        setTimeout(() => {
+          router.replace({
+            pathname: '/document/mismatch',
+            params: {
+              profileName,
+              profileDob,
+              docName: '',
+              docDob: '',
+              reason: err?.message ?? 'Verification failed',
+            },
+          });
+        }, 2000);
       }
     };
 

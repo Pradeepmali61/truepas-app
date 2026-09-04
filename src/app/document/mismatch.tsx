@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Text, View } from 'react-native';
 
 import { ScreenContainer, Spacer } from '@/components/layout/ScreenContainer';
@@ -13,6 +13,18 @@ const SESSION_TTL_SECONDS = 15 * 60;
 export default function MismatchScreen() {
   const router = useRouter();
   const { seconds } = useCountdown(SESSION_TTL_SECONDS);
+  const params = useLocalSearchParams<{
+    profileName?: string;
+    profileDob?: string;
+    docName?: string;
+    docDob?: string;
+    reason?: string;
+  }>();
+
+  const profileName = params.profileName || '—';
+  const docName = params.docName || '—';
+  const profileDob = params.profileDob || '—';
+  const docDob = params.docDob || '—';
 
   return (
     <ScreenContainer scroll={false}>
@@ -38,14 +50,23 @@ export default function MismatchScreen() {
             <Text className="text-[11px] tracking-[0.5px] text-faint">DOCUMENT</Text>
           </View>
           <View className="mb-2 flex-row items-center justify-between border-b border-canvas pb-2">
-            <Text className="text-[14px] font-semibold text-primary">Jane Doe</Text>
-            <Text className="text-[14px] font-semibold text-primary">Jane D. Smith</Text>
+            <Text className="text-[14px] font-semibold text-primary">{profileName}</Text>
+            <Text className="text-[14px] font-semibold text-primary">{docName}</Text>
           </View>
           <View className="flex-row items-center justify-between">
-            <Text className="text-[14px] font-semibold text-primary">04/12/1994</Text>
-            <Text className="text-[14px] font-semibold text-primary">04/12/1994</Text>
+            <Text className="text-[14px] font-semibold text-primary">{profileDob}</Text>
+            <Text className="text-[14px] font-semibold text-primary">{docDob}</Text>
           </View>
         </View>
+
+        {params.reason ? (
+          <View className="mt-3 flex-row items-start gap-[10px] rounded-btn bg-surface px-4 py-3">
+            <Icon name="info" size={16} />
+            <Text className="flex-1 text-[12px] leading-[18px] text-primary">
+              {params.reason}
+            </Text>
+          </View>
+        ) : null}
 
         <View className="mt-4 flex-row items-center gap-[10px] rounded-btn border-[1.5px] border-primary-light bg-surface px-4 py-3">
           <Icon name="clock" size={16} />

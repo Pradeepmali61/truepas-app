@@ -5,6 +5,7 @@ export interface User {
   fullName: string;
   email: string;
   phone: string;
+  dateOfBirth?: string;
   faceEnrolled: boolean;
   biometricConsentAt: string | null;
 }
@@ -319,6 +320,10 @@ export interface VerifyDocumentRequest {
 export interface VerifyDocumentResponse extends VerificationSession {
   document?: IdentityDocument;
   matchScore?: number | null;
+  /** Name extracted from the document by Regula (may differ from profile). */
+  extractedName?: string | null;
+  /** Date of birth extracted from the document (ISO yyyy-mm-dd). */
+  extractedDob?: string | null;
 }
 
 // ── Health check ──────────────────────────────────────────────────────
