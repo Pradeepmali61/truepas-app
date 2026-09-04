@@ -107,6 +107,8 @@ export const realApi = {
   // ── Auth ─────────────────────────────────────────────────────────────
   login: async (payload: LoginRequest): Promise<AuthResponse> => {
     const { data } = await apiClient.post<AuthResponse>('/auth/login', payload);
+    // TEMP LOG: backend contract check — see Metro terminal for output
+    console.log('[DEBUG] /auth/login response:', JSON.stringify(data, null, 2));
     // Handle both camelCase and snake_case token fields from backend
     return {
       user: data.user,
