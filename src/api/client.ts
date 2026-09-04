@@ -53,7 +53,6 @@ let refreshPromise: Promise<string> | null = null;
 async function refreshAccessToken(): Promise<string> {
   const refreshToken = await secureStorage.getRefreshToken();
   if (!refreshToken) {
-    console.warn('[DEBUG] refreshAccessToken: no stored refresh token');
     throw new Error('NO_REFRESH_TOKEN');
   }
   const response = await axios.post<AuthResponse>(
@@ -96,12 +95,14 @@ function createClient(baseURL: string): AxiosInstance {
   });
 
   // 401 → refresh token (single-flight) → replay original request
+  // Skip refresh for auth endpoints (login, register, verify-otp, forgot-password, reset-password)
+  // because those failures should surface directly as auth errors.
   instance.interceptors.response.use(
     (response) => response,
     async (error: AxiosError) => {
       const original = error.config as (InternalAxiosRequestConfig & { _retried?: boolean }) | undefined;
-      if (error.response?.status === 401 && original && !original._retried) {
-        console.warn('[DEBUG] 401 for', original.url, '— trying refresh');
+      const isAuthEndpoint = original?.url && ['/auth/login', '/auth/register', '/auth/verify-otp', '/auth/forgot-password', '/auth/reset-password'].some((p) => original.url!.endsWith(p));
+      if (error.response?.status === 401 && original && !isAuthEndpoint && !original._retried) {
         original._retried = true;
         try {
           const token = await getOrRefreshAccessToken();

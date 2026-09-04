@@ -32,13 +32,24 @@ export default function LoginScreen() {
     setSubmitting(true);
     setLoginError('');
     try {
+      // Normalize phone identifier: if user entered a 10-digit US number without
+      // a country code, prepend the default +1. Leave emails untouched.
+      let identifier = values.identifier.trim();
+      if (/^\d{10}$/.test(identifier)) {
+        identifier = `+1${identifier}`;
+      }
+
       const { user, accessToken, refreshToken } = await api.login({
-        identifier: values.identifier,
+        identifier,
         password: values.password,
       });
-      // DEBUG: show exact login response on phone + Metro
-      console.warn('[DEBUG] login.tsx tokens:', { accessToken, refreshToken });
-      Alert.alert('Login response (DEBUG)', `accessToken: ${accessToken ? 'yes' : 'NO'}\nrefreshToken: ${refreshToken ? 'yes' : 'NO'}`);
+
+      if (!accessToken || !refreshToken) {
+        setLoginError('Login incomplete — tokens missing. Please finish registration or contact support.');
+        setSubmitting(false);
+        return;
+      }
+
       await secureStorage.setRefreshToken(refreshToken);
       dispatch(sessionStarted({ user, accessToken, refreshToken }));
     } catch (error) {

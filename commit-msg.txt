@@ -1,14 +1,13 @@
-fix: remove mock API, fix registration flow and token handling
+fix: skip token refresh on auth endpoints, normalize login phone identifier
 
-- Set EXPO_PUBLIC_USE_MOCK_API=false and EXPO_PUBLIC_FALLBACK_TO_MOCK=false
-  (app now uses real backend only, no mock fallback)
-- Fix register flow: pass registrationId from register response to
-  verify-phone screen (backend requires registrationId for OTP verify)
-- Fix verify-otp: send registrationId instead of phone/countryCode
-- Fix login: handle both camelCase (accessToken) and snake_case
-  (access_token) token fields from backend response
-- Fix refresh token: same dual-format handling in refreshAccessToken
-- Fix verify-otp response: handle registration_token snake_case
+- 401 interceptor no longer attempts refresh for /auth/login, /auth/register,
+  /auth/verify-otp, /auth/forgot-password, /auth/reset-password. This prevents
+  the misleading "NO_REFRESH_TOKEN" error when credentials are invalid.
+- Login now normalizes a bare 10-digit identifier to +1... (US default) while
+  leaving emails and already-prefixed numbers untouched.
+- Login now shows a clear error if the backend response is missing tokens
+  instead of silently navigating and failing later.
+- Remove temporary debug logging and Alert from login flow.
 
 Generated with [Devin](https://devin.ai)
 
