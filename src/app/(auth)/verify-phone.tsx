@@ -6,9 +6,10 @@ import { OtpVerification } from '@/features/auth/components/OtpVerification';
  *  navigates to account-details (NOT verify-email, per contract v1.1.0). */
 export default function VerifyPhoneScreen() {
   const router = useRouter();
-  const { phone, countryCode } = useLocalSearchParams<{
+  const { phone, countryCode, registrationId } = useLocalSearchParams<{
     phone?: string;
     countryCode?: string;
+    registrationId?: string;
   }>();
 
   return (
@@ -19,7 +20,7 @@ export default function VerifyPhoneScreen() {
       icon="smartphone"
       progress={25}
       purpose="phone"
-      identifier={{ phone: phone ?? '', countryCode: countryCode ?? '+1' }}
+      identifier={{ registrationId: registrationId ?? '' }}
       onVerified={() => router.push('/(auth)/account-details')}
     />
   );

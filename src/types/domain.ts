@@ -117,6 +117,7 @@ export interface RegisterResponse {
 export type OtpPurpose = 'phone' | 'email' | 'password_reset';
 
 export interface VerifyOtpRequest {
+  registrationId?: string;
   phone?: string;
   countryCode?: string;
   email?: string;

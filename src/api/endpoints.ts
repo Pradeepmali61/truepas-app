@@ -107,7 +107,12 @@ export const realApi = {
   // ── Auth ─────────────────────────────────────────────────────────────
   login: async (payload: LoginRequest): Promise<AuthResponse> => {
     const { data } = await apiClient.post<AuthResponse>('/auth/login', payload);
-    return data;
+    // Handle both camelCase and snake_case token fields from backend
+    return {
+      user: data.user,
+      accessToken: data.accessToken ?? (data as any).access_token,
+      refreshToken: data.refreshToken ?? (data as any).refresh_token,
+    };
   },
   register: async (payload: RegisterRequest): Promise<RegisterResponse> => {
     const { data } = await apiClient.post<RegisterResponse>('/auth/register', payload);
@@ -115,7 +120,13 @@ export const realApi = {
   },
   verifyOtp: async (payload: VerifyOtpRequest): Promise<VerifyOtpResponse> => {
     const { data } = await apiClient.post<VerifyOtpResponse>('/auth/verify-otp', payload);
-    return data;
+    // Handle both camelCase and snake_case from backend
+    return {
+      ...data,
+      registrationToken: data.registrationToken ?? (data as any).registration_token,
+      accessToken: data.accessToken ?? (data as any).access_token,
+      refreshToken: data.refreshToken ?? (data as any).refresh_token,
+    };
   },
   completeAccountDetails: async (payload: AccountDetailsRequest): Promise<AccountDetailsResponse> => {
     const registrationToken = getRegistrationToken();

@@ -20,7 +20,7 @@ interface OtpVerificationProps {
   progress: number;
   purpose: OtpPurpose;
   /** Identifier fields to send with the OTP verification. */
-  identifier?: { phone?: string; countryCode?: string; email?: string };
+  identifier?: { registrationId?: string; phone?: string; countryCode?: string; email?: string };
   /**
    * Called after successful verification. Receives the full response
    * so the caller can decide what to do (e.g., dispatch sessionStarted

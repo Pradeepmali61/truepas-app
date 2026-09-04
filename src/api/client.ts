@@ -60,10 +60,14 @@ async function refreshAccessToken(): Promise<string> {
     { refreshToken },
     { timeout: 15_000 }
   );
-  // AuthResponse contains the full user + tokens; persist the new refresh token
-  await secureStorage.setRefreshToken(response.data.refreshToken);
-  setAccessToken(response.data.accessToken);
-  return response.data.accessToken;
+  // Handle both camelCase and snake_case token fields from backend
+  const newRefreshToken = response.data.refreshToken ?? (response.data as any).refresh_token;
+  const newAccessToken = response.data.accessToken ?? (response.data as any).access_token;
+  if (newRefreshToken) {
+    await secureStorage.setRefreshToken(newRefreshToken);
+  }
+  setAccessToken(newAccessToken);
+  return newAccessToken;
 }
 
 /** Returns a fresh access token, deduplicating concurrent refresh calls. */

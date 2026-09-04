@@ -1,18 +1,14 @@
-feat: auto liveness detection with vision-camera + ML Kit
+fix: remove mock API, fix registration flow and token handling
 
-Per KYC guide section 4: replace manual button-press flow with automatic
-ML Kit face detection using react-native-vision-camera v5.
-
-- Install react-native-vision-camera, react-native-vision-camera-face-detector,
-  react-native-worklets-core, expo-image-manipulator
-- Rewrite LivenessCamera.tsx: frame processor auto-detects blink/turn
-  via ML Kit face landmarks — NO manual button press
-- Evidence carries NO image (per guide section 4.2) — only step metadata
-- Only the finalize step sends a high-res photo
-- Blink: eyes closed (<0.35) then open (>0.6)
-- Turn: yaw angle crosses +/-12 deg threshold
-- Throttled to ~10 samples/sec
-- Auto-finalize when all challenge steps complete
+- Set EXPO_PUBLIC_USE_MOCK_API=false and EXPO_PUBLIC_FALLBACK_TO_MOCK=false
+  (app now uses real backend only, no mock fallback)
+- Fix register flow: pass registrationId from register response to
+  verify-phone screen (backend requires registrationId for OTP verify)
+- Fix verify-otp: send registrationId instead of phone/countryCode
+- Fix login: handle both camelCase (accessToken) and snake_case
+  (access_token) token fields from backend response
+- Fix refresh token: same dual-format handling in refreshAccessToken
+- Fix verify-otp response: handle registration_token snake_case
 
 Generated with [Devin](https://devin.ai)
 
