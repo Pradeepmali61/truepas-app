@@ -4,6 +4,7 @@ import { ActivityIndicator, Text, View } from 'react-native';
 
 import { api } from '@/api';
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
+import { Button } from '@/components/ui';
 import { Icon } from '@/components/ui/Icon';
 import { Colors } from '@/constants/theme';
 import { useAddDocument } from '@/features/documents/hooks';
@@ -22,6 +23,10 @@ const DOC_LABELS: Record<DocumentType, string> = {
 
 type ProcessingStatus = 'adding' | 'creating_session' | 'verifying' | 'done' | 'error';
 
+/** Extract a readable message from any thrown error. */
+const msg0 = (err: any): string =>
+  err?.response?.data?.message ?? err?.message ?? 'Verification failed';
+
 /** Document processing — per REACT_NATIVE_KYC_INTEGRATION_GUIDE.md §6:
  *  1. POST /documents → documentId
  *  2. POST /documents/{id}/verification-sessions → sessionId
@@ -35,6 +40,7 @@ export default function DocumentProcessingScreen() {
   const [status, setStatus] = useState<ProcessingStatus>('adding');
   const [error, setError] = useState<string | null>(null);
   const hasStarted = useRef(false);
+  const processRef = useRef<(() => Promise<void>) | null>(null);
   const addDocument = useAddDocument();
   const profileName = useAppSelector((state) => state.auth.user?.fullName ?? 'User');
   const profileDob = useAppSelector((state) => state.auth.user?.dateOfBirth ?? '');
@@ -109,24 +115,17 @@ export default function DocumentProcessingScreen() {
         }
       } catch (err: any) {
         clearScanResult();
-        setError(err?.message ?? 'Verification failed');
+        const msg = err?.response?.data?.message ?? err?.message ?? 'Verification failed';
+        console.error('[DocProcessing] Failed at step:', status, '|', msg, JSON.stringify(err?.response?.data));
+        setError(msg);
         setStatus('error');
-        // Even on error, navigate after a brief delay so user sees the error
-        setTimeout(() => {
-          router.replace({
-            pathname: '/document/mismatch',
-            params: {
-              profileName,
-              profileDob,
-              docName: '',
-              docDob: '',
-              reason: err?.message ?? 'Verification failed',
-            },
-          });
-        }, 2000);
+        // Stay on this screen with a Retry button — do NOT route to mismatch.
+        // Mismatch is only for real verification outcomes (rejected/mismatch),
+        // not for HTTP/API errors like 404 or 5xx.
       }
     };
 
+    processRef.current = process;
     process();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [docType]);
@@ -134,11 +133,17 @@ export default function DocumentProcessingScreen() {
   return (
     <ScreenContainer scroll={false}>
       <View className="flex-1 items-center justify-center p-5">
-        <ActivityIndicator size={80} color={Colors.primary} />
+        {status !== 'error' && <ActivityIndicator size={80} color={Colors.primary} />}
+        {status === 'error' && (
+          <View className="mb-3 h-16 w-16 items-center justify-center rounded-full" style={{ backgroundColor: Colors.errorBg }}>
+            <Icon name="warning" size={36} color={Colors.error} />
+          </View>
+        )}
         <Text
           accessibilityRole="header"
           accessibilityLiveRegion="polite"
-          className="mb-1 mt-5 text-[16px] font-bold text-primary">
+          className="mb-1 mt-5 text-[16px] font-bold"
+          style={{ color: status === 'error' ? Colors.error : Colors.primary }}>
           {status === 'adding' && 'Adding document…'}
           {status === 'creating_session' && 'Creating verification session…'}
           {status === 'verifying' && 'Verifying document…'}
@@ -176,10 +181,29 @@ export default function DocumentProcessingScreen() {
         </View>
 
         {error ? (
-          <Text className="mt-3 text-[12px] text-center" style={{ color: Colors.error }}>
+          <Text className="mt-3 text-[13px] text-center" style={{ color: Colors.error }}>
             {error}
           </Text>
         ) : null}
+
+        {status === 'error' && (
+          <View className="mt-6 w-full gap-3 px-2">
+            <Button
+              label="Retry Verification"
+              onPress={() => {
+                hasStarted.current = false;
+                setError(null);
+                setStatus('adding');
+                processRef.current?.();
+              }}
+            />
+            <Button
+              label="Back to Documents"
+              variant="outline"
+              onPress={() => router.back()}
+            />
+          </View>
+        )}
       </View>
     </ScreenContainer>
   );
