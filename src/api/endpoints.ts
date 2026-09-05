@@ -121,8 +121,13 @@ export const realApi = {
     return data;
   },
   verifyOtp: async (payload: VerifyOtpRequest): Promise<VerifyOtpResponse> => {
-    console.log('[API] POST /auth/verify-otp', JSON.stringify({ ...payload, otp: '***' }));
-    const { data } = await apiClient.post<VerifyOtpResponse>('/auth/verify-otp', payload);
+    // Send both camelCase and snake_case registration_id — backend may expect either.
+    const requestPayload: Record<string, unknown> = { ...payload };
+    if (payload.registrationId) {
+      requestPayload.registration_id = payload.registrationId;
+    }
+    console.log('[API] POST /auth/verify-otp', JSON.stringify({ ...requestPayload, otp: '***' }));
+    const { data } = await apiClient.post<VerifyOtpResponse>('/auth/verify-otp', requestPayload);
     console.log('[API] /auth/verify-otp response:', JSON.stringify({ ...data, registrationToken: data.registrationToken ? '***' : undefined }));
     // Handle both camelCase and snake_case from backend
     return {

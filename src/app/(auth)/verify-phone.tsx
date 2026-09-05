@@ -28,7 +28,7 @@ export default function VerifyPhoneScreen() {
       icon="smartphone"
       progress={25}
       purpose="phone"
-      identifier={{ registrationId: registrationId ?? '' }}
+      identifier={{ registrationId: registrationId ?? '', phone: phone ?? '', countryCode: countryCode ?? '' }}
       onVerified={() => router.push('/(auth)/account-details')}
     />
   );
