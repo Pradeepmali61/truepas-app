@@ -42,7 +42,13 @@ export function useLivenessSession() {
   const startSession = useCallback(async (personId?: string) => {
     setState({ ...initialState, phase: 'creating' });
     try {
+      console.log('[Liveness] Creating challenge...', personId ? `for personId=${personId}` : '(self enrollment)');
       const challenge = await api.createLivenessChallenge(personId);
+      console.log('[Liveness] Challenge created:', JSON.stringify({
+        session_id: challenge.session_id,
+        sequence: challenge.challenge_sequence,
+        step_time_limits: challenge.step_time_limits,
+      }));
       const firstChallenge = challenge.challenge_sequence[0];
       setState({
         phase: 'challenging',
@@ -55,6 +61,7 @@ export function useLivenessSession() {
       });
       return challenge;
     } catch (err: any) {
+      console.error('[Liveness] Challenge creation failed:', err?.message, JSON.stringify(err?.response?.data));
       setState({ ...initialState, phase: 'failed', error: err?.message ?? 'Failed to start liveness challenge' });
       throw err;
     }
@@ -77,8 +84,10 @@ export function useLivenessSession() {
         },
         state.challenge.session_token,
       );
+      console.log('[Liveness] Evidence response:', JSON.stringify(evidence));
 
       if (!evidence.step_accepted || evidence.status === 'failed') {
+        console.error('[Liveness] Step rejected:', JSON.stringify(evidence));
         setState((prev) => ({
           ...prev,
           phase: 'failed',
@@ -92,6 +101,7 @@ export function useLivenessSession() {
       const nextChallenge = evidence.next_challenge;
 
       if (nextChallenge && nextIndex < state.challenge.challenge_sequence.length) {
+        console.log(`[Liveness] Step ${state.currentStepIndex} accepted → next: ${nextChallenge}`);
         setState((prev) => ({
           ...prev,
           currentStepIndex: nextIndex,
@@ -100,6 +110,7 @@ export function useLivenessSession() {
         }));
       } else {
         // All steps done — ready to finalize
+        console.log('[Liveness] All steps accepted → finalizing');
         setState((prev) => ({
           ...prev,
           phase: 'finalizing',

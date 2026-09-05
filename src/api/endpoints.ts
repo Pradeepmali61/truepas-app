@@ -256,10 +256,12 @@ export const realApi = {
 
   // ── Liveness (via BFF /cb/liveness/*) ────────────────────────────────
   createLivenessChallenge: async (personId?: string): Promise<LivenessChallengeResponse> => {
+    console.log('[API] POST /liveness/v2/challenge', personId ? `personId=${personId}` : '(no personId)');
     const { data } = await apiClient.post<LivenessChallengeResponse>(
       '/liveness/v2/challenge',
       personId ? { personId } : undefined,
     );
+    console.log('[API] /liveness/v2/challenge response:', JSON.stringify(data));
     return data;
   },
   submitLivenessEvidence: async (
@@ -269,6 +271,7 @@ export const realApi = {
   ): Promise<LivenessEvidenceResponse> => {
     // Per KYC guide §4.2: Evidence carries NO image — only step metadata.
     // Send as JSON, not multipart.
+    console.log('[API] POST /liveness/v2/challenge/:id/evidence', JSON.stringify({ challenge: payload.challenge, step_index: payload.step_index, duration_ms: payload.duration_ms }));
     const { data } = await apiClient.post<LivenessEvidenceResponse>(
       `/liveness/v2/challenge/${sessionId}/evidence`,
       {
@@ -283,6 +286,7 @@ export const realApi = {
         },
       },
     );
+    console.log('[API] /liveness/v2/challenge/:id/evidence response:', JSON.stringify(data));
     return data;
   },
   finalizeLiveness: async (

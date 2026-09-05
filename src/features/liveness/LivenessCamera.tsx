@@ -109,24 +109,32 @@ export function LivenessCamera({ mode, personId, onSuccess, onError }: LivenessC
     const action = liveness.currentChallenge;
     if (!action) return;
 
+    console.log(`[Liveness] Sample: action=${action} leftEye=${leftEyeOpen.toFixed(2)} rightEye=${rightEyeOpen.toFixed(2)} yaw=${yaw.toFixed(1)}°`);
+
     // Detect the action
     if (action === 'blink') {
       // blink = eyes closed, then open again
       if (leftEyeOpen < BLINK_CLOSED_THRESHOLD && rightEyeOpen < BLINK_CLOSED_THRESHOLD) {
+        if (!eyesWereClosed.current) {
+          console.log('[Liveness] Blink: eyes CLOSED detected, waiting for reopen...');
+        }
         eyesWereClosed.current = true;
       }
       if (!eyesWereClosed.current || leftEyeOpen < BLINK_OPEN_THRESHOLD || rightEyeOpen < BLINK_OPEN_THRESHOLD) {
         return; // eyes not yet fully open after closing
       }
+      console.log('[Liveness] Blink: eyes REOPENED — blink complete!');
     } else {
       // turn = |yaw| must cross the threshold; sign picks the direction
       if (action === 'turn_left' && yaw > -YAW_THRESHOLD) return;
       if (action === 'turn_right' && yaw < YAW_THRESHOLD) return;
+      console.log(`[Liveness] Turn detected: yaw=${yaw.toFixed(1)}° crossed threshold ${YAW_THRESHOLD}°`);
     }
 
     // Action detected — check timing
     const durationMs = Date.now() - stepStartedAt.current;
     const { min_ms, max_ms } = liveness.challenge.step_time_limits;
+    console.log(`[Liveness] Action detected: duration=${durationMs}ms (limits: ${min_ms}-${max_ms}ms)`);
     if (durationMs < min_ms) return; // too fast — keep waiting
     if (durationMs > max_ms) {
       // too slow — step timed out
@@ -141,8 +149,11 @@ export function LivenessCamera({ mode, personId, onSuccess, onError }: LivenessC
     // Submit evidence — metadata only, NO image (per guide §4.2)
     submittingRef.current = true;
     try {
+      console.log(`[Liveness] Submitting evidence for step ${liveness.currentStepIndex}: ${action}`);
       await liveness.submitEvidence(durationMs);
+      console.log('[Liveness] Evidence accepted');
     } catch (err: any) {
+      console.error('[Liveness] Evidence submit failed:', err?.message, JSON.stringify(err?.response?.data));
       onError(err?.message ?? 'Liveness step rejected');
     } finally {
       submittingRef.current = false;
@@ -160,8 +171,10 @@ export function LivenessCamera({ mode, personId, onSuccess, onError }: LivenessC
   // Created once; the latest handler is read through a ref.
   const handleFacesRef = useRef<(faces: Face[]) => void>(() => {});
   handleFacesRef.current = (faces) => {
+    if (faces.length === 0) return;
+
     const face = faces[0];
-    if (!face) return;
+    console.log(`[Liveness] Faces detected: ${faces.length} | leftEye=${face.leftEyeOpenProbability?.toFixed(2) ?? 'null'} rightEye=${face.rightEyeOpenProbability?.toFixed(2) ?? 'null'} yaw=${face.yawAngle?.toFixed(1) ?? 'null'}°`);
 
     // Throttle: ~10 samples/sec
     const now = Date.now();
