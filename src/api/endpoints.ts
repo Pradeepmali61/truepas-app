@@ -1,4 +1,4 @@
-import { apiClient, getRegistrationToken } from '@/api/client';
+import { apiClient, getRegistrationToken, setRegistrationToken } from '@/api/client';
 import type {
     AccountDetailsRequest,
     AccountDetailsResponse,
@@ -126,8 +126,14 @@ export const realApi = {
     if (payload.registrationId) {
       requestPayload.registration_id = payload.registrationId;
     }
-    console.log('[API] POST /auth/verify-otp', JSON.stringify({ ...requestPayload, otp: '***' }));
-    const { data } = await apiClient.post<VerifyOtpResponse>('/auth/verify-otp', requestPayload);
+    // For email verification during registration, send the registration token as Bearer
+    // so the backend can link this to the ongoing registration session.
+    const registrationToken = getRegistrationToken();
+    const config = registrationToken
+      ? { headers: { Authorization: `Bearer ${registrationToken}` } }
+      : undefined;
+    console.log('[API] POST /auth/verify-otp', JSON.stringify({ ...requestPayload, otp: '***' }), registrationToken ? 'with registration token' : 'no registration token');
+    const { data } = await apiClient.post<VerifyOtpResponse>('/auth/verify-otp', requestPayload, config);
     console.log('[API] /auth/verify-otp response:', JSON.stringify({ ...data, registrationToken: data.registrationToken ? '***' : undefined }));
     // Handle both camelCase and snake_case from backend
     return {
@@ -145,7 +151,13 @@ export const realApi = {
       payload,
       registrationToken ? { headers: { Authorization: `Bearer ${registrationToken}` } } : undefined,
     );
-    console.log('[API] /auth/account-details response:', JSON.stringify(data));
+    console.log('[API] /auth/account-details response:', JSON.stringify({ ...data, registrationToken: data.registrationToken ? '***' : undefined }));
+    // If backend returns a new registration token for the email step, update it.
+    const newToken = data.registrationToken ?? (data as any).registration_token;
+    if (newToken) {
+      console.log('[API] Account-details returned new registration token for email step');
+      setRegistrationToken(newToken);
+    }
     return data;
   },
   forgotPassword: async (payload: ForgotPasswordRequest): Promise<OkResponse> => {

@@ -152,6 +152,8 @@ export interface AccountDetailsResponse {
   ok: boolean;
   message: string;
   nextStep: 'verifyEmail';
+  /** Backend may return a new registration token for the email verification step. */
+  registrationToken?: string;
 }
 
 export interface ForgotPasswordRequest {
