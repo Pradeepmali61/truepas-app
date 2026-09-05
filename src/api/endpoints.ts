@@ -1,4 +1,4 @@
-import { apiClient, getRegistrationToken, setRegistrationToken } from '@/api/client';
+import { apiClient, BFF_URL, getAccessToken, getRegistrationToken, setRegistrationToken } from '@/api/client';
 import type {
     AccountDetailsRequest,
     AccountDetailsResponse,
@@ -271,25 +271,41 @@ export const realApi = {
   ): Promise<LivenessEvidenceResponse> => {
     // Per KYC guide §4.2: Evidence carries NO image — only step metadata.
     // Send as JSON, not multipart.
+    // NOTE: Using fetch directly instead of apiClient to bypass any Axios
+    // serialization/interceptor issues that may cause the body to be dropped.
     const body = {
       challenge: payload.challenge,
       step_index: payload.step_index,
       client_ts_ms: payload.client_ts_ms,
       duration_ms: payload.duration_ms,
     };
+    const evidenceUrl = `${BFF_URL}/liveness/v2/challenge/${sessionId}/evidence`;
     console.log('[API] POST /liveness/v2/challenge/:id/evidence', JSON.stringify(body));
-    const { data } = await apiClient.post<LivenessEvidenceResponse>(
-      `/liveness/v2/challenge/${sessionId}/evidence`,
-      body,
-      {
-        headers: {
-          'X-Session-Token': sessionToken,
-          // Explicit Content-Type — without it some proxies skip JSON body parsing
-          // and forward an empty body, causing 422 "Field required" on the backend.
-          'Content-Type': 'application/json',
-        },
+
+    const authToken = getAccessToken();
+    const fetchResponse = await fetch(evidenceUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Session-Token': sessionToken,
+        ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
       },
-    );
+      body: JSON.stringify(body),
+    });
+
+    if (!fetchResponse.ok) {
+      const errorText = await fetchResponse.text();
+      console.error('[API] /liveness/v2/challenge/:id/evidence fetch failed:', fetchResponse.status, errorText);
+      const errorData = JSON.parse(errorText);
+      const axiosLikeError = {
+        response: { status: fetchResponse.status, data: errorData },
+        message: `Request failed with status code ${fetchResponse.status}`,
+        config: { url: evidenceUrl, method: 'POST' },
+      };
+      throw axiosLikeError;
+    }
+
+    const data = await fetchResponse.json() as LivenessEvidenceResponse;
     console.log('[API] /liveness/v2/challenge/:id/evidence response:', JSON.stringify(data));
     return data;
   },
