@@ -69,6 +69,7 @@ export default function FamilyProcessingScreen() {
           expiresAt: null,
           personId,
         });
+        console.log('[FamilyAdd] Document created:', JSON.stringify({ id: doc.id, personId: doc.personId, type: doc.type, label: doc.label }));
         // Persist captured image locally so it can be shown in document detail
         try {
           await saveDocumentImages(doc.id, {
@@ -78,7 +79,7 @@ export default function FamilyProcessingScreen() {
         } catch (e) {
           console.warn('[FamilyAdd] Failed to save document images locally:', e);
         }
-        console.log('[FamilyAdd] Document added for member:', personId);
+        console.log('[FamilyAdd] Document added for member:', personId, '| doc.personId=', doc.personId);
         clearScanResult();
         setStatus('done');
         // Route back to the member detail page (not just router.back()

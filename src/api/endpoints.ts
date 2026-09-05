@@ -59,10 +59,12 @@ export const realApi = {
     return data;
   },
   getDocuments: async (personId?: string): Promise<IdentityDocument[]> => {
+    console.log('[API] GET /documents', personId ? `?personId=${personId}` : '(self)');
     const { data } = await apiClient.get<IdentityDocument[]>(
       '/documents',
       personId ? { params: { personId } } : undefined,
     );
+    console.log('[API] GET /documents response:', JSON.stringify(data), `count=${Array.isArray(data) ? data.length : 'N/A'}`);
     return data;
   },
   getDocument: async (id: string): Promise<IdentityDocument | null> => {
@@ -211,7 +213,9 @@ export const realApi = {
 
   // ── Documents ────────────────────────────────────────────────────────
   addDocument: async (payload: AddDocumentRequest): Promise<IdentityDocument> => {
+    console.log('[API] POST /documents', JSON.stringify(payload));
     const { data } = await apiClient.post<IdentityDocument>('/documents', payload);
+    console.log('[API] POST /documents response:', JSON.stringify(data));
     return data;
   },
   removeDocument: async (id: string): Promise<OkResponse> => {
