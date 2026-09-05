@@ -1,4 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect } from 'react';
 
 import { OtpVerification } from '@/features/auth/components/OtpVerification';
 import { sessionStarted } from '@/features/auth/slice';
@@ -13,6 +14,13 @@ export default function VerifyEmailScreen() {
   const dispatch = useAppDispatch();
   const { email } = useLocalSearchParams<{ email?: string }>();
 
+  useEffect(() => {
+    console.log('[VerifyEmail] Params received:', { email });
+    if (!email) {
+      console.error('[VerifyEmail] Missing email param! Email OTP verification will fail.');
+    }
+  }, [email]);
+
   return (
     <OtpVerification
       title="Verify Email"
@@ -23,6 +31,12 @@ export default function VerifyEmailScreen() {
       purpose="email"
       identifier={{ email: email ?? '' }}
       onVerified={async (response) => {
+        console.log('[VerifyEmail] Verification response:', JSON.stringify({
+          ok: response.ok,
+          nextStep: response.nextStep,
+          hasUser: !!response.user,
+          hasAccessToken: !!response.accessToken,
+        }));
         // Email verification during registration returns AuthResponse fields
         // (user, accessToken, refreshToken) embedded in VerifyOtpResponse.
         if (response.user && response.accessToken) {

@@ -126,6 +126,20 @@ export function toApiError(error: unknown): ApiError {
       };
     }
 
+    // ── 409 Conflict ───────────────────────────────────────────────
+    // Common cause: email/phone already registered with another account.
+    if (status === 409) {
+      const serverMsg = (error.response?.data as { message?: string; error?: string })?.message
+        ?? (error.response?.data as { error?: string })?.error;
+      return {
+        code: 'CONFLICT',
+        message: serverMsg
+          ?? 'An account with these details already exists. Please log in or use different details.',
+        status,
+        retryable: false,
+      };
+    }
+
     // ── 4xx Request errors ─────────────────────────────────────────
     // Try to extract a server-provided message for validation errors.
     const serverMsg = (error.response?.data as { message?: string; error?: string })?.message

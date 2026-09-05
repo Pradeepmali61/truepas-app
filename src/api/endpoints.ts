@@ -139,11 +139,13 @@ export const realApi = {
   },
   completeAccountDetails: async (payload: AccountDetailsRequest): Promise<AccountDetailsResponse> => {
     const registrationToken = getRegistrationToken();
+    console.log('[API] POST /auth/account-details', JSON.stringify({ ...payload, password: '***', confirmPassword: '***', pin: '***' }), registrationToken ? 'with registration token' : 'NO REGISTRATION TOKEN');
     const { data } = await apiClient.post<AccountDetailsResponse>(
       '/auth/account-details',
       payload,
       registrationToken ? { headers: { Authorization: `Bearer ${registrationToken}` } } : undefined,
     );
+    console.log('[API] /auth/account-details response:', JSON.stringify(data));
     return data;
   },
   forgotPassword: async (payload: ForgotPasswordRequest): Promise<OkResponse> => {

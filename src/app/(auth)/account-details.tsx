@@ -52,8 +52,9 @@ export default function AccountDetailsScreen() {
 
   const onSubmit = handleSubmit(async (values) => {
     setSubmitError(null);
+    console.log('[AccountDetails] Submitting:', { fullName: values.fullName, email: values.email, dateOfBirth: values.dateOfBirth });
     try {
-      await completeAccount.mutateAsync({
+      const response = await completeAccount.mutateAsync({
         fullName: values.fullName,
         dateOfBirth: values.dateOfBirth,
         pin: values.pin,
@@ -61,6 +62,7 @@ export default function AccountDetailsScreen() {
         password: values.password,
         confirmPassword: values.confirmPassword,
       });
+      console.log('[AccountDetails] Response:', JSON.stringify(response));
       // Registration token is consumed; clear it. Navigate to verify-email.
       clearRegistrationToken();
       // Pass email to verify-email screen for the OTP request
@@ -69,6 +71,11 @@ export default function AccountDetailsScreen() {
         params: { email: values.email },
       });
     } catch (err: any) {
+      console.error('[AccountDetails] Error:', {
+        message: err?.message,
+        status: err?.response?.status,
+        data: JSON.stringify(err?.response?.data),
+      });
       setSubmitError(err?.message ?? 'Could not save details. Please try again.');
     }
   });
