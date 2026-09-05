@@ -38,7 +38,7 @@ export default function LoginScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [loginError, setLoginError] = useState('');
-  const [selectedCountry, setSelectedCountry] = useState(COUNTRIES[0]);
+  const [selectedCountry, setSelectedCountry] = useState(COUNTRIES.find((c) => c.code === '+91') ?? COUNTRIES[0]);
   const [pickerOpen, setPickerOpen] = useState(false);
 
   const { control, handleSubmit } = useForm<LoginForm>({
