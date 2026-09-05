@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Icon, Skeleton } from '@/components/ui';
 import { Colors } from '@/constants/theme';
+import { useDocuments } from '@/features/documents/hooks';
 import { useFamilyMember, useRemoveFamilyMember } from '@/features/family/hooks';
 
 function InfoField({ icon, label, value }: { icon: string; label: string; value: string }) {
