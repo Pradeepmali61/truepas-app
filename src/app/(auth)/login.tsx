@@ -153,6 +153,7 @@ export default function LoginScreen() {
                 placeholder="••••••••"
                 secureTextEntry={!showPassword}
                 autoCapitalize="none"
+                noMargin
                 value={value}
                 onChangeText={onChange}
                 error={fieldState.error?.message}

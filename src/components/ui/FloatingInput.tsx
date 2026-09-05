@@ -9,11 +9,13 @@ interface FloatingInputProps extends TextInputProps {
   error?: string;
   rightSlot?: React.ReactNode;
   gradient?: boolean;
+  /** Remove the built-in mx-6 — use when the parent already provides horizontal padding. */
+  noMargin?: boolean;
 }
 
 /** Floating-label input matching the mockup `.floating-input` (56px, radius 8). */
 export const FloatingInput = forwardRef<TextInput, FloatingInputProps>(
-  ({ label, error, rightSlot, gradient, onFocus, onBlur, value, ...inputProps }, ref) => {
+  ({ label, error, rightSlot, gradient, noMargin, onFocus, onBlur, value, ...inputProps }, ref) => {
     const [focused, setFocused] = useState(false);
 
     const borderColor = error ? Colors.warning : focused ? Colors.primary : Colors.borderInput;
@@ -43,7 +45,7 @@ export const FloatingInput = forwardRef<TextInput, FloatingInputProps>(
     );
 
     return (
-      <View className="mx-6 mb-6">
+      <View className={noMargin ? 'mb-6' : 'mx-6 mb-6'}>
         {gradient ? (
           <>
             <View className="mb-1">
