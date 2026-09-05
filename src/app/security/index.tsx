@@ -11,6 +11,7 @@ export default function SecurityScreen() {
   const router = useRouter();
   const [faceIdLogin, setFaceIdLogin] = useState(true);
   const [smsVerification, setSmsVerification] = useState(false);
+  const [consentGranted, setConsentGranted] = useState(true);
 
   return (
     <ScreenContainer>
@@ -49,27 +50,56 @@ export default function SecurityScreen() {
       <Card>
         <View className="flex-row items-center justify-between">
           <Text className="text-[13px] text-muted">Consent Status</Text>
-          <Pill label="Granted" />
+          <Pill label={consentGranted ? 'Granted' : 'Withdrawn'} />
         </View>
         <Text className="mt-2 text-[12px] text-muted">
-          You consented to biometric enrollment on Jul 29, 2026 at 9:10 AM
+          {consentGranted
+            ? 'You consented to biometric enrollment on Jul 29, 2026 at 9:10 AM'
+            : 'Biometric consent withdrawn. Face verification is disabled until you re-consent.'}
         </Text>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Withdraw consent"
-          className="mt-2"
-          onPress={() => {
-            Alert.alert(
-              'Withdraw Consent?',
-              'Withdrawing biometric consent will disable face verification. You will need to re-enroll to use face-based features.',
-              [
-                { text: 'Cancel', style: 'cancel' },
-                { text: 'Withdraw', style: 'destructive', onPress: () => router.back() },
-              ],
-            );
-          }}>
-          <Text className="text-[14px] font-medium text-primary underline">Withdraw Consent</Text>
-        </Pressable>
+        {consentGranted ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Withdraw consent"
+            className="mt-2"
+            onPress={() => {
+              Alert.alert(
+                'Withdraw Consent?',
+                'Withdrawing biometric consent will disable face verification. You will need to re-enroll to use face-based features.',
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  {
+                    text: 'Withdraw',
+                    style: 'destructive',
+                    onPress: () => setConsentGranted(false),
+                  },
+                ],
+              );
+            }}>
+            <Text className="text-[14px] font-medium text-primary underline">Withdraw Consent</Text>
+          </Pressable>
+        ) : (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Give consent"
+            className="mt-2"
+            onPress={() => {
+              Alert.alert(
+                'Give Consent?',
+                'Giving biometric consent will enable face verification. You can withdraw at any time.',
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  {
+                    text: 'Give Consent',
+                    style: 'default',
+                    onPress: () => setConsentGranted(true),
+                  },
+                ],
+              );
+            }}>
+            <Text className="text-[14px] font-medium text-primary underline">Give Consent</Text>
+          </Pressable>
+        )}
       </Card>
 
       <SectionTitle>Danger Zone</SectionTitle>
