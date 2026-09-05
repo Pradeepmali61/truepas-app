@@ -125,7 +125,6 @@ export default function LoginScreen() {
                       className="h-[56px] flex-row items-center rounded-[12px] border bg-white px-4"
                       style={{ borderColor: fieldState.error ? Colors.warning : Colors.borderInput }}>
                       <RNTextInput
-                        placeholder="jane@email.com or 5551234567"
                         placeholderTextColor={Colors.textFaint}
                         autoCapitalize="none"
                         autoCorrect={false}
