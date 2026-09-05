@@ -26,10 +26,11 @@ const DOC_LABELS: Record<DocumentType, string> = {
 /** Family document processing — runs AFTER document capture.
  *  Two modes:
  *  - personId present (existing member): adds the captured document to that
- *    member's profile, then returns to the member details screen.
+ *    member's profile, then routes to the member detail page.
  *  - no personId (new member): creates the family member, then:
- *    - 5-17: routes to face-capture (liveness + face enrollment) with personId
- *    - 0-4:  member created with document — back to family tab */
+ *    - 5-17: routes to face-capture (liveness + face enrollment), which
+ *      then routes to the member detail page on completion.
+ *    - 0-4:  routes directly to the member detail page. */
 export default function FamilyProcessingScreen() {
   const router = useRouter();
   const { type, personId, name, dob, relationship, band } = useLocalSearchParams<{
@@ -80,7 +81,9 @@ export default function FamilyProcessingScreen() {
         console.log('[FamilyAdd] Document added for member:', personId);
         clearScanResult();
         setStatus('done');
-        router.back();
+        // Route back to the member detail page (not just router.back()
+        // which would land on the select-type page).
+        router.replace({ pathname: '/family/[id]', params: { id: personId } });
         return;
       }
 
@@ -94,12 +97,14 @@ export default function FamilyProcessingScreen() {
       clearScanResult();
       setStatus('done');
       if (isMinorWithFace) {
+        // 5-17: face capture first, then route to member detail page
         router.replace({
           pathname: '/family/add/face-capture',
           params: { name: name.split(' ')[0], personId: member.id },
         });
       } else {
-        router.dismissTo('/(tabs)/family');
+        // 0-4: no face needed — go straight to member detail page
+        router.replace({ pathname: '/family/[id]', params: { id: member.id } });
       }
     } catch (err: any) {
       clearScanResult();

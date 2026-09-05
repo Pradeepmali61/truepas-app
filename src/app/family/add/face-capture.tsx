@@ -10,14 +10,22 @@ export default function FamilyFaceCaptureScreen() {
   const router = useRouter();
   const { personId } = useLocalSearchParams<{ personId?: string }>();
 
+  const goToMemberDetail = () => {
+    if (personId) {
+      router.replace({ pathname: '/family/[id]', params: { id: personId } });
+    } else {
+      router.dismissTo('/(tabs)/family');
+    }
+  };
+
   return (
     <LivenessCamera
       mode="enroll"
       personId={personId}
-      onSuccess={() => router.dismissTo('/(tabs)/family')}
+      onSuccess={goToMemberDetail}
       onError={(msg) => {
-        // Still navigate back to family tab; the error is shown in the camera UI
-        router.dismissTo('/(tabs)/family');
+        // Still navigate to member detail; the error is shown in the camera UI
+        goToMemberDetail();
       }}
     />
   );
