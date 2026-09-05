@@ -98,10 +98,10 @@ export default function LoginScreen() {
           </Text>
         </View>
 
-        <View className="-mx-6 mb-6 px-6">
-          {/* Identifier with country code */}
-          <View className="mb-4 flex-row items-start gap-3">
-            <Pressable onPress={() => setPickerOpen(true)} style={{ width: 100 }}>
+        <View className="mb-6">
+          {/* Identifier with country code — same layout as register screen */}
+          <View className="mb-4" style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}>
+            <Pressable onPress={() => setPickerOpen(true)} style={{ width: 90 }}>
               <Text className="mb-1.5 text-[12px]" style={{ color: Colors.textFaint, fontWeight: '500' }}>Code</Text>
               <View
                 className="h-[56px] flex-row items-center rounded-[12px] border bg-white px-3"
@@ -169,7 +169,7 @@ export default function LoginScreen() {
               />
             )}
           />
-          <View className="-mt-2 items-end px-6">
+          <View className="-mt-2 items-end">
             <Pressable accessibilityRole="button" accessibilityLabel="Forgot password" onPress={() => router.push('/(auth)/forgot-password' as never)}>
               <Text className="text-[14px] font-medium text-primary underline">Forgot password?</Text>
             </Pressable>
