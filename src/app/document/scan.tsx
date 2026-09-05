@@ -10,6 +10,10 @@ import { setScanResult } from '@/services/scanStore';
 
 type ScanStep = 'front' | 'selfie' | 'done';
 
+// Frame dimensions shown on the camera overlay (must match the JSX below)
+const FRONT_FRAME = { width: 280, height: 175 };
+const SELFIE_FRAME = { width: 220, height: 220 };
+
 /** Document scan — captures front of document (+ selfie for portrait documents) using expo-camera.
  *  Per REACT_NATIVE_KYC_INTEGRATION_GUIDE.md §6:
  *  - Capture frontImageBase64 (required)
@@ -38,6 +42,7 @@ export default function DocumentScanScreen() {
   const [step, setStep] = useState<ScanStep>('front');
   const [frontImage, setFrontImage] = useState<string | null>(null);
   const [selfieImage, setSelfieImage] = useState<string | null>(null);
+  const [cameraLayout, setCameraLayout] = useState({ width: 0, height: 0 });
 
   // Request permission on mount if not yet determined
   useEffect(() => {
@@ -56,13 +61,46 @@ export default function DocumentScanScreen() {
       });
       if (!photo?.uri) return;
 
+      // The frame overlay is centered in the camera view. Map the frame's
+      // screen position to the photo's pixel coordinates and crop so only
+      // the area inside the rectangle is kept.
+      const photoWidth = photo.width ?? 0;
+      const photoHeight = photo.height ?? 0;
+      const viewWidth = cameraLayout.width || photoWidth;
+      const viewHeight = cameraLayout.height || photoHeight;
+
+      const frame = step === 'front' ? FRONT_FRAME : SELFIE_FRAME;
+      // Frame is centered in the camera view
+      const frameScreenX = (viewWidth - frame.width) / 2;
+      const frameScreenY = (viewHeight - frame.height) / 2;
+
+      // Scale screen coords → photo coords
+      const scaleX = photoWidth / viewWidth;
+      const scaleY = photoHeight / viewHeight;
+
+      const cropX = Math.round(frameScreenX * scaleX);
+      const cropY = Math.round(frameScreenY * scaleY);
+      const cropW = Math.round(frame.width * scaleX);
+      const cropH = Math.round(frame.height * scaleY);
+
+      // Build actions: crop first, then resize to ~1600px wide
+      const actions: ImageManipulator.Action[] = [];
+      if (photoWidth > 0 && photoHeight > 0 && cropW > 0 && cropH > 0) {
+        actions.push({
+          crop: {
+            originX: Math.max(0, cropX),
+            originY: Math.max(0, cropY),
+            width: Math.min(cropW, photoWidth - cropX),
+            height: Math.min(cropH, photoHeight - cropY),
+          },
+        });
+      }
+      actions.push({ resize: { width: 1600 } });
+
       // Per KYC guide §6.3: resize to ~1600px + JPEG 0.8 before sending.
-      // Raw camera captures are 2-6 MB of base64 each; large payloads get
-      // dropped by proxies in transit, which the backend reports as
-      // 503 "Document images are required".
       const manipulated = await ImageManipulator.manipulateAsync(
         photo.uri,
-        [{ resize: { width: 1600 } }],
+        actions,
         { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG, base64: true },
       );
       const base64 = manipulated.base64 ?? '';
@@ -172,7 +210,12 @@ export default function DocumentScanScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-[#111111]" edges={['top', 'bottom']}>
-      <View className="flex-1">
+      <View
+        className="flex-1"
+        onLayout={(e) => {
+          const { width, height } = e.nativeEvent.layout;
+          setCameraLayout({ width, height });
+        }}>
         <CameraView
           ref={cameraRef}
           facing={facing}
