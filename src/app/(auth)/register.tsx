@@ -46,6 +46,13 @@ export default function RegisterScreen() {
         phone: cleanPhone,
         countryCode: selectedCountry.code,
       });
+      console.log('[Register] Response:', JSON.stringify(response));
+      if (!response?.registrationId) {
+        console.error('[Register] No registrationId in response!');
+        setSubmitError('Registration failed: server did not return a registration ID. Please try again.');
+        return;
+      }
+      console.log('[Register] Navigating to verify-phone with registrationId:', response.registrationId);
       router.push({
         pathname: '/(auth)/verify-phone',
         params: {
@@ -55,6 +62,7 @@ export default function RegisterScreen() {
         },
       });
     } catch (err: any) {
+      console.error('[Register] Error:', err?.message, err?.response?.status, JSON.stringify(err?.response?.data));
       setSubmitError(err?.message ?? 'Could not send code. Please try again.');
     }
   });

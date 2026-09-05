@@ -1,4 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect } from 'react';
 
 import { OtpVerification } from '@/features/auth/components/OtpVerification';
 
@@ -11,6 +12,13 @@ export default function VerifyPhoneScreen() {
     countryCode?: string;
     registrationId?: string;
   }>();
+
+  useEffect(() => {
+    console.log('[VerifyPhone] Params received:', { phone, countryCode, registrationId });
+    if (!registrationId) {
+      console.error('[VerifyPhone] Missing registrationId! OTP verification will fail with 404.');
+    }
+  }, [phone, countryCode, registrationId]);
 
   return (
     <OtpVerification

@@ -112,6 +112,20 @@ export function toApiError(error: unknown): ApiError {
       };
     }
 
+    // ── 404 Not Found ──────────────────────────────────────────────
+    // Common cause: registrationId expired/invalid, or endpoint path wrong.
+    if (status === 404) {
+      const serverMsg = (error.response?.data as { message?: string; error?: string })?.message
+        ?? (error.response?.data as { error?: string })?.error;
+      return {
+        code: 'NOT_FOUND',
+        message: serverMsg
+          ?? 'The requested resource was not found. This may happen if your registration session expired — please start again.',
+        status,
+        retryable: false,
+      };
+    }
+
     // ── 4xx Request errors ─────────────────────────────────────────
     // Try to extract a server-provided message for validation errors.
     const serverMsg = (error.response?.data as { message?: string; error?: string })?.message

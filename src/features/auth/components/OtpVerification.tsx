@@ -68,7 +68,12 @@ export function OtpVerification({
         purpose,
         ...identifier,
       };
+      console.log('[OTP] Verifying:', { purpose, registrationId: identifier?.registrationId, otpLength: code.length, payload: JSON.stringify(payload) });
+      if (purpose === 'phone' && !identifier?.registrationId) {
+        console.error('[OTP] Missing registrationId for phone verification — backend will return 404');
+      }
       const response = await verifyOtp.mutateAsync(payload);
+      console.log('[OTP] Response:', JSON.stringify(response));
 
       // Store registration token if present (phone verification during registration)
       if (response.registrationToken) {
@@ -79,6 +84,12 @@ export function OtpVerification({
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setTimeout(() => onVerified(response), 600);
     } catch (err: any) {
+      console.error('[OTP] Error:', {
+        message: err?.message,
+        status: err?.response?.status,
+        url: err?.config?.url,
+        data: JSON.stringify(err?.response?.data),
+      });
       setVerifyState('error');
       setErrorMsg(err?.message ?? 'Invalid verification code. Please try again.');
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);

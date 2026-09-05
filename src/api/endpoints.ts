@@ -115,11 +115,15 @@ export const realApi = {
     };
   },
   register: async (payload: RegisterRequest): Promise<RegisterResponse> => {
+    console.log('[API] POST /auth/register', JSON.stringify(payload));
     const { data } = await apiClient.post<RegisterResponse>('/auth/register', payload);
+    console.log('[API] /auth/register response:', JSON.stringify(data));
     return data;
   },
   verifyOtp: async (payload: VerifyOtpRequest): Promise<VerifyOtpResponse> => {
+    console.log('[API] POST /auth/verify-otp', JSON.stringify({ ...payload, otp: '***' }));
     const { data } = await apiClient.post<VerifyOtpResponse>('/auth/verify-otp', payload);
+    console.log('[API] /auth/verify-otp response:', JSON.stringify({ ...data, registrationToken: data.registrationToken ? '***' : undefined }));
     // Handle both camelCase and snake_case from backend
     return {
       ...data,
