@@ -152,6 +152,12 @@ export function LivenessCamera({ mode, personId, onSuccess, onError }: LivenessC
       console.log('[Liveness] Evidence accepted');
     } catch (err: any) {
       console.error('[Liveness] Evidence submit failed:', err?.message, JSON.stringify(err?.response?.data));
+      console.error('[Liveness] Sent request was:', JSON.stringify({
+        url: err?.config?.url,
+        method: err?.config?.method,
+        data: err?.config?.data,
+        contentType: err?.config?.headers?.['Content-Type'] ?? err?.config?.headers?.get?.('Content-Type'),
+      }));
       onError(err?.message ?? 'Liveness step rejected');
     } finally {
       submittingRef.current = false;

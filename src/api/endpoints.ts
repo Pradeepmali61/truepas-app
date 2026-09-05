@@ -271,18 +271,22 @@ export const realApi = {
   ): Promise<LivenessEvidenceResponse> => {
     // Per KYC guide §4.2: Evidence carries NO image — only step metadata.
     // Send as JSON, not multipart.
-    console.log('[API] POST /liveness/v2/challenge/:id/evidence', JSON.stringify({ challenge: payload.challenge, step_index: payload.step_index, duration_ms: payload.duration_ms }));
+    const body = {
+      challenge: payload.challenge,
+      step_index: payload.step_index,
+      client_ts_ms: payload.client_ts_ms,
+      duration_ms: payload.duration_ms,
+    };
+    console.log('[API] POST /liveness/v2/challenge/:id/evidence', JSON.stringify(body));
     const { data } = await apiClient.post<LivenessEvidenceResponse>(
       `/liveness/v2/challenge/${sessionId}/evidence`,
-      {
-        challenge: payload.challenge,
-        step_index: payload.step_index,
-        client_ts_ms: payload.client_ts_ms,
-        duration_ms: payload.duration_ms,
-      },
+      body,
       {
         headers: {
           'X-Session-Token': sessionToken,
+          // Explicit Content-Type — without it some proxies skip JSON body parsing
+          // and forward an empty body, causing 422 "Field required" on the backend.
+          'Content-Type': 'application/json',
         },
       },
     );
