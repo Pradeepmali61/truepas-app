@@ -109,8 +109,6 @@ export function LivenessCamera({ mode, personId, onSuccess, onError }: LivenessC
     const action = liveness.currentChallenge;
     if (!action) return;
 
-    console.log(`[Liveness] Sample: action=${action} leftEye=${leftEyeOpen.toFixed(2)} rightEye=${rightEyeOpen.toFixed(2)} yaw=${yaw.toFixed(1)}°`);
-
     // Detect the action
     if (action === 'blink') {
       // blink = eyes closed, then open again
@@ -125,9 +123,9 @@ export function LivenessCamera({ mode, personId, onSuccess, onError }: LivenessC
       }
       console.log('[Liveness] Blink: eyes REOPENED — blink complete!');
     } else {
-      // turn = |yaw| must cross the threshold; sign picks the direction
-      if (action === 'turn_left' && yaw > -YAW_THRESHOLD) return;
-      if (action === 'turn_right' && yaw < YAW_THRESHOLD) return;
+      // ML Kit yaw: positive = subject turns to their LEFT, negative = to their RIGHT
+      if (action === 'turn_right' && yaw > -YAW_THRESHOLD) return;
+      if (action === 'turn_left' && yaw < YAW_THRESHOLD) return;
       console.log(`[Liveness] Turn detected: yaw=${yaw.toFixed(1)}° crossed threshold ${YAW_THRESHOLD}°`);
     }
 
@@ -160,8 +158,18 @@ export function LivenessCamera({ mode, personId, onSuccess, onError }: LivenessC
     }
   }, [liveness, onError]);
 
-  // Create a runOnJS wrapper for the face sample handler
-  const onFaceSampleJS = useRef(runOnJS(onFaceSample)).current;
+  // Create a runOnJS wrapper for the face sample handler.
+  // IMPORTANT: runOnJS(fn) binds fn at creation time — passing onFaceSample directly
+  // would forever call the FIRST-render closure with stale liveness state
+  // (phase 'idle'), so no action would ever be detected. Route through a ref
+  // so the wrapper always invokes the latest callback.
+  const onFaceSampleRef = useRef(onFaceSample);
+  onFaceSampleRef.current = onFaceSample;
+  const onFaceSampleJS = useRef(
+    runOnJS((leftEyeOpen: number, rightEyeOpen: number, yaw: number) => {
+      onFaceSampleRef.current(leftEyeOpen, rightEyeOpen, yaw);
+    }),
+  ).current;
 
   // Face detection via a dedicated CameraOutput (NOT a frame processor).
   // The library manages its own YUV output stream so ML Kit always gets a
@@ -171,21 +179,20 @@ export function LivenessCamera({ mode, personId, onSuccess, onError }: LivenessC
   // Created once; the latest handler is read through a ref.
   const handleFacesRef = useRef<(faces: Face[]) => void>(() => {});
   handleFacesRef.current = (faces) => {
-    if (faces.length === 0) return;
-
     const face = faces[0];
-    console.log(`[Liveness] Faces detected: ${faces.length} | leftEye=${face.leftEyeOpenProbability?.toFixed(2) ?? 'null'} rightEye=${face.rightEyeOpenProbability?.toFixed(2) ?? 'null'} yaw=${face.yawAngle?.toFixed(1) ?? 'null'}°`);
+    if (!face) return;
 
     // Throttle: ~10 samples/sec
     const now = Date.now();
     if (now - lastSampleTs.current < 100) return;
     lastSampleTs.current = now;
 
-    onFaceSampleJS(
-      face.leftEyeOpenProbability ?? 1,
-      face.rightEyeOpenProbability ?? 1,
-      face.yawAngle ?? 0,
-    );
+    const leftEye = face.leftEyeOpenProbability ?? 1;
+    const rightEye = face.rightEyeOpenProbability ?? 1;
+    const yaw = face.yawAngle ?? 0;
+    console.log(`[Liveness] Sample: leftEye=${leftEye.toFixed(2)} rightEye=${rightEye.toFixed(2)} yaw=${yaw.toFixed(1)}°`);
+
+    onFaceSampleJS(leftEye, rightEye, yaw);
   };
 
   const faceDetectorOutput = useMemo(
