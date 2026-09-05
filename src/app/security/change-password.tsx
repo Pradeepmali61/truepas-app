@@ -1,14 +1,27 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Text, View } from 'react-native';
+import { Alert, Pressable, Text, View } from 'react-native';
 
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
 import { ScreenHeader } from '@/components/layout/ScreenHeader';
-import { Button, FloatingInput } from '@/components/ui';
+import { Button, FloatingInput, Icon } from '@/components/ui';
 import { useChangePassword } from '@/features/auth/mutations';
 import { sessionEnded } from '@/features/auth/slice';
 import { useAppDispatch } from '@/store';
+
+/** Eye toggle matching the login page pattern. */
+function PasswordEye({ visible, onToggle }: { visible: boolean; onToggle: () => void }) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={visible ? 'Hide password' : 'Show password'}
+      onPress={onToggle}
+      className="h-9 w-9 items-center justify-center">
+      <Icon name={visible ? 'eyeClosed' : 'eye'} size={20} color="#999" />
+    </Pressable>
+  );
+}
 
 /** Change Password — verify current, enter new password. */
 export default function ChangePasswordScreen() {
@@ -19,6 +32,9 @@ export default function ChangePasswordScreen() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
+  const [showCurrent, setShowCurrent] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const changePassword = useChangePassword();
 
   const handleChange = async () => {
@@ -61,19 +77,22 @@ export default function ChangePasswordScreen() {
           label="Current Password"
           value={currentPassword}
           onChangeText={setCurrentPassword}
-          secureTextEntry
+          secureTextEntry={!showCurrent}
+          rightSlot={<PasswordEye visible={showCurrent} onToggle={() => setShowCurrent((v) => !v)} />}
         />
         <FloatingInput
           label="New Password"
           value={newPassword}
           onChangeText={setNewPassword}
-          secureTextEntry
+          secureTextEntry={!showNew}
+          rightSlot={<PasswordEye visible={showNew} onToggle={() => setShowNew((v) => !v)} />}
         />
         <FloatingInput
           label="Confirm New Password"
           value={confirmPassword}
           onChangeText={setConfirmPassword}
-          secureTextEntry
+          secureTextEntry={!showConfirm}
+          rightSlot={<PasswordEye visible={showConfirm} onToggle={() => setShowConfirm((v) => !v)} />}
         />
 
         {error ? (
