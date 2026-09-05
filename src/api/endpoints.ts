@@ -227,7 +227,12 @@ export const realApi = {
       payload,
     );
     console.log('[API] /documents/:id/verification-sessions response:', JSON.stringify(data));
-    return data;
+    // Backend returns `sessionId`, the app type expects `id` — normalize it.
+    const raw = data as any;
+    return {
+      ...data,
+      id: data.id ?? raw.sessionId ?? raw.session_id,
+    };
   },
   /** POST /document-verification-sessions/{sessionId}/verify
    *  Per guide §6.3: SYNCHRONOUS result — no polling needed.
