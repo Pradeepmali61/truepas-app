@@ -1,7 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Pressable, Text, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
 import { ScreenHeader } from '@/components/layout/ScreenHeader';
@@ -68,45 +68,47 @@ export default function ChangePasswordScreen() {
   return (
     <ScreenContainer scroll={false}>
       <ScreenHeader title="Change Password" />
-      <View style={{ flex: 1, paddingHorizontal: 24, paddingTop: 16 }}>
-        <Text style={{ fontSize: 14, color: '#6B7280', marginBottom: 20, textAlign: 'center' }}>
-          Enter your current password and choose a new one.
-        </Text>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1 }} showsVerticalScrollIndicator={false}>
+          <View style={{ flexGrow: 1, paddingHorizontal: 24, paddingTop: 16 }}>
+            <Text style={{ fontSize: 14, color: '#6B7280', marginBottom: 20, textAlign: 'center' }}>
+              Enter your current password and choose a new one.
+            </Text>
 
-        <FloatingInput
-          label="Current Password"
-          value={currentPassword}
-          onChangeText={setCurrentPassword}
-          secureTextEntry={!showCurrent}
-          rightSlot={<PasswordEye visible={showCurrent} onToggle={() => setShowCurrent((v) => !v)} />}
-        />
-        <FloatingInput
-          label="New Password"
-          value={newPassword}
-          onChangeText={setNewPassword}
-          secureTextEntry={!showNew}
-          rightSlot={<PasswordEye visible={showNew} onToggle={() => setShowNew((v) => !v)} />}
-        />
-        <FloatingInput
-          label="Confirm New Password"
-          value={confirmPassword}
-          onChangeText={setConfirmPassword}
-          secureTextEntry={!showConfirm}
-          rightSlot={<PasswordEye visible={showConfirm} onToggle={() => setShowConfirm((v) => !v)} />}
-        />
+            <FloatingInput
+              label="Current Password"
+              value={currentPassword}
+              onChangeText={setCurrentPassword}
+              secureTextEntry={!showCurrent}
+              rightSlot={<PasswordEye visible={showCurrent} onToggle={() => setShowCurrent((v) => !v)} />}
+            />
+            <FloatingInput
+              label="New Password"
+              value={newPassword}
+              onChangeText={setNewPassword}
+              secureTextEntry={!showNew}
+              rightSlot={<PasswordEye visible={showNew} onToggle={() => setShowNew((v) => !v)} />}
+            />
+            <FloatingInput
+              label="Confirm New Password"
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+              secureTextEntry={!showConfirm}
+              rightSlot={<PasswordEye visible={showConfirm} onToggle={() => setShowConfirm((v) => !v)} />}
+            />
 
-        {error ? (
-          <Text style={{ fontSize: 13, color: '#EF4444', marginTop: 8, textAlign: 'center' }}>
-            {error}
-          </Text>
-        ) : null}
+            {error ? (
+              <Text style={{ fontSize: 13, color: '#EF4444', marginTop: 8, textAlign: 'center' }}>
+                {error}
+              </Text>
+            ) : null}
 
-        <View style={{ flex: 1 }} />
-
-        <View style={{ paddingBottom: 24, paddingTop: 16 }}>
-          <Button label="Update Password" onPress={handleChange} loading={changePassword.isPending} />
-        </View>
-      </View>
+            <View style={{ paddingTop: 16, paddingBottom: 24 }}>
+              <Button label="Update Password" onPress={handleChange} loading={changePassword.isPending} />
+            </View>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </ScreenContainer>
   );
 }
