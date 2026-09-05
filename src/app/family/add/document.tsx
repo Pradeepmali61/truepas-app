@@ -7,7 +7,6 @@ import { ScreenContainer, Spacer } from '@/components/layout/ScreenContainer';
 import { ScreenHeader } from '@/components/layout/ScreenHeader';
 import { BottomSheet, Button, FloatingInput, Icon, InfoBanner, Pill, Stepper } from '@/components/ui';
 import { Colors } from '@/constants/theme';
-import { useAddFamilyMember } from '@/features/family/hooks';
 import type { DocumentType, FamilyAgeBand } from '@/types/domain';
 
 type DocOption = { id: DocumentType; label: string; icon: keyof typeof DOC_ACCENT };
@@ -44,7 +43,6 @@ export default function FamilyDocumentScreen() {
     dob?: string;
     relationship?: string;
   }>();
-  const addFamilyMember = useAddFamilyMember();
   const isMinorWithFace = band !== '0-4';
   const firstName = (name ?? 'Member').split(' ')[0];
 
@@ -52,26 +50,24 @@ export default function FamilyDocumentScreen() {
   const [selectedDocType, setSelectedDocType] = useState<DocOption>(docOptions[0]);
   const [pickerOpen, setPickerOpen] = useState(false);
 
-  const handleComplete = async () => {
+  const handleComplete = () => {
     if (!name || !dob || !relationship) {
       router.dismissTo('/(tabs)/family');
       return;
     }
-    try {
-      // For 0-4: create the family member and go back
-      // For 5-17: create the family member and pass personId to face-capture
-      const member = await addFamilyMember.mutateAsync({ name, dateOfBirth: dob, relationship });
-      if (isMinorWithFace) {
-        router.push({
-          pathname: '/family/add/face-capture',
-          params: { name: firstName, personId: member.id },
-        });
-      } else {
-        router.dismissTo('/(tabs)/family');
-      }
-    } catch {
-      router.dismissTo('/(tabs)/family');
-    }
+    // Navigate to the document scan screen — the family member is created
+    // AFTER the document is captured (family/add/processing).
+    router.push({
+      pathname: '/document/scan',
+      params: {
+        type: selectedDocType.id,
+        family: '1',
+        name: name,
+        dob: dob,
+        relationship: relationship,
+        band: band ?? '',
+      },
+    });
   };
 
   return (
@@ -187,7 +183,6 @@ export default function FamilyDocumentScreen() {
         <View className="pb-6 pt-4">
           <Button
             label={isMinorWithFace ? 'Scan Document' : 'Upload Document'}
-            loading={addFamilyMember.isPending}
             onPress={handleComplete}
           />
         </View>

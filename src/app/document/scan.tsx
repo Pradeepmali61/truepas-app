@@ -10,15 +10,27 @@ import { setScanResult } from '@/services/scanStore';
 
 type ScanStep = 'front' | 'selfie' | 'done';
 
-/** Document scan — captures front of document + selfie using expo-camera.
+/** Document scan — captures front of document (+ selfie for portrait documents) using expo-camera.
  *  Per REACT_NATIVE_KYC_INTEGRATION_GUIDE.md §6:
  *  - Capture frontImageBase64 (required)
  *  - Capture selfieImageBase64 (for face match on portrait documents)
  *  - Images sent as base64 in the /verify call (NOT as object keys)
- *  - Regula runs server-side for OCR + authenticity + face match */
+ *  - Regula runs server-side for OCR + authenticity + face match
+ *  Family mode: when `family` param is set, routes to family/add/processing
+ *  after capture instead of the user document processing screen. Birth
+ *  certificates (0-4) skip the selfie step — no portrait, no face match. */
 export default function DocumentScanScreen() {
   const router = useRouter();
-  const { type } = useLocalSearchParams<{ type?: string }>();
+  const { type, family, name, dob, relationship, band } = useLocalSearchParams<{
+    type?: string;
+    family?: string;
+    name?: string;
+    dob?: string;
+    relationship?: string;
+    band?: string;
+  }>();
+  const isFamilyMode = family === '1';
+  const isDocOnly = type === 'birthCertificate';
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef<CameraView>(null);
   const [capturing, setCapturing] = useState(false);
@@ -57,7 +69,8 @@ export default function DocumentScanScreen() {
 
       if (step === 'front') {
         setFrontImage(base64);
-        setStep('selfie');
+        // Doc-only documents (birthCertificate, 0-4) have no portrait — skip selfie
+        setStep(isDocOnly ? 'done' : 'selfie');
       } else if (step === 'selfie') {
         setSelfieImage(base64);
         setStep('done');
@@ -75,6 +88,15 @@ export default function DocumentScanScreen() {
       documentImageBase64: frontImage ?? undefined,
       selfieBase64: selfieImage ?? undefined,
     });
+
+    if (isFamilyMode) {
+      // Family flow — member is created AFTER document capture
+      router.replace({
+        pathname: '/family/add/processing',
+        params: { type: type ?? 'idCard', name: name ?? '', dob: dob ?? '', relationship: relationship ?? '', band: band ?? '' },
+      });
+      return;
+    }
 
     router.push({
       pathname: '/document/processing',
@@ -175,7 +197,7 @@ export default function DocumentScanScreen() {
         {/* Step indicator */}
         <View className="absolute bottom-[100px] left-0 right-0 items-center">
           <Text className="text-[12px] text-white/50">
-            Step {isFront ? '1' : '2'} of 2
+            {isDocOnly ? 'Document photo' : `Step ${isFront ? '1' : '2'} of 2`}
           </Text>
         </View>
       </View>
