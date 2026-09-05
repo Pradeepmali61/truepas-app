@@ -9,6 +9,7 @@ import { ScreenHeader } from '@/components/layout/ScreenHeader';
 import { Icon, Skeleton } from '@/components/ui';
 import { Colors, Elevation } from '@/constants/theme';
 import { useDocument } from '@/features/documents/hooks';
+import { getDocumentImageUri } from '@/services/documentImageStore';
 import type { IdentityDocument, IssuedDoc } from '@/types/domain';
 
 type CombinedDoc = IssuedDoc | IdentityDocument;
@@ -35,12 +36,15 @@ export default function DocumentDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data: identityDoc, isPending } = useDocument(id ?? '');
   const [issuedDoc, setIssuedDoc] = useState<IssuedDoc | null>(null);
+  const [capturedImageUri, setCapturedImageUri] = useState<string | null>(null);
 
   useEffect(() => {
     if (id) {
       api.getIssuedDocuments().then((docs) => {
         setIssuedDoc(docs.find((d) => d.id === id) ?? null);
       });
+      // Load the locally persisted captured photo for this document
+      getDocumentImageUri(id, 'front').then(setCapturedImageUri).catch(() => setCapturedImageUri(null));
     }
   }, [id]);
 
@@ -129,6 +133,22 @@ export default function DocumentDetailScreen() {
             <Text style={{ fontSize: 11, fontWeight: '500', color: statusColor }}>{statusLabel}</Text>
           </View>
         </View>
+
+        {/* Captured document photo */}
+        {capturedImageUri && (
+          <View style={{ marginTop: 16, borderRadius: 16, overflow: 'hidden', ...Elevation.small }}>
+            <Text style={{ fontSize: 13, fontWeight: '600', color: Colors.textMuted, marginBottom: 8, paddingHorizontal: 4 }}>
+              Captured Photo
+            </Text>
+            <Image
+              source={{ uri: capturedImageUri }}
+              style={{ width: '100%', height: 220, borderRadius: 12, backgroundColor: '#F1F5F9' }}
+              resizeMode="contain"
+              accessible
+              accessibilityLabel={`Captured photo of ${title}`}
+            />
+          </View>
+        )}
 
         {/* Zone 3: Details */}
         <View style={{

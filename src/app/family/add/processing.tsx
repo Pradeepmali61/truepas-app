@@ -8,6 +8,7 @@ import { Button, Icon } from '@/components/ui';
 import { Colors } from '@/constants/theme';
 import { useAddDocument } from '@/features/documents/hooks';
 import { useAddFamilyMember } from '@/features/family/hooks';
+import { saveDocumentImages } from '@/services/documentImageStore';
 import { clearScanResult, getScanResult } from '@/services/scanStore';
 import type { DocumentType } from '@/types/domain';
 
@@ -60,13 +61,22 @@ export default function FamilyProcessingScreen() {
           throw new Error('No document image captured. Please scan again.');
         }
         console.log('[FamilyAdd] Adding document to member:', personId, docType);
-        await addDocument.mutateAsync({
+        const doc = await addDocument.mutateAsync({
           type: docType,
           label: DOC_LABELS[docType],
           number: '****' + Math.floor(1000 + Math.random() * 9000),
           expiresAt: null,
           personId,
         });
+        // Persist captured image locally so it can be shown in document detail
+        try {
+          await saveDocumentImages(doc.id, {
+            front: scanResult.documentImageBase64,
+            selfie: scanResult.selfieBase64,
+          });
+        } catch (e) {
+          console.warn('[FamilyAdd] Failed to save document images locally:', e);
+        }
         console.log('[FamilyAdd] Document added for member:', personId);
         clearScanResult();
         setStatus('done');

@@ -8,6 +8,7 @@ import { Button } from '@/components/ui';
 import { Icon } from '@/components/ui/Icon';
 import { Colors } from '@/constants/theme';
 import { useAddDocument } from '@/features/documents/hooks';
+import { saveDocumentImages } from '@/services/documentImageStore';
 import { clearScanResult, getScanResult } from '@/services/scanStore';
 import { useAppSelector } from '@/store';
 import type { DocumentType } from '@/types/domain';
@@ -70,6 +71,17 @@ export default function DocumentProcessingScreen() {
           number: '****' + Math.floor(1000 + Math.random() * 9000),
           expiresAt: null,
         });
+
+        // Persist captured images locally so the document detail screen
+        // can show the originally captured photo later.
+        try {
+          await saveDocumentImages(doc.id, {
+            front: frontImage,
+            selfie: selfieImage,
+          });
+        } catch (e) {
+          console.warn('[DocProcessing] Failed to save document images locally:', e);
+        }
 
         // Step 2: Create verification session (requestId = idempotency key)
         setStatus('creating_session');
