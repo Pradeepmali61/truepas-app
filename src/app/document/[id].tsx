@@ -92,9 +92,9 @@ export default function DocumentDetailScreen() {
   const title = getTitle(doc);
   const status = isIdentityDocument(doc) ? doc.status : doc.status;
   const isVerified = status === 'verified' || status === 'Active';
-  const isPending = status === 'pending';
-  const statusLabel = isVerified ? 'VERIFIED' : isPending ? 'PENDING' : 'FAILED';
-  const statusColor = isVerified ? '#34D399' : isPending ? '#FBBF24' : '#F87171';
+  const isPendingStatus = status === 'pending';
+  const statusLabel = isVerified ? 'VERIFIED' : isPendingStatus ? 'PENDING' : 'FAILED';
+  const statusColor = isVerified ? '#34D399' : isPendingStatus ? '#FBBF24' : '#F87171';
 
   return (
     <ScreenContainer>
@@ -183,8 +183,8 @@ export default function DocumentDetailScreen() {
                     </View>
                     <View style={styles.docDetailItem}>
                       <Text style={styles.docDetailLabel}>STATUS</Text>
-                      <Text style={[styles.docDetailValue, { color: isVerified ? '#059669' : isPending ? '#D97706' : '#EF4444' }]}>
-                        {isVerified ? 'Verified' : isPending ? 'Pending' : 'Failed'}
+                      <Text style={[styles.docDetailValue, { color: isVerified ? '#059669' : isPendingStatus ? '#D97706' : '#EF4444' }]}>
+                        {isVerified ? 'Verified' : isPendingStatus ? 'Pending' : 'Failed'}
                       </Text>
                     </View>
                     <View style={styles.docDetailItem}>
