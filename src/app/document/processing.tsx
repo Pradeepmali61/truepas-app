@@ -105,12 +105,23 @@ export default function DocumentProcessingScreen() {
         clearScanResult();
 
         // Step 4: Handle outcome — verify is synchronous, no polling
-        if (result.outcome === 'approved') {
+        if (result.outcome === 'approved' || result.outcome === 'review') {
           setStatus('done');
-          router.replace('/document/verified');
-        } else if (result.outcome === 'review') {
-          setStatus('done');
-          router.replace('/document/verified'); // Show "under review" state
+          // Pass result data so the verified screen can show the flip card
+          // (document info front / captured scan back). Images are loaded
+          // from the local documentImageStore using docId.
+          router.replace({
+            pathname: '/document/verified',
+            params: {
+              docId: doc.id,
+              docLabel: DOC_LABELS[docType],
+              docNumber: doc.number ?? '',
+              extractedName: result.extractedName ?? '',
+              extractedDob: result.extractedDob ?? '',
+              matchScore: result.matchScore != null ? String(result.matchScore) : '',
+              outcome: result.outcome,
+            },
+          });
         } else {
           setStatus('error');
           setError(result.reasonCode ?? 'Document verification failed');
