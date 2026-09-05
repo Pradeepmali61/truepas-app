@@ -37,6 +37,7 @@ export default function AddFamilyScreen() {
   const onSubmit = handleSubmit((values) => {
     const age = ageFromDob(values.dateOfBirth);
     const band = ageBandFromAge(age);
+    console.log('[FamilyAdd] DOB entered:', values.dateOfBirth, '| calculated age:', age, '| band:', band);
     if (band === '18+') {
       router.push({ pathname: '/family/add/rejected', params: { name: values.fullName, age: String(age) } });
       return;
