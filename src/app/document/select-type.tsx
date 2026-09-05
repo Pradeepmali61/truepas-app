@@ -1,5 +1,5 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -28,10 +28,29 @@ const OPTIONS: DocOption[] = [
   { id: 'usVisa', label: 'U.S. Visa', icon: 'usVisa' },
 ];
 
-/** Add document — select type. */
+/** Add document — select type. Supports family mode: when `family` param is
+ *  set, the scan flow is scoped to a family member (personId). */
 export default function SelectTypeScreen() {
   const router = useRouter();
+  const { family, personId, memberName, band } = useLocalSearchParams<{
+    family?: string;
+    personId?: string;
+    memberName?: string;
+    band?: string;
+  }>();
+  const isFamilyMode = family === '1';
   const [selected, setSelected] = useState<DocOption['id']>('passport');
+
+  const continueToScan = () => {
+    const params: Record<string, string> = { type: selected };
+    if (isFamilyMode) {
+      params.family = '1';
+      params.personId = personId ?? '';
+      params.name = memberName ?? '';
+      params.band = band ?? '';
+    }
+    router.push({ pathname: '/document/scan', params });
+  };
 
   return (
     <ScreenContainer scroll={false}>
@@ -44,7 +63,7 @@ export default function SelectTypeScreen() {
         />
       )}
       {/* Header */}
-      <ScreenHeader title="Verify Document" />
+      <ScreenHeader title={isFamilyMode ? `${memberName ?? 'Member'}'s Documents` : 'Verify Document'} />
 
       <View className="flex-1 px-6">
         <Text
@@ -108,7 +127,7 @@ export default function SelectTypeScreen() {
         </View>
         <Spacer />
         <View className="pb-6 pt-4">
-          <Button label="Continue to Scan" onPress={() => router.push({ pathname: '/document/scan', params: { type: selected } })} />
+          <Button label="Continue to Scan" onPress={continueToScan} />
         </View>
       </View>
     </ScreenContainer>

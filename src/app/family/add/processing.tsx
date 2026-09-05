@@ -6,37 +6,78 @@ import { ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-nativ
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
 import { Button, Icon } from '@/components/ui';
 import { Colors } from '@/constants/theme';
+import { useAddDocument } from '@/features/documents/hooks';
 import { useAddFamilyMember } from '@/features/family/hooks';
-import { clearScanResult } from '@/services/scanStore';
+import { clearScanResult, getScanResult } from '@/services/scanStore';
+import type { DocumentType } from '@/types/domain';
 
 type ProcessingStatus = 'adding' | 'done' | 'error';
 
-/** Add family — step 2.5: runs AFTER document capture.
- *  Creates the family member, then:
- *  - 5-17: routes to face-capture (liveness + face enrollment) with personId
- *  - 0-4:  member created with document — back to family tab */
+const DOC_LABELS: Record<DocumentType, string> = {
+  passport: 'Passport',
+  drivingLicense: "Driver's License",
+  greenCard: 'US Green Card',
+  birthCertificate: 'Birth Certificate',
+  usVisa: 'U.S. Visa',
+  idCard: 'Identity Card',
+};
+
+/** Family document processing — runs AFTER document capture.
+ *  Two modes:
+ *  - personId present (existing member): adds the captured document to that
+ *    member's profile, then returns to the member details screen.
+ *  - no personId (new member): creates the family member, then:
+ *    - 5-17: routes to face-capture (liveness + face enrollment) with personId
+ *    - 0-4:  member created with document — back to family tab */
 export default function FamilyProcessingScreen() {
   const router = useRouter();
-  const { name, dob, relationship, band } = useLocalSearchParams<{
+  const { type, personId, name, dob, relationship, band } = useLocalSearchParams<{
+    type?: string;
+    personId?: string;
     name?: string;
     dob?: string;
     relationship?: string;
     band?: string;
   }>();
+  const isExistingMember = !!personId;
+  const docType = (type ?? 'idCard') as DocumentType;
   const isMinorWithFace = band !== '0-4';
   const [status, setStatus] = useState<ProcessingStatus>('adding');
   const [error, setError] = useState<string | null>(null);
   const hasStarted = useRef(false);
   const processRef = useRef<(() => Promise<void>) | null>(null);
   const addFamilyMember = useAddFamilyMember();
+  const addDocument = useAddDocument();
 
   const process = async () => {
-    if (!name || !dob || !relationship) {
-      router.dismissTo('/(tabs)/family');
-      return;
-    }
     try {
       setStatus('adding');
+
+      if (isExistingMember) {
+        // Existing member — attach the captured document to their profile
+        const scanResult = getScanResult();
+        if (!scanResult?.documentImageBase64) {
+          throw new Error('No document image captured. Please scan again.');
+        }
+        console.log('[FamilyAdd] Adding document to member:', personId, docType);
+        await addDocument.mutateAsync({
+          type: docType,
+          label: DOC_LABELS[docType],
+          number: '****' + Math.floor(1000 + Math.random() * 9000),
+          expiresAt: null,
+          personId,
+        });
+        console.log('[FamilyAdd] Document added for member:', personId);
+        clearScanResult();
+        setStatus('done');
+        router.back();
+        return;
+      }
+
+      if (!name || !dob || !relationship) {
+        router.dismissTo('/(tabs)/family');
+        return;
+      }
       console.log('[FamilyAdd] Creating member:', JSON.stringify({ name, dob, relationship, band }));
       const member = await addFamilyMember.mutateAsync({ name, dateOfBirth: dob, relationship });
       console.log('[FamilyAdd] Member created:', member.id);

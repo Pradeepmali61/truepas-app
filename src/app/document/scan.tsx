@@ -21,9 +21,10 @@ type ScanStep = 'front' | 'selfie' | 'done';
  *  certificates (0-4) skip the selfie step — no portrait, no face match. */
 export default function DocumentScanScreen() {
   const router = useRouter();
-  const { type, family, name, dob, relationship, band } = useLocalSearchParams<{
+  const { type, family, personId, name, dob, relationship, band } = useLocalSearchParams<{
     type?: string;
     family?: string;
+    personId?: string;
     name?: string;
     dob?: string;
     relationship?: string;
@@ -90,10 +91,17 @@ export default function DocumentScanScreen() {
     });
 
     if (isFamilyMode) {
-      // Family flow — member is created AFTER document capture
+      // Family flow — member is created (or document added) AFTER document capture
       router.replace({
         pathname: '/family/add/processing',
-        params: { type: type ?? 'idCard', name: name ?? '', dob: dob ?? '', relationship: relationship ?? '', band: band ?? '' },
+        params: {
+          type: type ?? 'idCard',
+          personId: personId ?? '',
+          name: name ?? '',
+          dob: dob ?? '',
+          relationship: relationship ?? '',
+          band: band ?? '',
+        },
       });
       return;
     }

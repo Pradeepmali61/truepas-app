@@ -99,6 +99,14 @@ export default function FamilyMemberScreen() {
     .join('');
   const faceEnrolled = member.ageBand !== '0-4';
 
+  // Open the document scan flow scoped to this family member.
+  const openMemberDocuments = () => {
+    router.push({
+      pathname: '/document/select-type',
+      params: { family: '1', personId: id, memberName: member.name, band: member.ageBand },
+    });
+  };
+
   return (
     <SafeAreaView className="flex-1 bg-white" edges={['top', 'bottom']}>
       {/* Header */}
@@ -154,7 +162,7 @@ export default function FamilyMemberScreen() {
             </Pressable>
             <View style={{ height: 1, backgroundColor: '#F1F5F9' }} />
             <Pressable
-              onPress={() => { setMenuOpen(false); router.push('/document/select-type'); }}
+              onPress={() => { setMenuOpen(false); openMemberDocuments(); }}
               style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
               <Text style={{ fontSize: 15, fontWeight: '500', color: Colors.ink }}>Manage documents</Text>
             </Pressable>
@@ -230,7 +238,11 @@ export default function FamilyMemberScreen() {
         {/* Documents */}
         <View style={{ marginHorizontal: 16, marginTop: 16, backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 8, elevation: 2 }}>
           <Text style={{ fontSize: 14, fontWeight: '700', color: Colors.ink, marginBottom: 4 }}>Documents</Text>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10 }}>
+          <Pressable
+            onPress={openMemberDocuments}
+            accessibilityRole="button"
+            accessibilityLabel="Open member documents"
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10 }}>
             <View style={{
               width: 48, height: 48, borderRadius: 12,
               backgroundColor: '#F0FAFF',
@@ -240,21 +252,15 @@ export default function FamilyMemberScreen() {
             </View>
             <View style={{ flex: 1 }}>
               <Text style={{ fontSize: 15, fontWeight: '600', color: Colors.ink }}>Identity Card</Text>
-              <Text style={{ fontSize: 13, fontWeight: '400', color: Colors.textMuted, marginTop: 2 }}>Verified · Expires Apr 2027</Text>
+              <Text style={{ fontSize: 13, fontWeight: '400', color: Colors.textMuted, marginTop: 2 }}>Tap to scan document</Text>
             </View>
-            <View style={{
-              flexDirection: 'row', alignItems: 'center', gap: 4,
-              backgroundColor: '#ECFDF5', paddingHorizontal: 10, height: 28, borderRadius: 8,
-            }}>
-              <Icon name="check" size={12} color="#059669" />
-              <Text style={{ fontSize: 13, fontWeight: '600', color: '#059669' }}>Verified</Text>
-            </View>
-          </View>
+            <Icon name="chevron" size={18} color={Colors.textMuted} />
+          </Pressable>
         </View>
 
         {/* Add document */}
         <Pressable
-          onPress={() => router.push('/document/select-type')}
+          onPress={openMemberDocuments}
           accessibilityRole="button"
           accessibilityLabel="Add document"
           style={{
