@@ -7,10 +7,14 @@ export const documentKeys = {
   all: ['documents'] as const,
   detail: (id: string) => ['documents', id] as const,
   issued: ['documents', 'issued'] as const,
+  member: (personId: string) => ['documents', 'member', personId] as const,
 };
 
 export function useDocuments(personId?: string) {
-  return useQuery({ queryKey: documentKeys.all, queryFn: () => api.getDocuments(personId) });
+  return useQuery({
+    queryKey: personId ? documentKeys.member(personId) : documentKeys.all,
+    queryFn: () => api.getDocuments(personId),
+  });
 }
 
 export function useDocument(id: string) {

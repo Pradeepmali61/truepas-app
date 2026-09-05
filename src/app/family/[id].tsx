@@ -33,6 +33,8 @@ export default function FamilyMemberScreen() {
   const { data: member, isPending } = useFamilyMember(id);
   const removeMember = useRemoveFamilyMember();
   const [menuOpen, setMenuOpen] = useState(false);
+  // The member's already scanned documents (GET /documents?personId=<id>)
+  const { data: memberDocs, isPending: docsPending } = useDocuments(id);
 
   const handleRemove = () => {
     Alert.alert(
@@ -235,27 +237,56 @@ export default function FamilyMemberScreen() {
           />
         </View>
 
-        {/* Documents */}
+        {/* Documents — the member's already scanned documents */}
         <View style={{ marginHorizontal: 16, marginTop: 16, backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 8, elevation: 2 }}>
           <Text style={{ fontSize: 14, fontWeight: '700', color: Colors.ink, marginBottom: 4 }}>Documents</Text>
-          <Pressable
-            onPress={openMemberDocuments}
-            accessibilityRole="button"
-            accessibilityLabel="Open member documents"
-            style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10 }}>
-            <View style={{
-              width: 48, height: 48, borderRadius: 12,
-              backgroundColor: '#F0FAFF',
-              alignItems: 'center', justifyContent: 'center',
-            }}>
-              <Icon name="idCard" size={24} color={Colors.primary} />
+          {docsPending ? (
+            <View style={{ paddingVertical: 16, alignItems: 'center' }}>
+              <Skeleton height={48} radius={12} />
             </View>
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 15, fontWeight: '600', color: Colors.ink }}>Identity Card</Text>
-              <Text style={{ fontSize: 13, fontWeight: '400', color: Colors.textMuted, marginTop: 2 }}>Tap to scan document</Text>
-            </View>
-            <Icon name="chevron" size={18} color={Colors.textMuted} />
-          </Pressable>
+          ) : (memberDocs?.length ?? 0) === 0 ? (
+            <Text style={{ fontSize: 13, color: Colors.textMuted, paddingVertical: 12 }}>
+              No documents scanned yet. Use "Add document" below to scan one.
+            </Text>
+          ) : (
+            memberDocs!.map((doc, index) => (
+              <Pressable
+                key={doc.id}
+                onPress={() => router.push({ pathname: '/document/[id]', params: { id: doc.id } })}
+                accessibilityRole="button"
+                accessibilityLabel={`Open ${doc.label}`}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10 }}>
+                <View style={{
+                  width: 48, height: 48, borderRadius: 12,
+                  backgroundColor: '#F0FAFF',
+                  alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <Icon name={doc.type as never} size={24} color={Colors.primary} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 15, fontWeight: '600', color: Colors.ink }}>{doc.label}</Text>
+                  <Text style={{ fontSize: 13, fontWeight: '400', color: Colors.textMuted, marginTop: 2 }}>
+                    {doc.status === 'verified' ? 'Verified' : doc.status === 'failed' ? 'Failed' : 'Pending'}
+                    {doc.expiresAt ? ` · Expires ${new Date(doc.expiresAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}` : ''}
+                  </Text>
+                </View>
+                {doc.status === 'verified' ? (
+                  <View style={{
+                    flexDirection: 'row', alignItems: 'center', gap: 4,
+                    backgroundColor: '#ECFDF5', paddingHorizontal: 10, height: 28, borderRadius: 8,
+                  }}>
+                    <Icon name="check" size={12} color="#059669" />
+                    <Text style={{ fontSize: 13, fontWeight: '600', color: '#059669' }}>Verified</Text>
+                  </View>
+                ) : (
+                  <Icon name="chevron" size={18} color={Colors.textMuted} />
+                )}
+                {index < (memberDocs?.length ?? 0) - 1 && (
+                  <View style={{ position: 'absolute', left: 60, right: 0, bottom: 0, height: 1, backgroundColor: '#F1F5F9' }} />
+                )}
+              </Pressable>
+            ))
+          )}
         </View>
 
         {/* Add document */}
