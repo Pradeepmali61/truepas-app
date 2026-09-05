@@ -28,6 +28,7 @@ export default function AccountDetailsScreen() {
   const [selectedMonth, setSelectedMonth] = useState(0);
   const [selectedDay, setSelectedDay] = useState(1);
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const completeAccount = useCompleteAccountDetails();
 
   const { control, handleSubmit, setValue } = useForm<AccountDetailsForm>({
@@ -225,11 +226,20 @@ export default function AccountDetailsScreen() {
               <FloatingInput
                 label="Confirm Password"
                 placeholder="••••••••"
-                secureTextEntry={!showPassword}
+                secureTextEntry={!showConfirmPassword}
                 autoCapitalize="none"
                 value={value}
                 onChangeText={onChange}
                 error={fieldState.error?.message}
+                rightSlot={
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={showConfirmPassword ? 'Hide password' : 'Show password'}
+                    onPress={() => setShowConfirmPassword((v) => !v)}
+                    className="h-9 w-9 items-center justify-center">
+                    <Icon name={showConfirmPassword ? 'eyeClosed' : 'eye'} size={20} color="#999" />
+                  </Pressable>
+                }
               />
             )}
           />
