@@ -1,4 +1,5 @@
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import * as ImageManipulator from 'expo-image-manipulator';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
@@ -40,7 +41,19 @@ export default function DocumentScanScreen() {
         quality: 0.8,
         base64: true,
       });
-      const base64 = photo.base64 ?? '';
+      if (!photo?.uri) return;
+
+      // Per KYC guide §6.3: resize to ~1600px + JPEG 0.8 before sending.
+      // Raw camera captures are 2-6 MB of base64 each; large payloads get
+      // dropped by proxies in transit, which the backend reports as
+      // 503 "Document images are required".
+      const manipulated = await ImageManipulator.manipulateAsync(
+        photo.uri,
+        [{ resize: { width: 1600 } }],
+        { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG, base64: true },
+      );
+      const base64 = manipulated.base64 ?? '';
+      if (!base64) return;
 
       if (step === 'front') {
         setFrontImage(base64);
