@@ -221,10 +221,12 @@ export const realApi = {
 
   // ── Document verification sessions ───────────────────────────────────
   createVerificationSession: async (documentId: string, payload: VerificationSessionRequest): Promise<VerificationSession> => {
+    console.log('[API] POST /documents/:id/verification-sessions', JSON.stringify({ documentId, payload }));
     const { data } = await apiClient.post<VerificationSession>(
       `/documents/${documentId}/verification-sessions`,
       payload,
     );
+    console.log('[API] /documents/:id/verification-sessions response:', JSON.stringify(data));
     return data;
   },
   /** POST /document-verification-sessions/{sessionId}/verify
@@ -235,11 +237,13 @@ export const realApi = {
     payload: VerifyDocumentRequest,
     config?: { timeout?: number },
   ): Promise<VerifyDocumentResponse> => {
+    console.log('[API] POST /document-verification-sessions/:id/verify', JSON.stringify({ sessionId, hasFrontImage: !!payload.frontImageBase64, hasSelfie: !!payload.selfieImageBase64 }));
     const { data } = await apiClient.post<VerifyDocumentResponse>(
       `/document-verification-sessions/${sessionId}/verify`,
       payload,
       config,
     );
+    console.log('[API] /document-verification-sessions/:id/verify response:', JSON.stringify(data));
     return data;
   },
   /** Legacy: start verification without images (not per guide — kept for compatibility) */
