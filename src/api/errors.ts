@@ -67,6 +67,23 @@ export function toApiError(error: unknown): ApiError {
 
     // ── 401 Unauthorized ───────────────────────────────────────────
     if (status === 401) {
+      // 401 from an auth attempt (login/register/OTP) means bad credentials,
+      // NOT an expired session — show a credential error instead.
+      const url = error.config?.url ?? '';
+      const isAuthAttempt = ['/auth/login', '/auth/register', '/auth/verify-otp'].some((p) => url.endsWith(p));
+      if (isAuthAttempt) {
+        const serverMsg = (error.response?.data as { message?: string; error?: string })?.message
+          ?? (error.response?.data as { error?: string })?.error;
+        return {
+          code: 'INVALID_CREDENTIALS',
+          message: serverMsg
+            ?? (url.endsWith('/auth/login')
+              ? 'Invalid email/phone or password. Please try again.'
+              : 'Authentication failed. Please check your details and try again.'),
+          status,
+          retryable: false,
+        };
+      }
       return {
         code: 'UNAUTHORIZED',
         message: 'Your session expired. Please log in again.',
