@@ -29,24 +29,32 @@ let ScenarioIdentifier: any = null;
 let loadAttempted = false;
 
 function loadNativeModules(): boolean {
-  if (loadAttempted) return DocumentReader != null;
+  if (loadAttempted) return RNRegulaDocumentReader != null;
   loadAttempted = true;
   try {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const docModule = require('@regulaforensics/react-native-document-reader-api');
+    // RNRegulaDocumentReader is NativeModules.RNRegulaDocumentReader — it is
+    // null unless the app was BUILT with the native dependency (a Metro-only
+    // restart is not enough). All internal SDK calls go through
+    // RNRegulaDocumentReader.exec(...), so it must be non-null.
+    RNRegulaDocumentReader = docModule.RNRegulaDocumentReader;
+    if (!RNRegulaDocumentReader) {
+      console.warn('[Regula] JS package loaded but native module missing — rebuild the dev client (npx expo run:android)');
+      return false;
+    }
     DocumentReader = docModule.default;
     DocReaderConfig = docModule.DocReaderConfig;
     ScannerConfig = docModule.ScannerConfig;
     DocReaderAction = docModule.DocReaderAction;
     DocumentReaderCompletion = docModule.DocumentReaderCompletion;
     ProcessParams = docModule.ProcessParams;
-    RNRegulaDocumentReader = docModule.RNRegulaDocumentReader;
     Enum = docModule.Enum;
     ScenarioIdentifier = docModule.ScenarioIdentifier;
   } catch {
     // Native modules unavailable (Expo Go) — caller must fall back
   }
-  return DocumentReader != null;
+  return RNRegulaDocumentReader != null;
 }
 
 /** True when the Regula native modules are present (dev build / standalone). */
