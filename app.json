@@ -59,7 +59,9 @@
             "allowBackup": false
           }
         }
-      ]
+      ],
+      "./plugins/withRegulaMaven",
+      "./plugins/withRegulaLicense"
     ],
     "experiments": {
       "typedRoutes": true,

@@ -1,13 +1,13 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Animated, Image, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Animated, Image, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { api } from '@/api';
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
 import { ScreenHeader } from '@/components/layout/ScreenHeader';
-import { Icon, Skeleton } from '@/components/ui';
-import { useDocument } from '@/features/documents/hooks';
+import { Button, Icon, Skeleton } from '@/components/ui';
+import { useDocument, useRemoveDocument } from '@/features/documents/hooks';
 import { getDocumentImageUri } from '@/services/documentImageStore';
 import type { IdentityDocument, IssuedDoc } from '@/types/domain';
 
@@ -36,13 +36,41 @@ function formatDate(dateStr: string): string {
  *  Back face: the captured document scan image.
  *  Flip button toggles between "View Scan" and "View Info". */
 export default function DocumentDetailScreen() {
+  const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data: identityDoc, isPending } = useDocument(id ?? '');
+  const removeDocument = useRemoveDocument();
   const [issuedDoc, setIssuedDoc] = useState<IssuedDoc | null>(null);
   const [frontImageUri, setFrontImageUri] = useState<string | null>(null);
   const [selfieImageUri, setSelfieImageUri] = useState<string | null>(null);
   const [isFlipped, setIsFlipped] = useState(false);
   const flipAnim = useRef(new Animated.Value(0)).current;
+
+  const handleRemove = () => {
+    if (!id) return;
+    Alert.alert(
+      'Remove Document',
+      'Are you sure you want to remove this document? This action cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: () => {
+            removeDocument.mutate(id as string, {
+              onSuccess: () => router.back(),
+              onError: (err: any) => {
+                Alert.alert(
+                  'Remove Failed',
+                  err?.response?.data?.message ?? err?.message ?? 'Could not remove the document. Please try again.',
+                );
+              },
+            });
+          },
+        },
+      ],
+    );
+  };
 
   useEffect(() => {
     if (id) {
@@ -282,6 +310,18 @@ export default function DocumentDetailScreen() {
             </Text>
           </Pressable>
         </View>
+
+        {/* Remove document — only for user-scanned IdentityDocuments */}
+        {isIdentityDocument(doc) && (
+          <View style={{ marginTop: 24, paddingHorizontal: 8 }}>
+            <Button
+              label="Remove Document"
+              variant="danger"
+              loading={removeDocument.isPending}
+              onPress={handleRemove}
+            />
+          </View>
+        )}
       </ScrollView>
     </ScreenContainer>
   );

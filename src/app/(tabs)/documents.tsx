@@ -6,25 +6,26 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ErrorState, Icon, Skeleton } from '@/components/ui';
 import { Colors, Elevation } from '@/constants/theme';
-import { useIssuedDocuments } from '@/features/documents/hooks';
-import type { IssuedDoc } from '@/types/domain';
+import { useDocuments } from '@/features/documents/hooks';
+import type { DocumentType, IdentityDocument } from '@/types/domain';
 
-const DOC_ACCENT: Record<string, { bg: string; icon: string }> = {
+const DOC_ACCENT: Record<DocumentType, { bg: string; icon: string }> = {
   passport:         { bg: '#F5F7FF', icon: '#4F46E5' },
   drivingLicense:   { bg: '#F5F9FF', icon: '#2563EB' },
+  idCard:           { bg: '#F5F7FF', icon: '#4F46E5' },
   greenCard:        { bg: '#F5FBF7', icon: '#059669' },
   birthCertificate: { bg: '#F0FAFF', icon: '#08B6FC' },
   usVisa:           { bg: '#FAF9FF', icon: '#7C3AED' },
 };
 
-const DocCard = memo(function DocCard({ doc, onPress }: { doc: IssuedDoc; onPress: () => void }) {
-  const accent = DOC_ACCENT[doc.icon] ?? { bg: '#EEF2FF', icon: '#4F46E5' };
-  const isActive = doc.status === 'Active';
+const DocCard = memo(function DocCard({ doc, onPress }: { doc: IdentityDocument; onPress: () => void }) {
+  const accent = DOC_ACCENT[doc.type] ?? { bg: '#EEF2FF', icon: '#4F46E5' };
+  const isVerified = doc.status === 'verified';
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={`${doc.name}, ${doc.issuer}`}
+      accessibilityLabel={`${doc.label}, ${doc.number}`}
       style={{
         flexDirection: 'row',
         alignItems: 'center',
@@ -46,24 +47,24 @@ const DocCard = memo(function DocCard({ doc, onPress }: { doc: IssuedDoc; onPres
         borderWidth: 1,
         borderColor: accent.icon + '20',
       }}>
-        {doc.icon === 'drivingLicense' ? (
+        {doc.type === 'drivingLicense' ? (
           <Image source={require('../../../assets/images/car-simple4.png')} style={{ width: 48, height: 48 }} resizeMode="contain" />
-        ) : doc.icon === 'passport' ? (
+        ) : doc.type === 'passport' ? (
           <Image source={require('../../../assets/images/passport-simple4.png')} style={{ width: 48, height: 48 }} resizeMode="contain" />
-        ) : doc.icon === 'greenCard' ? (
+        ) : doc.type === 'greenCard' ? (
           <Image source={require('../../../assets/images/liberty-simple.png')} style={{ width: 48, height: 48 }} resizeMode="contain" />
-        ) : doc.icon === 'usVisa' ? (
+        ) : doc.type === 'usVisa' ? (
           <Image source={require('../../../assets/images/visa-simple4.png')} style={{ width: 48, height: 48 }} resizeMode="contain" />
-        ) : doc.icon === 'birthCertificate' ? (
+        ) : doc.type === 'birthCertificate' ? (
           <Image source={require('../../../assets/images/birth-simple4.png')} style={{ width: 48, height: 48 }} resizeMode="contain" />
         ) : (
-          <Icon name={doc.icon} size={34} color={accent.icon} />
+          <Icon name={doc.type} size={34} color={accent.icon} />
         )}
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={{ fontSize: 16, fontWeight: '700', color: '#111827' }}>{doc.name}</Text>
+        <Text style={{ fontSize: 16, fontWeight: '700', color: '#111827' }}>{doc.label}</Text>
         <Text style={{ fontSize: 12, color: '#6B7280', marginTop: 2 }} numberOfLines={1}>
-          {doc.issuer}
+          {doc.number}
         </Text>
       </View>
       <View style={{ alignItems: 'flex-end', gap: 6 }}>
@@ -71,13 +72,13 @@ const DocCard = memo(function DocCard({ doc, onPress }: { doc: IssuedDoc; onPres
           flexDirection: 'row',
           alignItems: 'center',
           gap: 3,
-          backgroundColor: isActive ? '#ECFDF5' : '#FEF2F2',
+          backgroundColor: isVerified ? '#ECFDF5' : '#FEF2F2',
           borderRadius: 8,
           paddingHorizontal: 7,
           paddingVertical: 3,
         }}>
-          <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: isActive ? '#059669' : '#EF4444' }} />
-          <Text style={{ fontSize: 10, fontWeight: '700', color: isActive ? '#059669' : '#EF4444' }}>{doc.status}</Text>
+          <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: isVerified ? '#059669' : '#EF4444' }} />
+          <Text style={{ fontSize: 10, fontWeight: '700', color: isVerified ? '#059669' : '#EF4444' }}>{doc.status}</Text>
         </View>
         <Icon name="chevron" size={16} color={Colors.textFaint} />
       </View>
@@ -100,14 +101,14 @@ function DocSkeleton() {
 export default function DocumentsScreen() {
   const router = useRouter();
   const [query, setQuery] = useState('');
-  const { data: documents, isPending, isError, isRefetching, refetch } = useIssuedDocuments();
+  const { data: documents, isPending, isError, isRefetching, refetch } = useDocuments();
 
   const filtered = useMemo(() => {
     const list = documents ?? [];
     const q = query.trim().toLowerCase();
     if (!q) return list;
     return list.filter(
-      (doc) => doc.name.toLowerCase().includes(q) || doc.issuer.toLowerCase().includes(q)
+      (doc) => doc.label.toLowerCase().includes(q) || doc.number.toLowerCase().includes(q)
     );
   }, [documents, query]);
 
