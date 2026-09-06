@@ -59,25 +59,16 @@ let initialized = false;
 let initPromise: Promise<void> | null = null;
 let initError: string | null = null;
 
-/** Resolve the license base64 from the bundled asset. */
+/** Resolve the license base64 from the embedded constant.
+ *  (The license is a binary blob embedded as base64 in regulaLicense.ts —
+ *  requiring the .license file as a Metro asset is unreliable with custom
+ *  resolvers, so we embed it instead.) */
 async function loadLicense(): Promise<string> {
-  // Metro treats .license as an asset (see metro.config.js assetExts).
-  // Asset.fromModule resolves to a local file URI we can read as base64.
-  const { Asset } = require('expo-asset');
-  const assetModule = require('../../assets/regula.license');
-  const asset = Asset.fromModule(assetModule);
-  if (!asset.downloaded && !asset.localUri) {
-    await asset.downloadAsync();
+  const { REGULA_LICENSE_BASE64 } = require('./regulaLicense') as { REGULA_LICENSE_BASE64: string };
+  if (!REGULA_LICENSE_BASE64) {
+    throw new Error('regula.license is empty — generate a license for com.truepas.truepasapp and regenerate regulaLicense.ts');
   }
-  const uri = asset.localUri ?? asset.uri;
-
-  // expo-file-system SDK 57 API
-  const { File, Paths } = require('expo-file-system');
-  const file = new File(uri.startsWith('file://') ? uri : `${Paths.document}/${uri}`);
-  if (!file.exists) {
-    throw new Error(`regula.license not found at ${uri}`);
-  }
-  return file.base64();
+  return REGULA_LICENSE_BASE64;
 }
 
 /**

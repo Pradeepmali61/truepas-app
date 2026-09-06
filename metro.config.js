@@ -12,9 +12,6 @@ process.env.EXPO_ROUTER_APP_ROOT = path
 
 const config = getDefaultConfig(__dirname);
 
-// Allow requiring the Regula license file as a Metro asset
-config.resolver.assetExts.push('license');
-
 const projectRoot = __dirname;
 
 const sourceExtensions = [
