@@ -2,6 +2,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 
+import { AppBackground } from '@/components/layout/AppBackground';
 import { ScreenContainer, Spacer } from '@/components/layout/ScreenContainer';
 import { ScreenHeader } from '@/components/layout/ScreenHeader';
 import { Button, Icon } from '@/components/ui';
@@ -13,7 +14,7 @@ export default function AgeRejectedScreen() {
   const { name, age } = useLocalSearchParams<{ name?: string; age?: string }>();
 
   return (
-    <ScreenContainer scroll={false}>
+    <ScreenContainer scroll={false} background={false}>
       {Platform.OS === 'web' ? (
         <View style={[StyleSheet.absoluteFill, { backgroundImage: 'linear-gradient(180deg, #F8FBFF, #EAF4FF)' } as any]} />
       ) : (
@@ -22,6 +23,7 @@ export default function AgeRejectedScreen() {
           style={StyleSheet.absoluteFill}
         />
       )}
+      <AppBackground />
       <ScreenHeader title="Add Family Member" />
       <View className="flex-1 items-center justify-center p-5">
         <View style={{

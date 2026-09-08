@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Text, View } from 'react-native';
 
@@ -9,9 +9,12 @@ import { useVerifyPin } from '@/features/auth/mutations';
 
 const PIN_LENGTH = 4;
 
-/** Update face — PIN verification (PRD FR-04: PIN required for face updates). */
+/** Update face — PIN verification (PRD FR-04: PIN required for face updates).
+ *  Forwards `personId` (when present) so the face update targets the family
+ *  member instead of the authenticated main user. */
 export default function FaceUpdatePinScreen() {
   const router = useRouter();
+  const { personId } = useLocalSearchParams<{ personId?: string }>();
   const [pin, setPin] = useState('');
   const verifyPin = useVerifyPin();
 
@@ -22,7 +25,10 @@ export default function FaceUpdatePinScreen() {
       setTimeout(async () => {
         try {
           await verifyPin.mutateAsync(next);
-          router.push('/face-update/camera');
+          router.push({
+            pathname: '/face-update/camera',
+            params: personId ? { personId } : {},
+          });
         } catch (err: any) {
           Alert.alert('Incorrect PIN', err?.message ?? 'Please try again.', [
             { text: 'OK', onPress: () => setPin('') },

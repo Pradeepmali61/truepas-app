@@ -1,12 +1,14 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Alert, Animated, Image, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Animated, Image, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { api } from '@/api';
+import { AppBackground } from '@/components/layout/AppBackground';
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
 import { ScreenHeader } from '@/components/layout/ScreenHeader';
-import { Button, Icon, Skeleton } from '@/components/ui';
+import { Icon, Skeleton } from '@/components/ui';
+import { Colors } from '@/constants/theme';
 import { useDocument, useRemoveDocument } from '@/features/documents/hooks';
 import { getDocumentImageUri } from '@/services/documentImageStore';
 import type { IdentityDocument, IssuedDoc } from '@/types/domain';
@@ -123,6 +125,8 @@ export default function DocumentDetailScreen() {
   const isPendingStatus = status === 'pending';
   const statusLabel = isVerified ? 'VERIFIED' : isPendingStatus ? 'PENDING' : 'FAILED';
   const statusColor = isVerified ? '#34D399' : isPendingStatus ? '#FBBF24' : '#F87171';
+  const docType = isIdentityDocument(doc) ? doc.type : doc.icon;
+  const isLicense = docType.toLowerCase().includes('license');
 
   return (
     <ScreenContainer>
@@ -134,6 +138,7 @@ export default function DocumentDetailScreen() {
           style={StyleSheet.absoluteFill}
         />
       )}
+      <AppBackground />
       <ScreenHeader title={title} />
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 24, paddingTop: 12 }}>
 
@@ -170,9 +175,16 @@ export default function DocumentDetailScreen() {
             </LinearGradient>
 
             <View style={styles.docMainInfo}>
-              {/* Portrait / selfie */}
+              {/* Portrait — from backend (portraitImageUrl, extracted by server-side Regula)
+               *  → selfie fallback → icon placeholder */}
               <View style={styles.docAvatarContainer}>
-                {selfieImageUri ? (
+                {isIdentityDocument(doc) && doc.portraitImageUrl ? (
+                  <Image
+                    source={{ uri: doc.portraitImageUrl }}
+                    style={styles.docAvatar}
+                    resizeMode="cover"
+                  />
+                ) : selfieImageUri ? (
                   <Image
                     source={{ uri: selfieImageUri }}
                     style={styles.docAvatar}
@@ -197,17 +209,43 @@ export default function DocumentDetailScreen() {
                 )}
               </View>
 
-              {/* Details grid */}
+              {/* Details grid — all key fields always visible; '—' when missing.
+                  Exception: DL expiry stays hidden when null (backend doesn't map it). */}
               <View style={styles.docDetailsGrid}>
                 {isIdentityDocument(doc) ? (
                   <>
+                    <View style={styles.docDetailItem}>
+                      <Text style={styles.docDetailLabel}>FULL NAME</Text>
+                      <Text style={styles.docDetailValue} numberOfLines={2}>{doc.extractedName || '—'}</Text>
+                    </View>
                     <View style={styles.docDetailItem}>
                       <Text style={styles.docDetailLabel}>DOCUMENT NO</Text>
                       <Text style={styles.docDetailValue} numberOfLines={1}>{doc.number || '—'}</Text>
                     </View>
                     <View style={styles.docDetailItem}>
-                      <Text style={styles.docDetailLabel}>DOCUMENT TYPE</Text>
-                      <Text style={styles.docDetailValue} numberOfLines={1}>{doc.label}</Text>
+                      <Text style={styles.docDetailLabel}>DATE OF BIRTH</Text>
+                      <Text style={styles.docDetailValue}>{doc.extractedDob ? formatDate(doc.extractedDob) : '—'}</Text>
+                    </View>
+                    {isLicense ? (
+                      doc.expiresAt ? (
+                        <View style={styles.docDetailItem}>
+                          <Text style={styles.docDetailLabel}>EXPIRES</Text>
+                          <Text style={styles.docDetailValue}>{formatDate(doc.expiresAt)}</Text>
+                        </View>
+                      ) : null
+                    ) : (
+                      <View style={styles.docDetailItem}>
+                        <Text style={styles.docDetailLabel}>EXPIRES</Text>
+                        <Text style={styles.docDetailValue}>{doc.expiresAt ? formatDate(doc.expiresAt) : '—'}</Text>
+                      </View>
+                    )}
+                    <View style={styles.docDetailItem}>
+                      <Text style={styles.docDetailLabel}>
+                        {isLicense ? 'STATE' : 'NATIONALITY'}
+                      </Text>
+                      <Text style={styles.docDetailValue} numberOfLines={1}>
+                        {isLicense ? (doc.issuingState || '—') : (doc.nationality || '—')}
+                      </Text>
                     </View>
                     <View style={styles.docDetailItem}>
                       <Text style={styles.docDetailLabel}>STATUS</Text>
@@ -216,16 +254,8 @@ export default function DocumentDetailScreen() {
                       </Text>
                     </View>
                     <View style={styles.docDetailItem}>
-                      <Text style={styles.docDetailLabel}>MATCH SCORE</Text>
-                      <Text style={styles.docDetailValue}>{doc.matchScore ? `${doc.matchScore}%` : '—'}</Text>
-                    </View>
-                    <View style={styles.docDetailItem}>
                       <Text style={styles.docDetailLabel}>ADDED</Text>
                       <Text style={styles.docDetailValue}>{formatDate(doc.addedAt)}</Text>
-                    </View>
-                    <View style={styles.docDetailItem}>
-                      <Text style={styles.docDetailLabel}>EXPIRES</Text>
-                      <Text style={styles.docDetailValue}>{doc.expiresAt ? formatDate(doc.expiresAt) : '—'}</Text>
                     </View>
                   </>
                 ) : (
@@ -297,8 +327,8 @@ export default function DocumentDetailScreen() {
           </Animated.View>
         </View>
 
-        {/* Flip action button */}
-        <View style={{ alignItems: 'center', marginTop: 20 }}>
+        {/* Actions row — flip + remove side by side */}
+        <View style={styles.actionsRow}>
           <Pressable
             onPress={toggleFlip}
             accessibilityRole="button"
@@ -309,19 +339,24 @@ export default function DocumentDetailScreen() {
               {isFlipped ? 'View Info' : 'View Scan'}
             </Text>
           </Pressable>
-        </View>
 
-        {/* Remove document — only for user-scanned IdentityDocuments */}
-        {isIdentityDocument(doc) && (
-          <View style={{ marginTop: 24, paddingHorizontal: 8 }}>
-            <Button
-              label="Remove Document"
-              variant="danger"
-              loading={removeDocument.isPending}
+          {/* Remove document — subtle light-red pill, only for user-scanned IdentityDocuments */}
+          {isIdentityDocument(doc) && (
+            <Pressable
               onPress={handleRemove}
-            />
-          </View>
-        )}
+              disabled={removeDocument.isPending}
+              accessibilityRole="button"
+              accessibilityLabel="Remove document"
+              style={styles.removeActionBtn}>
+              {removeDocument.isPending ? (
+                <ActivityIndicator size="small" color={Colors.error} />
+              ) : (
+                <Icon name="trash" size={16} color={Colors.error} />
+              )}
+              <Text style={styles.removeActionText}>Remove</Text>
+            </Pressable>
+          )}
+        </View>
       </ScrollView>
     </ScreenContainer>
   );
@@ -396,8 +431,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   docAvatarContainer: {
-    width: 80,
-    height: 100,
+    width: 96,
+    height: 96,
     borderRadius: 12,
     overflow: 'hidden',
     backgroundColor: '#F3F4F6',
@@ -448,6 +483,14 @@ const styles = StyleSheet.create({
     color: '#111827',
     lineHeight: 18,
   },
+  actionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginTop: 20,
+  },
   flipActionBtn: {
     flexDirection: 'row',
     backgroundColor: '#08B6FC',
@@ -461,6 +504,22 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 5,
+  },
+  removeActionBtn: {
+    flexDirection: 'row',
+    backgroundColor: '#FEF2F2',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 30,
+    alignItems: 'center',
+    gap: 8,
+    borderWidth: 1,
+    borderColor: '#FECACA',
+  },
+  removeActionText: {
+    color: Colors.error,
+    fontSize: 14,
+    fontWeight: '600',
   },
   flipActionText: {
     color: '#FFFFFF',

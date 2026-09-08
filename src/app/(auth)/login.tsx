@@ -8,6 +8,7 @@ import { KeyboardAvoidingView, Modal, Platform, Pressable, TextInput as RNTextIn
 
 import { api } from '@/api';
 import { toApiError } from '@/api/errors';
+import { AppBackground } from '@/components/layout/AppBackground';
 import { ScreenContainer, Spacer } from '@/components/layout/ScreenContainer';
 import { Button, FloatingInput, Icon } from '@/components/ui';
 import { Colors } from '@/constants/theme';
@@ -81,9 +82,10 @@ export default function LoginScreen() {
   return (
     <ScreenContainer scroll={false}>
       <LinearGradient
-        colors={['#ffffff', '#84dbfe']}
+        colors={['#F8FBFF', '#EAF4FF']}
         style={StyleSheet.absoluteFill}
       />
+      <AppBackground />
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         <View className="flex-1 px-6 pb-6">
         <View className="mb-10 mt-[52px] items-center">

@@ -34,6 +34,7 @@ export type IconName =
   | 'search'
   | 'plus'
   | 'chevron'
+  | 'chevronDown'
   | 'document'
   | 'passport'
   | 'drivingLicense'

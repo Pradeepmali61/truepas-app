@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ErrorState, Icon, Skeleton } from '@/components/ui';
 import { Colors, Elevation } from '@/constants/theme';
 import { useDocuments } from '@/features/documents/hooks';
+import { useAppSelector } from '@/store';
 import type { DocumentType, IdentityDocument } from '@/types/domain';
 
 const DOC_ACCENT: Record<DocumentType, { bg: string; icon: string }> = {
@@ -102,17 +103,25 @@ export default function DocumentsScreen() {
   const router = useRouter();
   const [query, setQuery] = useState('');
   const { data: documents, isPending, isError, isRefetching, refetch } = useDocuments();
+  const userId = useAppSelector((state) => state.auth.user?.id);
+
+  // Defensive: this tab shows only the account owner's documents. The self
+  // `GET /documents` call is scoped by the BFF, but if a family member's
+  // document (tagged with their personId) ever comes through, drop it here.
+  const ownDocuments = useMemo(
+    () => (documents ?? []).filter((doc) => !doc.personId || doc.personId === userId),
+    [documents, userId],
+  );
 
   const filtered = useMemo(() => {
-    const list = documents ?? [];
     const q = query.trim().toLowerCase();
-    if (!q) return list;
-    return list.filter(
+    if (!q) return ownDocuments;
+    return ownDocuments.filter(
       (doc) => doc.label.toLowerCase().includes(q) || doc.number.toLowerCase().includes(q)
     );
-  }, [documents, query]);
+  }, [ownDocuments, query]);
 
-  const isEmpty = !isPending && !isError && (documents?.length ?? 0) === 0;
+  const isEmpty = !isPending && !isError && ownDocuments.length === 0;
 
   return (
     <SafeAreaView className="flex-1" edges={['top']} style={{ backgroundColor: '#F8FBFF' }}>

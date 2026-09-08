@@ -8,10 +8,10 @@ import { Button } from '@/components/ui';
 import { Icon } from '@/components/ui/Icon';
 import { Colors } from '@/constants/theme';
 import { useAddDocument } from '@/features/documents/hooks';
-import { saveDocumentImages } from '@/services/documentImageStore';
+import { clearDocumentImages, saveDocumentImages } from '@/services/documentImageStore';
 import { clearScanResult, getScanResult } from '@/services/scanStore';
 import { useAppSelector } from '@/store';
-import type { DocumentType } from '@/types/domain';
+import type { DocumentType, IdentityDocument } from '@/types/domain';
 
 const DOC_LABELS: Record<DocumentType, string> = {
   passport: 'Passport',
@@ -42,6 +42,9 @@ export default function DocumentProcessingScreen() {
   const [error, setError] = useState<string | null>(null);
   const hasStarted = useRef(false);
   const processRef = useRef<(() => Promise<void>) | null>(null);
+  // Document created by the current attempt — reused on Retry so a failed
+  // session/API error doesn't pile up duplicate documents.
+  const createdDocRef = useRef<IdentityDocument | null>(null);
   const addDocument = useAddDocument();
   const profileName = useAppSelector((state) => state.auth.user?.fullName ?? 'User');
   const profileDob = useAppSelector((state) => state.auth.user?.dateOfBirth ?? '');
@@ -63,31 +66,38 @@ export default function DocumentProcessingScreen() {
       }
 
       try {
-        // Step 1: Add document (metadata only)
-        setStatus('adding');
-        const doc = await addDocument.mutateAsync({
-          type: docType,
-          label: DOC_LABELS[docType],
-          number: '****' + Math.floor(1000 + Math.random() * 9000),
-          expiresAt: null,
-        });
-
-        // Persist captured images locally so the document detail screen
-        // can show the originally captured photo later.
-        try {
-          await saveDocumentImages(doc.id, {
-            front: frontImage,
-            selfie: selfieImage,
+        // Step 1: Add document (metadata only — backend will fill in extracted data).
+        // On Retry, reuse the document created by the previous attempt.
+        let doc = createdDocRef.current;
+        if (!doc) {
+          setStatus('adding');
+          doc = await addDocument.mutateAsync({
+            type: docType,
+            label: DOC_LABELS[docType],
+            number: String(Math.floor(10000000 + Math.random() * 89999999)),
+            expiresAt: null,
           });
-        } catch (e) {
-          console.warn('[DocProcessing] Failed to save document images locally:', e);
+          createdDocRef.current = doc;
+
+          // Persist captured images locally so the document detail screen
+          // can show the originally captured photo later.
+          try {
+            await saveDocumentImages(doc.id, {
+              front: frontImage,
+              selfie: selfieImage,
+            });
+          } catch (e) {
+            console.warn('[DocProcessing] Failed to save document images locally:', e);
+          }
         }
 
         // Step 2: Create verification session (requestId = idempotency key)
+        // Per guide §6.3: omit frontObjectKey/backObjectKey/selfieObjectKey —
+        // they are reserved for the future signed-upload pipeline and the BFF
+        // rejects keys not starting with customers/{customerId}/.
         setStatus('creating_session');
         const session = await api.createVerificationSession(doc.id, {
           requestId: `req-${Date.now()}`,
-          frontObjectKey: '', // Not used for base64 — per guide §6.3
         });
 
         // Step 3: Verify — SYNCHRONOUS result with images as base64
@@ -106,10 +116,31 @@ export default function DocumentProcessingScreen() {
 
         // Step 4: Handle outcome — verify is synchronous, no polling
         if (result.outcome === 'approved' || result.outcome === 'review') {
+          // Facepe-style REPLACE: the new document is verified, so remove any
+          // previous document of the same type for the main user (self docs
+          // have no personId). This also cleans up historical duplicates.
+          try {
+            const existing = await api.getDocuments();
+            const duplicates = (existing ?? []).filter(
+              (d) => d.type === docType && d.id !== doc.id && !d.personId,
+            );
+            for (const dup of duplicates) {
+              try {
+                await api.removeDocument(dup.id);
+                await clearDocumentImages(dup.id);
+                console.log('[DocProcessing] Replaced existing document:', dup.id, dup.type);
+              } catch (e) {
+                console.warn('[DocProcessing] Failed to remove duplicate:', dup.id, e);
+              }
+            }
+          } catch (e) {
+            console.warn('[DocProcessing] Replace lookup failed — keeping existing documents:', e);
+          }
+
           setStatus('done');
-          // Pass result data so the verified screen can show the flip card
-          // (document info front / captured scan back). Images are loaded
-          // from the local documentImageStore using docId.
+          // Pass backend-returned extracted data to the verified screen.
+          // The backend should return these fields (like Facepe's backend does)
+          // — see BUG_REPORT_BACKEND_EXTRACTED_DATA.md for the full contract.
           router.replace({
             pathname: '/document/verified',
             params: {
@@ -120,11 +151,34 @@ export default function DocumentProcessingScreen() {
               extractedDob: result.extractedDob ?? '',
               matchScore: result.matchScore != null ? String(result.matchScore) : '',
               outcome: result.outcome,
+              issuingState: result.issuingState ?? '',
+              nationality: result.nationality ?? '',
+              dateOfExpiry: result.dateOfExpiry ?? '',
+              portraitImageUrl: result.portraitImageUrl ?? '',
             },
           });
         } else {
           setStatus('error');
           setError(result.reasonCode ?? 'Document verification failed');
+
+          // Verification rejected — if the user already has a document of this
+          // type, discard the failed attempt so the old document survives
+          // (Facepe-style replace never leaves a failed duplicate behind).
+          try {
+            const existing = await api.getDocuments();
+            const hasExisting = (existing ?? []).some(
+              (d) => d.type === docType && d.id !== doc.id && !d.personId,
+            );
+            if (hasExisting) {
+              await api.removeDocument(doc.id);
+              await clearDocumentImages(doc.id);
+              createdDocRef.current = null;
+              console.log('[DocProcessing] Discarded failed re-upload, existing document kept');
+            }
+          } catch (e) {
+            console.warn('[DocProcessing] Failed-attempt cleanup error:', e);
+          }
+
           router.replace({
             pathname: '/document/mismatch',
             params: {
@@ -223,7 +277,17 @@ export default function DocumentProcessingScreen() {
             <Button
               label="Back to Documents"
               variant="outline"
-              onPress={() => router.back()}
+              onPress={() => {
+                // Discard the unverified document created by this attempt so
+                // no pending duplicate is left in My Documents.
+                const doc = createdDocRef.current;
+                if (doc) {
+                  api.removeDocument(doc.id).catch(() => {});
+                  clearDocumentImages(doc.id).catch(() => {});
+                  createdDocRef.current = null;
+                }
+                router.back();
+              }}
             />
           </View>
         )}

@@ -44,6 +44,15 @@ export interface IdentityDocument {
   expiresAt: string | null;
   source?: 'uploaded' | 'verified';
   personId?: string;
+  /** Extracted data fields — returned by backend after Regula processing.
+   *  These mirror Facepe's VerifiedDocument schema and are populated by the
+   *  backend's document verification flow. See BUG_REPORT_BACKEND_EXTRACTED_DATA.md */
+  extractedName?: string | null;
+  extractedDob?: string | null;
+  nationality?: string | null;
+  issuingState?: string | null;
+  portraitImageUrl?: string | null;
+  documentImageUrl?: string | null;
 }
 
 export type FamilyAgeBand = '0-4' | '5-17' | '18+';
@@ -282,6 +291,13 @@ export interface FaceResponse {
   faceId?: string;
 }
 
+/** Profile picture — presigned URL response (URL expires, see expires_in). */
+export interface ProfilePictureResponse {
+  url: string;
+  expires_in: number;
+  updated_at: string | null;
+}
+
 // ── Document verification sessions ─────────────────────────────────────
 
 export interface VerificationSessionRequest {
@@ -318,7 +334,9 @@ export interface VerifyDocumentRequest {
   selfieImageBase64?: string;
 }
 
-/** Response from /verify — synchronous result with outcome + document */
+/** Response from /verify — synchronous result with outcome + document.
+ *  The backend should return all extracted data fields (like Facepe's backend does)
+ *  — see BUG_REPORT_BACKEND_EXTRACTED_DATA.md for the full contract. */
 export interface VerifyDocumentResponse extends VerificationSession {
   document?: IdentityDocument;
   matchScore?: number | null;
@@ -326,6 +344,19 @@ export interface VerifyDocumentResponse extends VerificationSession {
   extractedName?: string | null;
   /** Date of birth extracted from the document (ISO yyyy-mm-dd). */
   extractedDob?: string | null;
+  /** Document number extracted by Regula. */
+  extractedDocumentNumber?: string | null;
+  /** Expiry date extracted by Regula (ISO yyyy-mm-dd). */
+  dateOfExpiry?: string | null;
+  /** Nationality extracted by Regula (3-letter country code or full name). */
+  nationality?: string | null;
+  /** Issuing state/province extracted by Regula. */
+  issuingState?: string | null;
+  /** Portrait photo URL — extracted from the document by backend Regula,
+   *  uploaded to object storage, returned as a signed URL. */
+  portraitImageUrl?: string | null;
+  /** Full document image URL — uploaded to object storage, returned as a signed URL. */
+  documentImageUrl?: string | null;
 }
 
 // ── Health check ──────────────────────────────────────────────────────

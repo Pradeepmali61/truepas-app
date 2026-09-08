@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
 
+import { AppBackground } from '@/components/layout/AppBackground';
 import { ScreenContainer, Spacer } from '@/components/layout/ScreenContainer';
 import { TopBar } from '@/components/layout/TopBar';
 import { Button, CheckboxRow, Icon, ListItem, ProgressTrack } from '@/components/ui';
@@ -31,9 +32,10 @@ export default function ConsentScreen() {
   return (
     <ScreenContainer scroll={false}>
       <LinearGradient
-        colors={['#ffffff', '#93c5fd']}
+        colors={['#F8FBFF', '#EAF4FF']}
         style={StyleSheet.absoluteFill}
       />
+      <AppBackground />
       <TopBar title="Biometric Consent" />
       <ProgressTrack percent={55} />
       <View className="items-center px-6 pb-2 pt-4">

@@ -1,13 +1,17 @@
+import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useState } from 'react';
-import { Alert, Modal, Pressable, ScrollView, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Alert, Image, Modal, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { AppBackground } from '@/components/layout/AppBackground';
 import { Icon, Skeleton } from '@/components/ui';
 import { Colors } from '@/constants/theme';
 import { useDocuments } from '@/features/documents/hooks';
 import { useFamilyMember, useRemoveFamilyMember } from '@/features/family/hooks';
+import { useToast } from '@/hooks/useToast';
+import { getMemberProfileImage, saveMemberProfileImage } from '@/services/profileImageStore';
 
 function InfoField({ icon, label, value }: { icon: string; label: string; value: string }) {
   return (
@@ -34,8 +38,42 @@ export default function FamilyMemberScreen() {
   const { data: member, isPending } = useFamilyMember(id);
   const removeMember = useRemoveFamilyMember();
   const [menuOpen, setMenuOpen] = useState(false);
+  const toast = useToast();
+  // The member's locally persisted profile picture (backend S3 pending).
+  const [memberPic, setMemberPic] = useState<string | null>(null);
   // The member's already scanned documents (GET /documents?personId=<id>)
   const { data: memberDocs, isPending: docsPending } = useDocuments(id);
+
+  useEffect(() => {
+    if (id) {
+      getMemberProfileImage(id).then(setMemberPic).catch(() => setMemberPic(null));
+    }
+  }, [id]);
+
+  const handlePickProfilePicture = async () => {
+    try {
+      if (Platform.OS === 'ios') {
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== 'granted') {
+          toast.show('error', 'Photo access is needed to set a profile picture.');
+          return;
+        }
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+      if (!result.canceled && result.assets[0]?.uri) {
+        const uri = await saveMemberProfileImage(id, result.assets[0].uri);
+        setMemberPic(uri);
+        toast.show('success', 'Profile picture updated');
+      }
+    } catch {
+      toast.show('error', 'Failed to update profile picture. Please try again.');
+    }
+  };
 
   const handleRemove = () => {
     Alert.alert(
@@ -62,6 +100,7 @@ export default function FamilyMemberScreen() {
   if (isPending) {
     return (
       <SafeAreaView className="flex-1 bg-white" edges={['top', 'bottom']}>
+        <AppBackground />
         <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, height: 56 }}>
           <Pressable onPress={() => router.back()} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
             <Icon name="back" size={22} color={Colors.ink} />
@@ -81,6 +120,7 @@ export default function FamilyMemberScreen() {
   if (!member) {
     return (
       <SafeAreaView className="flex-1 bg-white" edges={['top', 'bottom']}>
+        <AppBackground />
         <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, height: 56 }}>
           <Pressable onPress={() => router.back()} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
             <Icon name="back" size={22} color={Colors.ink} />
@@ -112,6 +152,7 @@ export default function FamilyMemberScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-white" edges={['top', 'bottom']}>
+      <AppBackground />
       {/* Header */}
       <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, height: 56 }}>
         <Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel="Go back" style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
@@ -153,21 +194,12 @@ export default function FamilyMemberScreen() {
             elevation: 8,
           }}>
             <Pressable
-              onPress={() => { setMenuOpen(false); }}
-              style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
-              <Text style={{ fontSize: 15, fontWeight: '500', color: Colors.ink }}>Edit member</Text>
-            </Pressable>
-            <View style={{ height: 1, backgroundColor: '#F1F5F9' }} />
-            <Pressable
-              onPress={() => { setMenuOpen(false); router.push('/face-update/pin' as never); }}
+              onPress={() => {
+                setMenuOpen(false);
+                router.push({ pathname: '/face-update/pin', params: { personId: id } } as never);
+              }}
               style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
               <Text style={{ fontSize: 15, fontWeight: '500', color: Colors.ink }}>Update face</Text>
-            </Pressable>
-            <View style={{ height: 1, backgroundColor: '#F1F5F9' }} />
-            <Pressable
-              onPress={() => { setMenuOpen(false); openMemberDocuments(); }}
-              style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
-              <Text style={{ fontSize: 15, fontWeight: '500', color: Colors.ink }}>Manage documents</Text>
             </Pressable>
             <View style={{ height: 1, backgroundColor: '#F1F5F9' }} />
             <Pressable
@@ -183,17 +215,25 @@ export default function FamilyMemberScreen() {
         {/* Avatar */}
         <View style={{ alignItems: 'center', paddingTop: 16, paddingBottom: 8 }}>
           <View>
-            <LinearGradient
-              colors={['#08B6FC', '#84dbfe']}
-              style={{ alignItems: 'center', justifyContent: 'center', width: 88, height: 88, borderRadius: 44 }}>
-              <Text style={{ fontSize: 32, fontWeight: '700', color: '#FFFFFF' }}>
-                {initials}
-              </Text>
-            </LinearGradient>
+            {memberPic ? (
+              <Image
+                source={{ uri: memberPic }}
+                style={{ width: 88, height: 88, borderRadius: 44 }}
+                resizeMode="cover"
+              />
+            ) : (
+              <LinearGradient
+                colors={['#08B6FC', '#84dbfe']}
+                style={{ alignItems: 'center', justifyContent: 'center', width: 88, height: 88, borderRadius: 44 }}>
+                <Text style={{ fontSize: 32, fontWeight: '700', color: '#FFFFFF' }}>
+                  {initials}
+                </Text>
+              </LinearGradient>
+            )}
             <Pressable
-              onPress={() => router.push('/face-update/pin' as never)}
+              onPress={handlePickProfilePicture}
               accessibilityRole="button"
-              accessibilityLabel="Update face photo"
+              accessibilityLabel="Change profile picture"
               style={{
                 position: 'absolute',
                 bottom: 0,
@@ -228,13 +268,13 @@ export default function FamilyMemberScreen() {
           <InfoField
             icon="scanFace"
             label="Face Enrollment"
-            value={faceEnrolled ? 'Complete' : 'Pending'}
+            value={member.ageBand === '0-4' ? 'Not Applicable' : faceEnrolled ? 'Complete' : 'Pending'}
           />
           <View style={{ height: 1, backgroundColor: '#F1F5F9', marginHorizontal: -16 }} />
           <InfoField
             icon="documents"
             label="Documents"
-            value="1 verified"
+            value={`${memberDocs?.filter((d) => d.status === 'verified').length ?? 0} verified`}
           />
         </View>
 

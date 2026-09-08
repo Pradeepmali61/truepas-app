@@ -187,6 +187,8 @@ export const plus: IconRenderer = (c) => (
 
 export const chevron: IconRenderer = (c) => P("M9 6L15 12L9 18", c);
 
+export const chevronDown: IconRenderer = (c) => P("M6 9L12 15L18 9", c);
+
 export const document: IconRenderer = (c) => (
   <>
     <Path d="M14 3H6C5 3 4 4 4 5V19C4 20 5 21 6 21H18C19 21 20 20 20 19V9L14 3Z" stroke={c} strokeWidth={2} strokeLinejoin="round" />

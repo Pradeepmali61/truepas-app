@@ -7,9 +7,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Icon, Skeleton } from '@/components/ui';
 import { DocIllustration } from '@/components/ui/DocIllustration';
+import { DUMMY_PAST_TRIP, DUMMY_TRIP } from '@/constants/dummyTrip';
 import { Colors, Elevation } from '@/constants/theme';
 import { useDocuments } from '@/features/documents/hooks';
 import { useBookings } from '@/features/history/hooks';
+import { useProfilePicture } from '@/features/profile/hooks';
 import { useAppSelector } from '@/store';
 import type { Booking, IdentityDocument } from '@/types/domain';
 
@@ -122,6 +124,7 @@ export default function IdentityScreen() {
   const router = useRouter();
   const { data: documents, isPending, isRefetching, isError, refetch } = useDocuments();
   const { data: bookings } = useBookings();
+  const { url: profilePictureUrl } = useProfilePicture();
   const user = useAppSelector((state) => state.auth.user);
   const [query, setQuery] = useState('');
   const [activeFamilyIndex, setActiveFamilyIndex] = useState(0);
@@ -178,14 +181,18 @@ export default function IdentityScreen() {
         height: scrollY > 80 ? 50 : 0,
         overflow: 'hidden',
       }}>
-        <Pressable onPress={() => router.push('/profile' as never)} className="items-center justify-center rounded-full bg-white p-2" style={{ ...Elevation.small }}>
-          <Icon name="user" size={18} color={Colors.ink} />
+        <Pressable onPress={() => router.push('/profile' as never)} className="items-center justify-center overflow-hidden rounded-full bg-white" style={{ width: 34, height: 34, ...Elevation.small }}>
+          {profilePictureUrl ? (
+            <Image source={{ uri: profilePictureUrl }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+          ) : (
+            <Icon name="user" size={18} color={Colors.ink} />
+          )}
         </Pressable>
       </View>
 
       <Image source={require('@/assets/images/background2.png')} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100%', opacity: 0.12 }} resizeMode="cover" pointerEvents="none" />
 
-      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 240 }}>
+      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 240 }} pointerEvents="none">
         <LinearGradient
           colors={['#39c5fd', '#9ce2fe', '#f5fcff']}
           style={{ flex: 1 }}
@@ -194,14 +201,20 @@ export default function IdentityScreen() {
 
       <ScrollView
         style={{ flex: 1 }}
+        contentContainerStyle={{ flexGrow: 1, paddingBottom: 200 }}
         showsVerticalScrollIndicator={false}
         onScroll={(e) => setScrollY(e.nativeEvent.contentOffset.y)}
-        scrollEventThrottle={16}>
+        scrollEventThrottle={16}
+        nestedScrollEnabled={true}>
       <View style={{ position: 'relative' }}>
         <View className="px-5 pb-3 pt-2">
           <View className="mb-4 flex-row items-center justify-start">
-            <Pressable onPress={() => router.push('/profile' as never)} className="items-center justify-center rounded-full bg-white p-2.5" style={{ ...Elevation.small }}>
-              <Icon name="user" size={20} color={Colors.ink} />
+            <Pressable onPress={() => router.push('/profile' as never)} className="items-center justify-center overflow-hidden rounded-full bg-white" style={{ width: 40, height: 40, ...Elevation.small }}>
+              {profilePictureUrl ? (
+                <Image source={{ uri: profilePictureUrl }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+              ) : (
+                <Icon name="user" size={20} color={Colors.ink} />
+              )}
             </Pressable>
           </View>
         </View>
@@ -231,26 +244,20 @@ export default function IdentityScreen() {
       </View>
 
       {(() => {
-        const upcoming = (bookings ?? []).filter((b) => b.status === 'upcoming');
-        if (upcoming.length === 0) {
-          return (
-            <View className="flex-1 items-center justify-center px-6">
-              <View className="mb-5 h-24 w-24 items-center justify-center rounded-full bg-surface">
-                <Icon name="hotel" size={52} />
-              </View>
-              <Text accessibilityRole="header" className="mb-2 text-[20px] font-bold text-primary">
-                No upcoming trips
-              </Text>
-              <Text className="mb-6 text-center text-[14px] leading-[21px] text-muted">
-                Your upcoming bookings will appear here.
-              </Text>
-            </View>
-          );
-        }
+        // Real upcoming bookings + the always-present dummy trip at the end
+        const upcoming = [...(bookings ?? []).filter((b) => b.status === 'upcoming'), DUMMY_TRIP];
         return (
           <View style={{ paddingHorizontal: 20 }}>
             {upcoming.map((booking) => (
-              <TripCard key={booking.id} booking={booking} onPress={() => router.push(`/booking/${booking.id}` as never)} />
+              <TripCard
+                key={booking.id}
+                booking={booking}
+                onPress={
+                  booking.id === DUMMY_TRIP.id
+                    ? () => router.push('/(tabs)/history' as never)
+                    : () => router.push(`/booking/${booking.id}` as never)
+                }
+              />
             ))}
           </View>
         );
@@ -306,6 +313,30 @@ export default function IdentityScreen() {
               <ProgressDot key={i} active={i === activeFamilyIndex} index={i} />
             ))}
           </View>
+        </View>
+
+        {/* Recent trips — most recent completed trip only */}
+        <View style={{ marginTop: 24, paddingHorizontal: 20 }}>
+          <Text style={{ fontSize: 18, fontWeight: '700', color: Colors.ink, marginBottom: 12 }}>Recent Trips</Text>
+          {(() => {
+            // Most recent completed trip — falls back to the always-present
+            // dummy past trip when the user has no real completed bookings.
+            const recent = (bookings ?? [])
+              .filter((b) => b.status === 'completed')
+              .sort((a, b) => new Date(b.checkOut).getTime() - new Date(a.checkOut).getTime())
+              .slice(0, 1);
+            const booking = recent[0] ?? DUMMY_PAST_TRIP;
+            return (
+              <TripCard
+                booking={booking}
+                onPress={
+                  booking.id === DUMMY_PAST_TRIP.id
+                    ? () => router.push('/(tabs)/history' as never)
+                    : () => router.push(`/booking/${booking.id}` as never)
+                }
+              />
+            );
+          })()}
         </View>
       </ScrollView>
     </SafeAreaView>

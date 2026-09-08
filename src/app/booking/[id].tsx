@@ -4,12 +4,14 @@ import { useState } from 'react';
 import { Image, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { AppBackground } from '@/components/layout/AppBackground';
 import { ScreenHeader } from '@/components/layout/ScreenHeader';
 import { Icon, Skeleton } from '@/components/ui';
+import { DUMMY_PAST_TRIP, DUMMY_TRIP } from '@/constants/dummyTrip';
 import { Colors, Elevation, Gradients } from '@/constants/theme';
 import { useBooking } from '@/features/history/hooks';
 
-const BOOKING_IMAGES = {
+const BOOKING_IMAGES: Record<string, any> = {
   'hayat hotel': require('../../../assets/images/hayat-hotel1.png'),
   'theme park': require('../../../assets/images/theme-park2.png'),
   'disney cruise': require('../../../assets/images/cruise-2,.png'),
@@ -19,6 +21,10 @@ const BOOKING_IMAGES = {
 export default function BookingDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data: booking, isPending } = useBooking(id);
+  // Dummy trips live only in the UI layer — resolve them from shared constants
+  const resolvedBooking =
+    booking ??
+    (id === DUMMY_TRIP.id ? DUMMY_TRIP : id === DUMMY_PAST_TRIP.id ? DUMMY_PAST_TRIP : null);
   const [docsExpanded, setDocsExpanded] = useState(false);
   const [membersExpanded, setMembersExpanded] = useState(false);
 
@@ -29,6 +35,7 @@ export default function BookingDetailScreen() {
 
   return (
     <SafeAreaView className="flex-1" edges={['top']} style={{ backgroundColor: '#F8FBFF' }}>
+      <AppBackground />
       <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 240 }}>
         {Platform.OS === 'web' ? (
           <View style={[StyleSheet.absoluteFill, { backgroundImage: 'linear-gradient(180deg, #39c5fd, #9ce2fe, #f5fcff)' } as any]} />
@@ -46,7 +53,7 @@ export default function BookingDetailScreen() {
           <Skeleton height={180} radius={20} />
           <Skeleton height={120} radius={20} />
         </View>
-      ) : !booking ? (
+      ) : !resolvedBooking ? (
         <View className="flex-1 items-center justify-center px-6">
           <Text className="text-[14px] text-muted">Booking not found.</Text>
         </View>
@@ -67,10 +74,10 @@ export default function BookingDetailScreen() {
             shadowOffset: { width: 0, height: 4 },
           }}>
             {/* Hotel image */}
-            {booking.image && BOOKING_IMAGES[booking.image] ? (
+            {resolvedBooking.image && BOOKING_IMAGES[resolvedBooking.image] ? (
               <View style={{ width: '100%', aspectRatio: 2.2 }}>
                 <Image
-                  source={BOOKING_IMAGES[booking.image]}
+                  source={BOOKING_IMAGES[resolvedBooking.image]}
                   style={{ width: '100%', height: '100%' }}
                   resizeMode="cover"
                 />
@@ -91,17 +98,17 @@ export default function BookingDetailScreen() {
             {/* Summary content */}
             <View style={{ padding: 20 }}>
               <Text style={{ fontSize: 21, fontWeight: '700', color: Colors.ink, marginBottom: 12 }}>
-                {booking.venue} <Text style={{ fontWeight: '500', color: '#9CA3AF' }}>— Front Desk</Text>
+                {resolvedBooking.venue} <Text style={{ fontWeight: '500', color: '#9CA3AF' }}>— Front Desk</Text>
               </Text>
 
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
                 <Icon name="location" size={18} color="#6B7280" />
-                <Text style={{ fontSize: 15, fontWeight: '500', color: '#374151' }}>{booking.location}</Text>
+                <Text style={{ fontSize: 15, fontWeight: '500', color: '#374151' }}>{resolvedBooking.location}</Text>
               </View>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                 <Icon name="calendar" size={18} color="#6B7280" />
                 <Text style={{ fontSize: 15, fontWeight: '500', color: '#374151' }}>
-                  {booking.checkIn} → {booking.checkOut}
+                  {resolvedBooking.checkIn} → {resolvedBooking.checkOut}
                 </Text>
               </View>
             </View>
@@ -116,21 +123,23 @@ export default function BookingDetailScreen() {
             marginTop: 24,
             ...Elevation.small,
           }}>
-            {/* Success header */}
+            {/* Status header — completed vs upcoming */}
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 20, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' }}>
               <View style={{
                 width: 40, height: 40, borderRadius: 20,
-                backgroundColor: '#ECFDF5',
+                backgroundColor: resolvedBooking.status === 'upcoming' ? '#FFFBEB' : '#ECFDF5',
                 alignItems: 'center', justifyContent: 'center',
               }}>
-                <Icon name="check" size={22} color="#059669" />
+                <Icon name={resolvedBooking.status === 'upcoming' ? 'documents' : 'check'} size={22} color={resolvedBooking.status === 'upcoming' ? '#D97706' : '#059669'} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={{ fontSize: 17, fontWeight: '700', color: Colors.ink }}>
-                  Check-in completed
+                  {resolvedBooking.status === 'upcoming' ? 'Check-in scheduled' : 'Check-in completed'}
                 </Text>
                 <Text style={{ fontSize: 13, fontWeight: '400', color: '#9CA3AF', marginTop: 2 }}>
-                  All required details are verified
+                  {resolvedBooking.status === 'upcoming'
+                    ? 'Verify your identity to check in at this venue'
+                    : 'All required details are verified'}
                 </Text>
               </View>
             </View>
@@ -157,9 +166,13 @@ export default function BookingDetailScreen() {
                 style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
               >
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 16, fontWeight: '500', color: '#374151' }}>Documents verified</Text>
+                  <Text style={{ fontSize: 16, fontWeight: '500', color: '#374151' }}>
+                    {resolvedBooking.status === 'upcoming' ? 'Documents required' : 'Documents verified'}
+                  </Text>
                   <Text style={{ fontSize: 13, fontWeight: '400', color: '#9CA3AF', marginTop: 2 }}>
-                    {verifiedDocs.length} of {verifiedDocs.length} documents verified
+                    {resolvedBooking.status === 'upcoming'
+                      ? `0 of ${verifiedDocs.length} documents verified`
+                      : `${verifiedDocs.length} of ${verifiedDocs.length} documents verified`}
                   </Text>
                 </View>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -167,21 +180,21 @@ export default function BookingDetailScreen() {
                     {verifiedDocs.slice(0, docsExpanded ? 0 : 2).map((doc, idx) => (
                       <View key={idx} style={{
                         width: 40, height: 40, borderRadius: 20,
-                        backgroundColor: '#ECFDF5',
+                        backgroundColor: resolvedBooking.status === 'upcoming' ? '#FFFBEB' : '#ECFDF5',
                         alignItems: 'center', justifyContent: 'center',
-                        borderWidth: 2, borderColor: '#059669',
+                        borderWidth: 2, borderColor: resolvedBooking.status === 'upcoming' ? '#D97706' : '#059669',
                         marginLeft: idx === 0 ? 0 : -12,
                       }}>
-                        <Icon name={doc.icon} size={20} color="#059669" />
+                        <Icon name={doc.icon} size={20} color={resolvedBooking.status === 'upcoming' ? '#D97706' : '#059669'} />
                       </View>
                     ))}
                   </View>
                   <View style={{
                     width: 24, height: 24, borderRadius: 12,
-                    backgroundColor: '#ECFDF5',
+                    backgroundColor: resolvedBooking.status === 'upcoming' ? '#FFFBEB' : '#ECFDF5',
                     alignItems: 'center', justifyContent: 'center',
                   }}>
-                    <Icon name="check" size={14} color="#059669" />
+                    <Icon name={resolvedBooking.status === 'upcoming' ? 'clock' : 'check'} size={14} color={resolvedBooking.status === 'upcoming' ? '#D97706' : '#059669'} />
                   </View>
                 </View>
               </Pressable>
@@ -225,12 +238,12 @@ export default function BookingDetailScreen() {
                 <View style={{ flex: 1 }}>
                   <Text style={{ fontSize: 16, fontWeight: '500', color: '#374151' }}>Family members checked in</Text>
                   <Text style={{ fontSize: 13, fontWeight: '400', color: '#9CA3AF', marginTop: 2 }}>
-                    {(booking.checkedInMembers ?? []).length} members
+                    {(resolvedBooking.checkedInMembers ?? []).length} members
                   </Text>
                 </View>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                   <View style={{ flexDirection: 'row', marginRight: 4 }}>
-                    {(booking.checkedInMembers ?? []).slice(0, membersExpanded ? 0 : 4).map((member, idx) => (
+                    {(resolvedBooking.checkedInMembers ?? []).slice(0, membersExpanded ? 0 : 4).map((member, idx) => (
                       <View key={idx} style={{
                         width: 40, height: 40, borderRadius: 20,
                         backgroundColor: '#08B6FC',
@@ -255,7 +268,7 @@ export default function BookingDetailScreen() {
               </Pressable>
               {membersExpanded && (
                 <View style={{ marginTop: 12, flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                  {(booking.checkedInMembers ?? []).map((member, idx) => (
+                  {(resolvedBooking.checkedInMembers ?? []).map((member, idx) => (
                     <View key={idx} style={{
                       flexDirection: 'row', alignItems: 'center', gap: 8,
                       backgroundColor: '#F8FBFF', borderRadius: 24,

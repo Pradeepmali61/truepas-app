@@ -1,12 +1,15 @@
+import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
-import { Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Platform, Pressable, Text, View } from 'react-native';
 
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
-import { Avatar, Card, Icon, ListItem, SectionTitle } from '@/components/ui';
+import { Card, Icon, ListItem, SectionTitle } from '@/components/ui';
+import { Colors } from '@/constants/theme';
 import { useLogout } from '@/features/auth/mutations';
 import { sessionEnded } from '@/features/auth/slice';
 import { useDocuments } from '@/features/documents/hooks';
 import { useFamily } from '@/features/family/hooks';
+import { useProfilePicture, useUploadProfilePicture } from '@/features/profile/hooks';
 import { useToast } from '@/hooks/useToast';
 import { secureStorage } from '@/services/secureStorage';
 import { useAppDispatch, useAppSelector } from '@/store';
@@ -19,6 +22,8 @@ export default function ProfileScreen() {
   const user = useAppSelector((state) => state.auth.user);
   const { data: documents } = useDocuments();
   const { data: family } = useFamily();
+  const { url: profilePictureUrl } = useProfilePicture();
+  const { mutateAsync: uploadProfilePicture, isPending: isUploading } = useUploadProfilePicture();
   const toast = useToast();
   const logout = useLogout();
 
@@ -30,6 +35,33 @@ export default function ProfileScreen() {
 
   const docCount = documents?.length ?? 0;
   const familyCount = family?.length ?? 0;
+
+  const handlePickProfilePicture = async () => {
+    try {
+      // Android uses the system photo picker — no storage permission needed.
+      if (Platform.OS === 'ios') {
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== 'granted') {
+          toast.show('error', 'Photo access is needed to upload a profile picture.');
+          return;
+        }
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]?.uri) {
+        await uploadProfilePicture(result.assets[0].uri);
+        toast.show('success', 'Profile picture updated');
+      }
+    } catch {
+      toast.show('error', 'Failed to update profile picture. Please try again.');
+    }
+  };
 
   const handleLogout = async () => {
     // Best-effort logout API call — clear local state even on error
@@ -50,7 +82,57 @@ export default function ProfileScreen() {
   return (
     <ScreenContainer>
       <View className="items-center px-5 pb-3 pt-6">
-        <Avatar initials={initials} size={72} />
+        <View>
+          {profilePictureUrl ? (
+            <Image
+              source={{ uri: profilePictureUrl }}
+              style={{ width: 72, height: 72, borderRadius: 24 }}
+              resizeMode="cover"
+            />
+          ) : (
+            <View
+              className="items-center justify-center bg-faint"
+              style={{ width: 72, height: 72, borderRadius: 16 }}>
+              <Text style={{ fontSize: 24, fontWeight: '700', color: Colors.textMuted }}>
+                {initials}
+              </Text>
+            </View>
+          )}
+          {isUploading && (
+            <View
+              style={{
+                position: 'absolute',
+                width: 72,
+                height: 72,
+                borderRadius: 16,
+                backgroundColor: 'rgba(0,0,0,0.45)',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}>
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            </View>
+          )}
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Change profile picture"
+            onPress={handlePickProfilePicture}
+            disabled={isUploading}
+            style={{
+              position: 'absolute',
+              bottom: -4,
+              right: -4,
+              width: 26,
+              height: 26,
+              borderRadius: 13,
+              backgroundColor: Colors.primary,
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderWidth: 2,
+              borderColor: '#FFFFFF',
+            }}>
+            <Icon name="camera" size={13} color="#FFFFFF" />
+          </Pressable>
+        </View>
         <Text accessibilityRole="header" className="mt-[10px] text-[18px] font-bold text-primary">
           {user?.fullName ?? 'User'}
         </Text>

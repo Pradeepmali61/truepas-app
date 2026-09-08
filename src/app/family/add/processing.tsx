@@ -3,6 +3,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-native';
 
+import { AppBackground } from '@/components/layout/AppBackground';
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
 import { Button, Icon } from '@/components/ui';
 import { Colors } from '@/constants/theme';
@@ -65,7 +66,7 @@ export default function FamilyProcessingScreen() {
         const doc = await addDocument.mutateAsync({
           type: docType,
           label: DOC_LABELS[docType],
-          number: '****' + Math.floor(1000 + Math.random() * 9000),
+          number: String(Math.floor(10000000 + Math.random() * 89999999)),
           expiresAt: null,
           personId,
         });
@@ -95,6 +96,29 @@ export default function FamilyProcessingScreen() {
       console.log('[FamilyAdd] Creating member:', JSON.stringify({ name, dob, relationship, band }));
       const member = await addFamilyMember.mutateAsync({ name, dateOfBirth: dob, relationship });
       console.log('[FamilyAdd] Member created:', member.id);
+
+      // Attach the captured document to the newly created member
+      const scanResult = getScanResult();
+      if (scanResult?.documentImageBase64) {
+        console.log('[FamilyAdd] Adding document to new member:', member.id, docType);
+        const doc = await addDocument.mutateAsync({
+          type: docType,
+          label: DOC_LABELS[docType],
+          number: String(Math.floor(10000000 + Math.random() * 89999999)),
+          expiresAt: null,
+          personId: member.id,
+        });
+        console.log('[FamilyAdd] Document created:', JSON.stringify({ id: doc.id, personId: doc.personId, type: doc.type }));
+        try {
+          await saveDocumentImages(doc.id, {
+            front: scanResult.documentImageBase64,
+            selfie: scanResult.selfieBase64,
+          });
+        } catch (e) {
+          console.warn('[FamilyAdd] Failed to save document images locally:', e);
+        }
+      }
+
       clearScanResult();
       setStatus('done');
       if (isMinorWithFace) {
@@ -123,7 +147,7 @@ export default function FamilyProcessingScreen() {
   }, []);
 
   return (
-    <ScreenContainer scroll={false}>
+    <ScreenContainer scroll={false} background={false}>
       {Platform.OS === 'web' ? (
         <View style={[StyleSheet.absoluteFill, { backgroundImage: 'linear-gradient(180deg, #F8FBFF, #EAF4FF)' } as any]} />
       ) : (
@@ -132,6 +156,7 @@ export default function FamilyProcessingScreen() {
           style={StyleSheet.absoluteFill}
         />
       )}
+      <AppBackground />
       <View className="flex-1 items-center justify-center px-6">
         {status !== 'error' && <ActivityIndicator size={70} color={Colors.primary} />}
         {status === 'error' && (

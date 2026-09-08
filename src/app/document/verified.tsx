@@ -3,6 +3,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { AppBackground } from '@/components/layout/AppBackground';
 import { ScreenContainer, Spacer } from '@/components/layout/ScreenContainer';
 import { ScreenHeader } from '@/components/layout/ScreenHeader';
 import { Button, Icon } from '@/components/ui';
@@ -30,6 +31,10 @@ export default function DocumentVerifiedScreen() {
     extractedDob,
     matchScore,
     outcome,
+    issuingState,
+    nationality,
+    dateOfExpiry,
+    portraitImageUrl,
   } = useLocalSearchParams<{
     docId?: string;
     docLabel?: string;
@@ -38,9 +43,20 @@ export default function DocumentVerifiedScreen() {
     extractedDob?: string;
     matchScore?: string;
     outcome?: string;
+    issuingState?: string;
+    nationality?: string;
+    dateOfExpiry?: string;
+    portraitImageUrl?: string;
   }>();
 
   const [frontImageUri, setFrontImageUri] = useState<string | null>(null);
+
+  // Per KYC guide §6.4: matchScore is normalized 0..1 (e.g. 0.87) — display as %.
+  const matchScorePct = (() => {
+    const n = Number(matchScore);
+    if (!matchScore || Number.isNaN(n)) return null;
+    return Math.round(n <= 1 ? n * 100 : n);
+  })();
   const [selfieImageUri, setSelfieImageUri] = useState<string | null>(null);
   const [isFlipped, setIsFlipped] = useState(false);
   const flipAnim = useRef(new Animated.Value(0)).current;
@@ -76,6 +92,7 @@ export default function DocumentVerifiedScreen() {
           style={StyleSheet.absoluteFill}
         />
       )}
+      <AppBackground />
       <ScreenHeader title="Verified" />
 
       <View className="flex-1 items-center px-6 pt-2">
@@ -139,8 +156,16 @@ export default function DocumentVerifiedScreen() {
             </LinearGradient>
 
             <View style={styles.docMainInfo}>
+              {/* Portrait — from backend (portraitImageUrl, extracted by server-side Regula)
+               *  → selfie fallback → icon placeholder */}
               <View style={styles.docAvatarContainer}>
-                {selfieImageUri ? (
+                {portraitImageUrl ? (
+                  <Image
+                    source={{ uri: portraitImageUrl }}
+                    style={styles.docAvatar}
+                    resizeMode="cover"
+                  />
+                ) : selfieImageUri ? (
                   <Image
                     source={{ uri: selfieImageUri }}
                     style={styles.docAvatar}
@@ -168,10 +193,24 @@ export default function DocumentVerifiedScreen() {
                   <Text style={styles.docDetailLabel}>DATE OF BIRTH</Text>
                   <Text style={styles.docDetailValue}>{formatUSDate(extractedDob)}</Text>
                 </View>
+                {(() => {
+                  const isLicense = (docLabel || '').toLowerCase().includes('license');
+                  if (isLicense && !dateOfExpiry) return null;
+                  return (
+                    <View style={styles.docDetailItem}>
+                      <Text style={styles.docDetailLabel}>EXPIRES</Text>
+                      <Text style={styles.docDetailValue}>{formatUSDate(dateOfExpiry)}</Text>
+                    </View>
+                  );
+                })()}
                 <View style={styles.docDetailItem}>
-                  <Text style={styles.docDetailLabel}>MATCH SCORE</Text>
+                  <Text style={styles.docDetailLabel}>
+                    {(docLabel || '').toLowerCase().includes('license') ? 'STATE' : 'NATIONALITY'}
+                  </Text>
                   <Text style={styles.docDetailValue}>
-                    {matchScore ? `${matchScore}%` : '—'}
+                    {(docLabel || '').toLowerCase().includes('license')
+                      ? (issuingState || '—')
+                      : (nationality || '—')}
                   </Text>
                 </View>
               </View>
@@ -316,8 +355,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   docAvatarContainer: {
-    width: 80,
-    height: 100,
+    width: 96,
+    height: 96,
     borderRadius: 12,
     overflow: 'hidden',
     backgroundColor: '#F3F4F6',

@@ -15,7 +15,7 @@ export const ISSUED_DOCS: IssuedDoc[] = [
     issuer: 'Ministry of Road Transport and Highways',
     issuedAt: 'Thu, 19 Jan 2022 14:27 GMT',
     icon: 'drivingLicense',
-    number: 'DL•••••9034',
+    number: 'DL9034201901234',
     status: 'Active',
   },
   {
@@ -24,7 +24,7 @@ export const ISSUED_DOCS: IssuedDoc[] = [
     issuer: 'Ministry of External Affairs',
     issuedAt: 'Thu, 19 Jan 2022 15:12 GMT',
     icon: 'passport',
-    number: 'P•••••4821',
+    number: 'P4821557',
     status: 'Active',
   },
 ];

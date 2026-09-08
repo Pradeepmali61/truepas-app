@@ -70,6 +70,14 @@ export const Typography = {
   heading: { size: 24, weight: '700' as const },
   headingLarge: { size: 32, weight: '700' as const },
   display: { size: 40, weight: '700' as const },
+  // Extended catalog (ref: facepe-user-frontend Typography.ts)
+  label: { size: 14, weight: '500' as const },
+  inputError: { size: 12, weight: '500' as const },
+  link: { size: 16, weight: '600' as const },
+  linkSmall: { size: 14, weight: '500' as const },
+  otp: { size: 24, weight: '700' as const },
+  screenSubtitle: { size: 16, weight: '400' as const },
+  cardSubtitle: { size: 14, weight: '400' as const },
 } as const;
 
 export const Elevation = {

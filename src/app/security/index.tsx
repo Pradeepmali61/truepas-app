@@ -101,9 +101,6 @@ export default function SecurityScreen() {
           </Pressable>
         )}
       </Card>
-
-      <SectionTitle>Danger Zone</SectionTitle>
-      <ListItem title="Delete Account" showChevron onPress={() => router.push('/account/delete')} />
     </ScreenContainer>
   );
 }

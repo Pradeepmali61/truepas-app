@@ -1,0 +1,23 @@
+Category,Item,Status,Severity,Owner,Details / Next Step
+Working,EAS Android build,WORKING,,DevOps,Build 3208d5da succeeded after lock file sync + .npmrc (legacy-peer-deps) + react-native-nitro-image added
+Working,Registration flow,WORKING,,App,register -> verify-phone (registrationId) -> account-details -> verify-email -> session started
+Working,OTP verification,WORKING,,App,Uses registrationId; handles camelCase + snake_case token fields
+Working,Login screen UX,WORKING,,App,Country code selector (default +1) with phone auto-normalization
+Working,401 refresh handling,WORKING,,App,Auth endpoints no longer trigger token refresh loop on 401
+Working,Backend BFF routes,WORKING,,Backend,All routes verified via curl (return 401 not 404): documents / verification-sessions / verify / liveness v2 / face enroll / identity summary
+Working,Mock API removal,WORKING,,App,App runs 100% on real backend (USE_MOCK_API=false FALLBACK_TO_MOCK=false)
+Working,API error logging,WORKING,,App,Dev-only [API] logging shows method + URL + status + response body in Metro logs
+Working,Mismatch screen data,WORKING,,App,Shows real profile vs document data (was hardcoded Jane Doe) - commit 6348358
+Not Working,Login 401,NOT WORKING,BLOCKER,Backend,Valid credentials return 401 - full report in BACKEND_LOGIN_ISSUE_REPORT.md - waiting on backend fix
+Not Working,Face scan FaceDetector crash,IN FIX,HIGH,App,Crashed every frame (Only JPEG and YUV_420_888 supported) - fix applied in adfc2b1 - needs device test (Metro reload only)
+Not Working,404 after document + face scan,NEEDS DIAGNOSIS,HIGH,App + Backend,API 404 shown on screen after both scans - exact endpoint unknown - re-test with new [API] logging and share the log line
+Not Working,Face update photo-only flow,BLOCKED ON DECISION,MEDIUM,Product + Backend,Requested photo capture without liveness - but backend PUT /cb/face requires livenessSessionId + sessionToken (face image comes from liveness finalize frame)
+Issue,Face update backend contract,DECISION PENDING,MEDIUM,Product + Backend,Options: (1) backend accepts photo in PUT /cb/face (2) silent auto liveness (3) reduce to 1 quick liveness step
+Issue,Mismatch screen document name shows dash,APP READY - BACKEND PENDING,MEDIUM,Backend,Backend must return extractedName + extractedDob in verify response - app already handles it
+Issue,Pre-existing TypeScript errors,CLEANUP,LOW,App,Errors in (tabs)/_layout.tsx documents.tsx family.tsx - not blocking
+Issue,EAS build overage charges,INFO,LOW,DevOps,70 builds beyond credits ($22 overage) - consider EAS_SKIP_AUTO_FINGERPRINT=1 and fewer test builds
+Issue,eas.json appVersionSource warning,INFO,LOW,App,Set cli.appVersionSource to remote in eas.json to silence warning
+Next Step,Test face scan on device,PENDING,HIGH,App,Metro reload only - no new EAS build needed - verify FaceDetector fix works
+Next Step,Reproduce 404 and capture [API] log,PENDING,HIGH,App,Share the [API] log line (URL + status + body) to identify failing endpoint
+Next Step,Backend login 401 fix,PENDING,BLOCKER,Backend,See BACKEND_LOGIN_ISSUE_REPORT.md action items
+Next Step,Decide face-update contract,PENDING,MEDIUM,Product + Backend,Required before implementing photo-only update flow

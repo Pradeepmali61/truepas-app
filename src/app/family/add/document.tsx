@@ -3,9 +3,10 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { AppBackground } from '@/components/layout/AppBackground';
 import { ScreenContainer, Spacer } from '@/components/layout/ScreenContainer';
 import { ScreenHeader } from '@/components/layout/ScreenHeader';
-import { BottomSheet, Button, FloatingInput, Icon, InfoBanner, Pill, Stepper } from '@/components/ui';
+import { Button, Icon, InfoBanner, Pill, Stepper } from '@/components/ui';
 import { Colors } from '@/constants/theme';
 import type { DocumentType, FamilyAgeBand } from '@/types/domain';
 
@@ -20,21 +21,21 @@ const DOC_ACCENT: Record<DocumentType, { bg: string; icon: string }> = {
   idCard:           { bg: '#EEF2FF', icon: '#7C3AED' },
 };
 
-// Per KYC guide §6.2:
-//  - 5-17 (minor with face): idCard only
-//  - 0-4 (minor no face): idCard or birthCertificate
 const OPTIONS_5_17: DocOption[] = [
-  { id: 'idCard', label: 'Identity Card', icon: 'idCard' },
+  { id: 'passport', label: 'Passport', icon: 'passport' },
+  { id: 'greenCard', label: 'US Green Card', icon: 'greenCard' },
+  { id: 'birthCertificate', label: 'Birth Certificate', icon: 'birthCertificate' },
+  { id: 'usVisa', label: 'US Visa', icon: 'usVisa' },
 ];
 
 const OPTIONS_0_4: DocOption[] = [
-  { id: 'idCard', label: 'Identity Card', icon: 'idCard' },
+  { id: 'passport', label: 'Passport', icon: 'passport' },
+  { id: 'greenCard', label: 'US Green Card', icon: 'greenCard' },
   { id: 'birthCertificate', label: 'Birth Certificate', icon: 'birthCertificate' },
+  { id: 'usVisa', label: 'US Visa', icon: 'usVisa' },
 ];
 
-/** Add family — step 2: document. 5-17 → doc + selfie + face; 0-4 → doc only (PRD).
- *  For 5-17, the family member is created here and the personId is passed
- *  to the face-capture screen for liveness + face enrollment. */
+/** Add family — step 2: document. 5-17 → doc + selfie + face; 0-4 → doc only (PRD). */
 export default function FamilyDocumentScreen() {
   const router = useRouter();
   const { name, band, dob, relationship } = useLocalSearchParams<{
@@ -55,8 +56,6 @@ export default function FamilyDocumentScreen() {
       router.dismissTo('/(tabs)/family');
       return;
     }
-    // Navigate to the document scan screen — the family member is created
-    // AFTER the document is captured (family/add/processing).
     router.push({
       pathname: '/document/scan',
       params: {
@@ -71,7 +70,7 @@ export default function FamilyDocumentScreen() {
   };
 
   return (
-    <ScreenContainer scroll={false}>
+    <ScreenContainer scroll={false} background={false}>
       {Platform.OS === 'web' ? (
         <View style={[StyleSheet.absoluteFill, { backgroundImage: 'linear-gradient(180deg, #F8FBFF, #EAF4FF)' } as any]} />
       ) : (
@@ -80,6 +79,7 @@ export default function FamilyDocumentScreen() {
           style={StyleSheet.absoluteFill}
         />
       )}
+      <AppBackground />
       <ScreenHeader title="Add Family Member" />
       <Stepper total={4} done={isMinorWithFace ? 2 : 3} />
       <View className="flex-1 px-6">
@@ -97,88 +97,71 @@ export default function FamilyDocumentScreen() {
             </InfoBanner>
           </View>
         ) : null}
-        <View className="-mx-6 mt-3">
-          <Pressable onPress={() => setPickerOpen(true)} accessibilityRole="button" accessibilityLabel="Select document type">
-            <FloatingInput
-              label="Document Type"
-              value={selectedDocType.label}
-              editable={false}
-              gradient
-              rightSlot={
-                <View className="flex-row items-center pr-1">
-                  <Icon name="chevron" size={20} color={Colors.textFaint} />
-                </View>
-              }
-            />
+        <View className="-mx-6 mt-3 px-6">
+          <Pressable
+            onPress={() => setPickerOpen(!pickerOpen)}
+            accessibilityRole="button"
+            accessibilityLabel="Select document type"
+            accessibilityState={{ expanded: pickerOpen }}
+            style={styles.dropdownButton}>
+            <Text style={styles.dropdownButtonText}>{selectedDocType.label}</Text>
+            <View style={{ transform: [{ rotate: pickerOpen ? '180deg' : '0deg' }] }}>
+              <Icon name="chevronDown" size={20} color={Colors.textFaint} />
+            </View>
           </Pressable>
-        </View>
-        <BottomSheet visible={pickerOpen} onClose={() => setPickerOpen(false)} title="Select Document Type">
-          <View className="px-5 pb-2">
-            {docOptions.map((option) => {
-              const active = option.id === selectedDocType.id;
-              const accent = DOC_ACCENT[option.id];
-              return (
-                <Pressable
-                  key={option.id}
-                  accessibilityRole="radio"
-                  accessibilityState={{ selected: active }}
-                  accessibilityLabel={option.label}
-                  onPress={() => {
-                    setSelectedDocType(option);
-                    setPickerOpen(false);
-                  }}
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    gap: 14,
-                    borderRadius: 16,
-                    backgroundColor: active ? '#F5F3FF' : '#F8FAFC',
-                    paddingHorizontal: 14,
-                    paddingVertical: 12,
-                    marginBottom: 8,
-                    borderWidth: active ? 2 : 1,
-                    borderColor: active ? Colors.primary : '#E2E8F0',
-                  }}>
-                  <View style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 20,
-                    backgroundColor: accent.bg,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}>
-                    <Icon name={option.icon} size={22} color={accent.icon} />
+
+          {pickerOpen && (
+            <View style={styles.dropdownOptionsContainer}>
+              {docOptions.map((option, index) => {
+                const active = option.id === selectedDocType.id;
+                const accent = DOC_ACCENT[option.id];
+                return (
+                  <View key={option.id}>
+                    {index > 0 && <View style={styles.dropdownDivider} />}
+                    <Pressable
+                      accessibilityRole="radio"
+                      accessibilityState={{ selected: active }}
+                      accessibilityLabel={option.label}
+                      onPress={() => {
+                        setSelectedDocType(option);
+                        setPickerOpen(false);
+                      }}
+                      style={styles.dropdownOption}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                        <View style={{
+                          width: 36,
+                          height: 36,
+                          borderRadius: 18,
+                          backgroundColor: accent.bg,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}>
+                          <Icon name={option.icon} size={20} color={accent.icon} />
+                        </View>
+                        <Text style={styles.dropdownOptionText}>{option.label}</Text>
+                      </View>
+                      {active && <Icon name="check" size={18} color={Colors.primary} />}
+                    </Pressable>
                   </View>
-                  <Text className="flex-1 text-[15px] font-semibold text-ink">
-                    {option.label}
-                  </Text>
-                  {active && (
-                    <View style={{
-                      width: 22,
-                      height: 22,
-                      borderRadius: 11,
-                      backgroundColor: Colors.primary,
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}>
-                      <Icon name="check" size={12} color="#FFFFFF" />
-                    </View>
-                  )}
-                </Pressable>
-              );
-            })}
-          </View>
-        </BottomSheet>
-        <View className="items-center">
-          <View className="my-5 h-[150px] w-[240px] items-center justify-center rounded-btn border-[3px] border-dashed border-primary">
-            <Icon name="idCard" size={80} />
-          </View>
+                );
+              })}
+            </View>
+          )}
+        </View>
+
+        <View className="items-center py-8">
           {isMinorWithFace ? (
-            <Text className="-mt-[10px] text-[12px] text-muted">
+            <Text className="text-[15px] font-bold text-ink">
               Scan {firstName}&apos;s {selectedDocType.label}
             </Text>
-          ) : null}
+          ) : (
+            <Text className="text-[15px] font-bold text-ink">Upload {selectedDocType.label}</Text>
+          )}
+          <Text className="mt-2 text-center text-[13px] text-muted">
+            Make sure all corners are visible and text is readable.
+          </Text>
         </View>
+
         <Spacer />
         <View className="pb-6 pt-4">
           <Button
@@ -190,3 +173,44 @@ export default function FamilyDocumentScreen() {
     </ScreenContainer>
   );
 }
+
+const styles = StyleSheet.create({
+  dropdownButton: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.borderInput,
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    backgroundColor: Colors.bgWhite,
+  },
+  dropdownButtonText: {
+    fontSize: 16,
+    color: Colors.text,
+    fontWeight: '500',
+  },
+  dropdownOptionsContainer: {
+    marginTop: 8,
+    backgroundColor: Colors.bgWhite,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: Colors.borderInput,
+    overflow: 'hidden',
+  },
+  dropdownOption: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 14,
+  },
+  dropdownOptionText: {
+    fontSize: 16,
+    color: Colors.text,
+  },
+  dropdownDivider: {
+    height: 1,
+    backgroundColor: Colors.divider,
+  },
+});

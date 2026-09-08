@@ -1,4 +1,4 @@
-import { apiClient, BFF_URL, getAccessToken, getRegistrationToken, setRegistrationToken } from '@/api/client';
+import { apiClient, getRegistrationToken, setRegistrationToken } from '@/api/client';
 import type {
     AccountDetailsRequest,
     AccountDetailsResponse,
@@ -27,6 +27,7 @@ import type {
     LogoutRequest,
     Notification,
     OkResponse,
+    ProfilePictureResponse,
     RegisterRequest,
     RegisterResponse,
     ResetPasswordRequest,
@@ -270,9 +271,13 @@ export const realApi = {
   // ── Liveness (via BFF /cb/liveness/*) ────────────────────────────────
   createLivenessChallenge: async (personId?: string): Promise<LivenessChallengeResponse> => {
     console.log('[API] POST /liveness/v2/challenge', personId ? `personId=${personId}` : '(no personId)');
+    // Per KYC guide §4.3: personId is a QUERY PARAM (?personId=), not a body field.
+    // Sending it in the body causes the BFF to bind the session to the authed
+    // user, and family face enroll then fails with 409 CONFLICT.
     const { data } = await apiClient.post<LivenessChallengeResponse>(
       '/liveness/v2/challenge',
-      personId ? { personId } : undefined,
+      null,
+      { params: personId ? { personId } : undefined },
     );
     console.log('[API] /liveness/v2/challenge response:', JSON.stringify(data));
     return data;
@@ -283,42 +288,26 @@ export const realApi = {
     sessionToken: string,
   ): Promise<LivenessEvidenceResponse> => {
     // Per KYC guide §4.2: Evidence carries NO image — only step metadata.
-    // Send as JSON, not multipart.
-    // NOTE: Using fetch directly instead of apiClient to bypass any Axios
-    // serialization/interceptor issues that may cause the body to be dropped.
-    const body = {
-      challenge: payload.challenge,
-      step_index: payload.step_index,
-      client_ts_ms: payload.client_ts_ms,
-      duration_ms: payload.duration_ms,
-    };
-    const evidenceUrl = `${BFF_URL}/liveness/v2/challenge/${sessionId}/evidence`;
-    console.log('[API] POST /liveness/v2/challenge/:id/evidence', JSON.stringify(body));
+    // BFF drops JSON bodies on this route but forwards form-encoded data
+    // correctly (confirmed via curl — JSON returns 422, form-encoded works).
+    // Send as application/x-www-form-urlencoded until the BFF is fixed.
+    const formBody = new URLSearchParams();
+    formBody.append('challenge', payload.challenge);
+    formBody.append('step_index', String(payload.step_index));
+    formBody.append('client_ts_ms', String(payload.client_ts_ms));
+    formBody.append('duration_ms', String(payload.duration_ms));
+    console.log('[API] POST /liveness/v2/challenge/:id/evidence', formBody.toString());
 
-    const authToken = getAccessToken();
-    const fetchResponse = await fetch(evidenceUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Session-Token': sessionToken,
-        ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+    const { data } = await apiClient.post<LivenessEvidenceResponse>(
+      `/liveness/v2/challenge/${sessionId}/evidence`,
+      formBody.toString(),
+      {
+        headers: {
+          'X-Session-Token': sessionToken,
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
       },
-      body: JSON.stringify(body),
-    });
-
-    if (!fetchResponse.ok) {
-      const errorText = await fetchResponse.text();
-      console.error('[API] /liveness/v2/challenge/:id/evidence fetch failed:', fetchResponse.status, errorText);
-      const errorData = JSON.parse(errorText);
-      const axiosLikeError = {
-        response: { status: fetchResponse.status, data: errorData },
-        message: `Request failed with status code ${fetchResponse.status}`,
-        config: { url: evidenceUrl, method: 'POST' },
-      };
-      throw axiosLikeError;
-    }
-
-    const data = await fetchResponse.json() as LivenessEvidenceResponse;
+    );
     console.log('[API] /liveness/v2/challenge/:id/evidence response:', JSON.stringify(data));
     return data;
   },
@@ -355,5 +344,27 @@ export const realApi = {
   updateFace: async (payload: FaceUpdateRequest): Promise<FaceResponse> => {
     const { data } = await apiClient.put<FaceResponse>('/face', payload);
     return data;
+  },
+
+  // ── Profile picture (multipart upload, presigned URL response) ────────
+  uploadProfilePicture: async (imageUri: string): Promise<ProfilePictureResponse> => {
+    const formData = new FormData();
+    const filename = imageUri.split('/').pop() || 'profile.jpg';
+    const match = /\.(\w+)$/.exec(filename);
+    const type = match ? `image/${match[1]}` : 'image/jpeg';
+    formData.append('file', { uri: imageUri, name: filename, type } as unknown as Blob);
+    const { data } = await apiClient.post<ProfilePictureResponse>('/profile/picture', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return data;
+  },
+  getProfilePicture: async (): Promise<ProfilePictureResponse | null> => {
+    try {
+      const { data } = await apiClient.get<ProfilePictureResponse>('/profile/picture');
+      return data;
+    } catch (error: any) {
+      if (error?.response?.status === 404) return null; // no picture set
+      throw error;
+    }
   },
 };

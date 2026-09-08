@@ -171,6 +171,10 @@ export class RegulaScanCancelled extends Error {
 /**
  * Open the native Regula scanner and resolve with the cropped document
  * image as base64. Rejects with RegulaScanCancelled if the user cancels.
+ *
+ * The app ONLY captures the document image — all OCR, portrait extraction,
+ * authenticity checks, and face matching are done by the backend (same
+ * architecture as Facepe, where the backend runs Regula server-side).
  */
 export function scanDocument(): Promise<string> {
   if (!loadNativeModules() || !initialized) {

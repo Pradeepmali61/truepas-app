@@ -157,12 +157,23 @@ export function useLivenessSession() {
     setState({ ...initialState });
   }, []);
 
+  /** Fail the active session locally (e.g. step timeout) — shows the retry UI
+   *  without involving the parent's unrecoverable-error handler. */
+  const failSession = useCallback((message: string) => {
+    setState((prev) => ({
+      ...prev,
+      phase: 'failed',
+      error: message,
+    }));
+  }, []);
+
   return {
     ...state,
     startSession,
     submitEvidence,
     finalize,
     reset,
+    failSession,
     /** Session credentials for face enrollment (available after finalize passes). */
     sessionId: state.challenge?.session_id ?? null,
     sessionToken: state.challenge?.session_token ?? null,

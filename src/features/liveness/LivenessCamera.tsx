@@ -1,6 +1,8 @@
+import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import Svg, { Circle, Ellipse, Path } from 'react-native-svg';
 import {
     Camera,
     useCameraDevice,
@@ -14,6 +16,7 @@ import {
 } from 'react-native-vision-camera-face-detector';
 import { runOnJS } from 'react-native-worklets';
 
+import { Icon } from '@/components/ui/Icon';
 import { Colors } from '@/constants/theme';
 import { useEnrollFace, useUpdateFace } from '@/features/auth/mutations';
 import { faceEnrollmentCompleted } from '@/features/auth/slice';
@@ -36,6 +39,44 @@ const BLINK_CLOSED_THRESHOLD = 0.35;
 const BLINK_OPEN_THRESHOLD = 0.6;
 const YAW_THRESHOLD = 12; // degrees
 
+/** Per-action UI copy — big icon + short title + helper line so the user
+ *  instantly knows what to do. Backend `ui_copy` is shown as the subtitle. */
+const ACTION_UI: Record<string, { title: string; helper: string; icon: string; iconRotate: string }> = {
+  blink: {
+    title: 'Blink your eyes',
+    helper: 'Close and open both eyes',
+    icon: 'eyeClosed',
+    iconRotate: '0deg',
+  },
+  turn_left: {
+    title: 'Look left',
+    helper: 'Slowly turn your head left',
+    icon: 'chevron',
+    iconRotate: '180deg',
+  },
+  turn_right: {
+    title: 'Look right',
+    helper: 'Slowly turn your head right',
+    icon: 'chevron',
+    iconRotate: '0deg',
+  },
+};
+
+/** Arc path along the camera ring (radius 154 inside the 316px ring box).
+ *  Angle 0 = 12 o'clock, increasing clockwise. */
+function sideArcPath(startDeg: number, endDeg: number): string {
+  const r = 154;
+  const c = 158;
+  const polar = (deg: number) => {
+    const a = ((deg - 90) * Math.PI) / 180;
+    return { x: c + r * Math.cos(a), y: c + r * Math.sin(a) };
+  };
+  const s = polar(startDeg);
+  const e = polar(endDeg);
+  const largeArc = endDeg - startDeg > 180 ? 1 : 0;
+  return `M ${s.x.toFixed(2)} ${s.y.toFixed(2)} A ${r} ${r} 0 ${largeArc} 1 ${e.x.toFixed(2)} ${e.y.toFixed(2)}`;
+}
+
 /**
  * Full liveness challenge camera using react-native-vision-camera v5
  * + ML Kit face detector.
@@ -53,11 +94,18 @@ const YAW_THRESHOLD = 12; // degrees
 export function LivenessCamera({ mode, personId, onSuccess, onError }: LivenessCameraProps) {
   const { hasPermission, requestPermission } = useCameraPermission();
   const [capturing, setCapturing] = useState(false);
+  // Camera preview is stopped briefly before navigating away — unmounting an
+  // ACTIVE Camera on the new architecture (Fabric) can dispatch a
+  // topCameraReady event after the JS view is gone, which crashes the app.
+  const [cameraActive, setCameraActive] = useState(true);
   const dispatch = useAppDispatch();
+  const router = useRouter();
 
   const liveness = useLivenessSession();
   const enrollFace = useEnrollFace();
   const updateFace = useUpdateFace();
+  // Absolute overlays ignore SafeAreaView padding — apply insets manually
+  const insets = useSafeAreaInsets();
 
   const device = useCameraDevice('front');
   const photoOutput = usePhotoOutput();
@@ -78,23 +126,37 @@ export function LivenessCamera({ mode, personId, onSuccess, onError }: LivenessC
     }
   }, [hasPermission, requestPermission]);
 
-  // Start liveness challenge when permission is granted
-  const phaseRef = useRef(liveness.phase);
-  phaseRef.current = liveness.phase;
+  // Start liveness challenge when permission is granted, and restart after
+  // reset (Try Again) — depends on phase so idle→start works every time.
   useEffect(() => {
-    if (hasPermission && phaseRef.current === 'idle') {
+    if (hasPermission && liveness.phase === 'idle') {
       liveness.startSession(personId).catch((err) => {
         onError(err?.message ?? 'Failed to start liveness challenge');
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasPermission, personId]);
+  }, [hasPermission, personId, liveness.phase]);
 
   const beginStep = useCallback(() => {
     stepStartedAt.current = Date.now();
     eyesWereClosed.current = false;
     submittingRef.current = false;
   }, []);
+
+  // Stop the preview, let the native camera settle, then navigate. Prevents
+  // the Fabric "Unsupported top level event type topCameraReady" crash that
+  // happens when an active Camera unmounts mid-event-dispatch.
+  const settleCameraThen = useCallback(async (navigate: () => void) => {
+    setCameraActive(false);
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    navigate();
+  }, []);
+
+  // Report errors to the parent after the camera has settled (parent usually
+  // navigates on error, which unmounts this component).
+  const reportError = useCallback(async (message: string) => {
+    await settleCameraThen(() => onError(message));
+  }, [onError, settleCameraThen]);
 
   // Begin step when challenge phase starts or step advances
   useEffect(() => {
@@ -135,8 +197,10 @@ export function LivenessCamera({ mode, personId, onSuccess, onError }: LivenessC
     console.log(`[Liveness] Action detected: duration=${durationMs}ms (limits: ${min_ms}-${max_ms}ms)`);
     if (durationMs < min_ms) return; // too fast — keep waiting
     if (durationMs > max_ms) {
-      // too slow — step timed out
-      onError('Too slow — the check timed out. Please try again.');
+      // too slow — fail the session locally so the retry UI shows and
+      // sample processing stops (phase leaves 'challenging').
+      console.error('[Liveness] Step timed out:', durationMs, '>', max_ms);
+      liveness.failSession('Time limit exceeded. Please try again.');
       return;
     }
 
@@ -158,7 +222,7 @@ export function LivenessCamera({ mode, personId, onSuccess, onError }: LivenessC
         data: err?.config?.data,
         contentType: err?.config?.headers?.['Content-Type'] ?? err?.config?.headers?.get?.('Content-Type'),
       }));
-      onError(err?.message ?? 'Liveness step rejected');
+      reportError(err?.message ?? 'Liveness step rejected');
     } finally {
       submittingRef.current = false;
     }
@@ -219,6 +283,7 @@ export function LivenessCamera({ mode, personId, onSuccess, onError }: LivenessC
   const captureAndFinalize = useCallback(async () => {
     if (capturing || liveness.phase !== 'finalizing') return;
     setCapturing(true);
+    console.log('[Liveness] captureAndFinalize: starting photo capture...');
 
     try {
       // Use capturePhotoToFile to get a file path, then read as base64
@@ -228,19 +293,29 @@ export function LivenessCamera({ mode, personId, onSuccess, onError }: LivenessC
       );
 
       if (!photoFile) {
-        onError('Failed to capture photo');
+        console.error('[Liveness] capturePhotoToFile returned null');
+        reportError('Failed to capture photo');
         return;
       }
+      console.log('[Liveness] Photo captured:', photoFile.filePath);
 
-      // Read file as base64 using expo-file-system
-      const FileSystem = await import('expo-file-system');
-      const frameBase64 = await FileSystem.readAsStringAsync(photoFile.filePath, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
+      // Read file as base64 using SDK 57 File API (readAsStringAsync is deprecated & throws)
+      // File API requires an absolute URI (file:// prefix on Android)
+      const { File } = await import('expo-file-system');
+      const filePath = photoFile.filePath.startsWith('file://')
+        ? photoFile.filePath
+        : `file://${photoFile.filePath}`;
+      const photoFileRef = new File(filePath);
+      const frameBase64 = await photoFileRef.base64();
+      console.log('[Liveness] Frame base64 length:', frameBase64.length);
 
+      console.log('[Liveness] Calling finalize API...');
       const result = await liveness.finalize(frameBase64);
+      console.log('[Liveness] Finalize result:', JSON.stringify(result));
+
       if (result.status !== 'passed') {
-        onError(result.message || 'Liveness verification failed');
+        console.error('[Liveness] Finalize not passed:', result.status, result.message);
+        reportError(result.message || 'Liveness verification failed');
         return;
       }
 
@@ -251,6 +326,7 @@ export function LivenessCamera({ mode, personId, onSuccess, onError }: LivenessC
         sessionToken: liveness.sessionToken ?? '',
         personId,
       };
+      console.log('[Liveness] Enrolling face, mode:', mode, 'personId:', personId);
 
       if (mode === 'enroll') {
         await enrollFace.mutateAsync(facePayload);
@@ -261,9 +337,11 @@ export function LivenessCamera({ mode, personId, onSuccess, onError }: LivenessC
         await updateFace.mutateAsync(facePayload);
       }
 
-      onSuccess();
+      console.log('[Liveness] Face enrollment SUCCESS');
+      await settleCameraThen(onSuccess);
     } catch (err: any) {
-      onError(err?.message ?? 'Face enrollment failed');
+      console.error('[Liveness] captureAndFinalize ERROR:', err?.message, err?.response?.data ? JSON.stringify(err.response.data) : '', err?.stack);
+      reportError(err?.message ?? 'Face enrollment failed');
     } finally {
       setCapturing(false);
     }
@@ -279,11 +357,26 @@ export function LivenessCamera({ mode, personId, onSuccess, onError }: LivenessC
     }
   }, [liveness.phase, capturing, captureAndFinalize]);
 
+  // ── UI animation hooks (MUST be before any early return) ──────────────
+  // Brief "step done" flash when the step index advances
+  const [stepDone, setStepDone] = useState(false);
+  const prevStepRef = useRef(0);
+  prevStepRef.current = liveness.currentStepIndex;
+  useEffect(() => {
+    if (liveness.phase === 'challenging' && liveness.currentStepIndex > prevStepRef.current) {
+      setStepDone(true);
+      const t = setTimeout(() => setStepDone(false), 900);
+      prevStepRef.current = liveness.currentStepIndex;
+      return () => clearTimeout(t);
+    }
+    prevStepRef.current = liveness.currentStepIndex;
+  }, [liveness.phase, liveness.currentStepIndex]);
+
   // Permission not granted
   if (!hasPermission) {
     return (
-      <SafeAreaView className="flex-1 items-center justify-center bg-[#111111]" edges={['top', 'bottom']}>
-        <Text className="mb-4 text-center text-[16px] text-white">Camera permission is required for face verification.</Text>
+      <SafeAreaView className="flex-1 items-center justify-center bg-[#F8FBFF]" edges={['top', 'bottom']}>
+        <Text className="mb-4 text-center text-[16px] text-[#111827]">Camera permission is required for face verification.</Text>
         <Pressable
           onPress={requestPermission}
           className="rounded-btn bg-primary px-6 py-3">
@@ -296,9 +389,9 @@ export function LivenessCamera({ mode, personId, onSuccess, onError }: LivenessC
   // No camera device
   if (!device) {
     return (
-      <SafeAreaView className="flex-1 items-center justify-center bg-[#111111]" edges={['top', 'bottom']}>
+      <SafeAreaView className="flex-1 items-center justify-center bg-[#F8FBFF]" edges={['top', 'bottom']}>
         <ActivityIndicator size="large" color={Colors.primary} />
-        <Text className="mt-4 text-[14px] text-white">Loading camera...</Text>
+        <Text className="mt-4 text-[14px] text-[#6B7280]">Loading camera...</Text>
       </SafeAreaView>
     );
   }
@@ -306,9 +399,9 @@ export function LivenessCamera({ mode, personId, onSuccess, onError }: LivenessC
   // Loading / creating session
   if (liveness.phase === 'creating' || liveness.phase === 'idle') {
     return (
-      <SafeAreaView className="flex-1 items-center justify-center bg-[#111111]" edges={['top', 'bottom']}>
+      <SafeAreaView className="flex-1 items-center justify-center bg-[#F8FBFF]" edges={['top', 'bottom']}>
         <ActivityIndicator size="large" color={Colors.primary} />
-        <Text className="mt-4 text-[14px] text-white">Preparing liveness challenge...</Text>
+        <Text className="mt-4 text-[14px] text-[#6B7280]">Preparing liveness challenge...</Text>
       </SafeAreaView>
     );
   }
@@ -316,8 +409,8 @@ export function LivenessCamera({ mode, personId, onSuccess, onError }: LivenessC
   // Error state
   if (liveness.phase === 'failed') {
     return (
-      <SafeAreaView className="flex-1 items-center justify-center bg-[#111111]" edges={['top', 'bottom']}>
-        <Text className="mb-4 text-center text-[16px] text-white px-6">{liveness.error ?? 'Liveness check failed'}</Text>
+      <SafeAreaView className="flex-1 items-center justify-center bg-[#F8FBFF]" edges={['top', 'bottom']}>
+        <Text className="mb-4 text-center text-[16px] text-[#111827] px-6">{liveness.error ?? 'Liveness check failed'}</Text>
         <Pressable
           onPress={() => liveness.reset()}
           className="rounded-btn bg-primary px-6 py-3">
@@ -328,52 +421,119 @@ export function LivenessCamera({ mode, personId, onSuccess, onError }: LivenessC
   }
 
   // Active challenge or finalizing — camera with frame processor, NO capture button
-  const isChallenging = liveness.phase === 'challenging';
   const isFinalizing = liveness.phase === 'finalizing';
+  const steps = liveness.challenge?.challenge_sequence ?? [];
+  const action = liveness.currentChallenge;
+  const actionUi = (action && ACTION_UI[action]) ?? null;
+
+  // Progress arcs on the LEFT + RIGHT sides of the camera circle only.
+  // Progress flows clockwise: the right arc fills first (top→bottom), then
+  // the left arc (bottom→top). Whole ring turns green once capturing.
+  const progress = steps.length
+    ? (isFinalizing ? 1 : Math.min(liveness.currentStepIndex / steps.length, 1))
+    : 0;
+  const rightFill = Math.min(progress * 2, 1);
+  const leftFill = Math.max(0, Math.min(progress * 2 - 1, 1));
+  const arcFillColor = isFinalizing ? '#34D399' : Colors.primary;
+
+  // Pill + helper copy per phase
+  const pillText = isFinalizing
+    ? 'Hold still'
+    : stepDone
+      ? 'Done!'
+      : actionUi
+        ? actionUi.title
+        : (liveness.instruction || 'Follow the instruction');
+  const helperText = isFinalizing
+    ? 'Capturing your photo'
+    : stepDone
+      ? null
+      : actionUi
+        ? actionUi.helper
+        : null;
 
   return (
-    <SafeAreaView className="flex-1 bg-[#111111]" edges={['top', 'bottom']}>
-      <Camera
-        ref={cameraRef}
-        style={{ flex: 1 }}
-        device={device}
-        isActive
-        outputs={[photoOutput, faceDetectorOutput]}
-        mirrorMode="auto"
-      />
+    <SafeAreaView className="flex-1 bg-[#F8FBFF]" edges={['top', 'bottom']}>
+      {/* Close button — top right */}
+      <Pressable
+        onPress={() => router.back()}
+        accessibilityRole="button"
+        accessibilityLabel="Close liveness check"
+        style={{ position: 'absolute', top: insets.top + 14, right: 20, zIndex: 10, width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
+        <Icon name="cross" size={24} color="#111827" />
+      </Pressable>
 
-      {/* Face overlay guide */}
-      <View className="absolute inset-0 items-center justify-center pointer-events-none">
-        <View className="h-[220px] w-[220px] items-center justify-center rounded-full border-4 border-white/60" />
-      </View>
+      <View className="flex-1 items-center justify-center px-6">
+        {/* Camera circle + progress arcs (Regula-style) */}
+        <View style={{ width: 316, height: 316, alignItems: 'center', justifyContent: 'center' }}>
+          {/* Progress ring — left + right side arcs only (gaps at 12 and 6
+              o'clock). Right arc fills first, then the left one. */}
+          <Svg width={316} height={316} style={{ position: 'absolute' }} pointerEvents="none">
+            {/* Gray tracks */}
+            <Path d={sideArcPath(8, 172)} stroke="rgba(17,24,39,0.10)" strokeWidth={4} strokeLinecap="round" fill="none" />
+            <Path d={sideArcPath(188, 352)} stroke="rgba(17,24,39,0.10)" strokeWidth={4} strokeLinecap="round" fill="none" />
+            {/* Filled progress */}
+            {rightFill > 0 && (
+              <Path d={sideArcPath(8, 8 + 164 * rightFill)} stroke={arcFillColor} strokeWidth={4} strokeLinecap="round" fill="none" />
+            )}
+            {leftFill > 0 && (
+              <Path d={sideArcPath(188, 188 + 164 * leftFill)} stroke={arcFillColor} strokeWidth={4} strokeLinecap="round" fill="none" />
+            )}
+          </Svg>
+          {/* Camera clipped inside the circle */}
+          <View style={{ width: 280, height: 280, borderRadius: 140, overflow: 'hidden', backgroundColor: '#E5E7EB' }}>
+            <Camera
+              ref={cameraRef}
+              style={{ width: '100%', height: '100%' }}
+              device={device}
+              isActive={cameraActive}
+              outputs={[photoOutput, faceDetectorOutput]}
+              mirrorMode="auto"
+            />
+            {/* Face guide overlay — head outline, eyes, nose, mouth so the
+                user knows exactly where to position their face */}
+            <Svg width={280} height={280} style={{ position: 'absolute', top: 0, left: 0 }} pointerEvents="none">
+              <Ellipse cx={140} cy={132} rx={66} ry={84} stroke="#FFFFFF" strokeWidth={5} fill="none" />
+              <Circle cx={112} cy={118} r={9} fill="#FFFFFF" />
+              <Circle cx={168} cy={118} r={9} fill="#FFFFFF" />
+              <Path d="M 140 118 L 140 168" stroke="#FFFFFF" strokeWidth={5} strokeLinecap="round" />
+              <Path d="M 112 190 Q 140 200 168 190" stroke="#FFFFFF" strokeWidth={5} strokeLinecap="round" fill="none" />
+            </Svg>
+          </View>
+        </View>
 
-      {/* Instruction overlay */}
-      <View className="absolute top-[60px] left-0 right-0 items-center px-6">
-        <View className="rounded-btn bg-black/60 px-4 py-2">
-          <Text className="text-[15px] font-semibold text-white text-center">
-            {isFinalizing ? 'Hold still...' : liveness.instruction}
+        {/* Instruction pill */}
+        <View
+          style={{
+            marginTop: 40,
+            maxWidth: '85%',
+            paddingHorizontal: 22, paddingVertical: 12,
+            borderRadius: 24,
+            backgroundColor: stepDone ? '#059669' : 'rgba(17,24,39,0.06)',
+          }}>
+          <Text style={[styles.pillText, stepDone && { color: '#FFFFFF' }]}>
+            {isFinalizing ? 'Hold still' : stepDone ? 'Done!' : actionUi ? actionUi.title : (liveness.instruction || 'Follow the instruction')}
           </Text>
         </View>
-        {isChallenging && liveness.challenge && (
-          <Text className="mt-2 text-[12px] text-white/70">
-            Step {liveness.currentStepIndex + 1} of {liveness.challenge.challenge_sequence.length}
-          </Text>
-        )}
-      </View>
-
-      {/* Bottom status — no button, detection is automatic */}
-      <View className="absolute bottom-[40px] left-0 right-0 items-center">
-        {isFinalizing ? (
-          <>
-            <ActivityIndicator size="large" color={Colors.primary} />
-            <Text className="mt-2 text-[14px] text-white">Capturing photo...</Text>
-          </>
-        ) : (
-          <Text className="text-[12px] text-white/50 text-center">
-            Follow the instruction — detection is automatic
-          </Text>
+        {!!helperText && !stepDone && (
+          <Text style={styles.helperText}>{helperText}</Text>
         )}
       </View>
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  pillText: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: '#111827',
+    textAlign: 'center',
+  },
+  helperText: {
+    marginTop: 10,
+    fontSize: 13,
+    color: '#6B7280',
+    textAlign: 'center',
+  },
+});

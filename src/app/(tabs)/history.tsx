@@ -6,7 +6,8 @@ import { memo, useMemo, useState } from 'react';
 import { FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { BottomSheet, EmptyState, ErrorState, Icon, Skeleton } from '@/components/ui';
+import { BottomSheet, ErrorState, Icon, Skeleton } from '@/components/ui';
+import { DUMMY_PAST_TRIP, DUMMY_TRIP } from '@/constants/dummyTrip';
 import { Colors, Elevation } from '@/constants/theme';
 import { useBookings } from '@/features/history/hooks';
 import type { Booking } from '@/types/domain';
@@ -100,8 +101,12 @@ export default function HistoryScreen() {
     let list = bookings ?? [];
     if (tab === 'past') {
       list = list.filter((b) => b.status === 'completed' || b.status === 'failed');
+      // The always-present dummy past trip — appended to real past bookings
+      list = [...list, DUMMY_PAST_TRIP];
     } else {
       list = list.filter((b) => b.status === 'upcoming');
+      // The always-present dummy trip — appended to real upcoming bookings
+      list = [...list, DUMMY_TRIP];
     }
     if (filterStatus !== 'all') {
       list = list.filter((b) => b.status === filterStatus);
@@ -132,29 +137,16 @@ export default function HistoryScreen() {
       </View>
       <View className="flex-1">
       <View style={{ paddingHorizontal: 32, paddingTop: 12, paddingBottom: 24 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-          <View>
-            <Text accessibilityRole="header" style={{ fontSize: 28, fontWeight: '700', color: '#000000' }}>
-              My Bookings
-            </Text>
-          </View>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Search bookings"
-            style={{ alignItems: 'center', justifyContent: 'center', width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.2)' }}>
-            <Icon name="search" size={20} color="#FFFFFF" />
-          </Pressable>
-        </View>
+        <Text accessibilityRole="header" style={{ fontSize: 28, fontWeight: '700', color: '#000000' }}>
+          My Bookings
+        </Text>
       </View>
 
-      {isEmpty ? (
-        <EmptyState
-          icon="clock"
-          title="No check-ins yet"
-          desc="Once a venue or partner verifies your identity, your check-in & check-out history will show up here."
-        />
-      ) : (
-        <>
+      {(() => {
+        // Tabs always render — the Upcoming tab always shows the dummy trip,
+        // and the Past tab shows its own empty message when there's nothing.
+        return (
+          <>
           <View style={{ flexDirection: 'row', paddingHorizontal: 32, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: '#E5E7EB' }}>
             {(['upcoming', 'past'] as const).map((t) => (
               <Pressable
@@ -225,8 +217,9 @@ export default function HistoryScreen() {
               }
             />
           )}
-        </>
-      )}
+          </>
+        );
+      })()}
 
       <BottomSheet visible={showSortSheet} onClose={() => setShowSortSheet(false)} title="Sort by">
         {(['recent', 'oldest'] as const).map((opt) => (

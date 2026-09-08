@@ -1,6 +1,7 @@
 import { Text, View } from 'react-native';
 
 import { Icon, IconName } from '@/components/ui/Icon';
+import { Colors } from '@/constants/theme';
 
 interface EmptyStateProps {
   icon: IconName;
@@ -9,12 +10,14 @@ interface EmptyStateProps {
   action?: React.ReactNode;
 }
 
-/** Empty state matching `.empty-state` (56px icon at 50% opacity). */
+/** Empty state — icon in a soft theme-tinted circle (matches app design). */
 export function EmptyState({ icon, title, desc, action }: EmptyStateProps) {
   return (
     <View className="flex-1 items-center justify-center p-[30px]">
-      <View className="mb-4 opacity-50">
-        <Icon name={icon} size={56} />
+      <View
+        className="mb-4 items-center justify-center rounded-full"
+        style={{ width: 72, height: 72, backgroundColor: Colors.surface }}>
+        <Icon name={icon} size={32} color={Colors.primary} />
       </View>
       <Text accessibilityRole="header" className="mb-[6px] text-[16px] font-bold text-ink">
         {title}

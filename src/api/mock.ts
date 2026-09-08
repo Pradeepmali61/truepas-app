@@ -27,6 +27,7 @@ import type {
     LogoutRequest,
     Notification,
     OkResponse,
+    ProfilePictureResponse,
     RegisterRequest,
     RegisterResponse,
     ResetPasswordRequest,
@@ -120,7 +121,14 @@ export const mockApi = {
   // ── Reads ────────────────────────────────────────────────────────────
   getUser: () => respond(user),
   getIdentitySummary: () => respond(identitySummary),
-  getDocuments: (_personId?: string) => respond(documents),
+  getDocuments: (personId?: string) =>
+    respond(
+      personId
+        ? documents.filter((d) => d.personId === personId)
+        : // Self call: only the account owner's documents — family members'
+          // documents (tagged with their personId) must not leak in here.
+          documents.filter((d) => !d.personId || d.personId === user.id),
+    ),
   getDocument: (id: string) => respond(documents.find((d) => d.id === id) ?? null),
   getIssuedDocuments: () => respond(issuedDocuments),
   getFamily: () => respond(family),
@@ -382,5 +390,13 @@ export const mockApi = {
   },
   updateFace: (_payload: FaceUpdateRequest): Promise<FaceResponse> => {
     return respond({ ok: true, faceEnrolled: true, faceId: nextId('face') });
+  },
+
+  // ── Profile picture (mock — no-op) ─────────────────────────────────────
+  uploadProfilePicture: (_imageUri: string): Promise<ProfilePictureResponse> => {
+    return respond({ url: '', expires_in: 3600, updated_at: new Date().toISOString() });
+  },
+  getProfilePicture: (): Promise<ProfilePictureResponse | null> => {
+    return respond(null);
   },
 };

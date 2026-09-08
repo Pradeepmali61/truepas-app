@@ -39,6 +39,9 @@ export function useAddDocument() {
     onSuccess: (data, variables) => {
       // Invalidate all document queries (covers both self and member lists)
       queryClient.invalidateQueries({ queryKey: documentKeys.all });
+      // Per KYC guide §7: identity summary must be invalidated after
+      // document changes so gating reflects the new document state.
+      queryClient.invalidateQueries({ queryKey: ['identity'] });
       // Also explicitly invalidate the member-specific query if personId was set
       if (variables.personId) {
         queryClient.invalidateQueries({ queryKey: documentKeys.member(variables.personId) });

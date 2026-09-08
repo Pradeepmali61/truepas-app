@@ -20,7 +20,7 @@ type ScanStep = 'front' | 'selfie' | 'done';
 // must match the JSX below). The Regula scanner crops natively and does not
 // use these.
 const FRONT_FRAME = { width: 280, height: 175 };
-const SELFIE_FRAME = { width: 220, height: 220 };
+const SELFIE_FRAME = { width: 300, height: 300 };
 
 /** Document scan — captures front of document (+ selfie for portrait documents).
  *  Document capture uses the Regula Document Reader native scanner (edge
@@ -47,7 +47,11 @@ export default function DocumentScanScreen() {
     band?: string;
   }>();
   const isFamilyMode = family === '1';
-  const isDocOnly = type === 'birthCertificate';
+  const isDocOnly = type === 'birthCertificate' || band === '0-4';
+  // Family flow: the selfie step is skipped — face capture happens later via
+  // the liveness flow (family/add/face-capture), so a separate selfie here is
+  // redundant (it is never sent to the backend in family mode).
+  const skipSelfie = isFamilyMode || isDocOnly;
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef<CameraView>(null);
   const [capturing, setCapturing] = useState(false);
@@ -89,8 +93,8 @@ export default function DocumentScanScreen() {
     try {
       const base64 = await scanDocument();
       setFrontImage(base64);
-      // Doc-only documents (birthCertificate, 0-4) have no portrait — skip selfie
-      setStep(isDocOnly ? 'done' : 'selfie');
+      // Doc-only + family mode: no separate selfie — face capture via liveness
+      setStep(skipSelfie ? 'done' : 'selfie');
     } catch (e: any) {
       if (e instanceof RegulaScanCancelled) return; // user closed the scanner
       console.error('[Scan] Regula scan failed:', e?.message);
@@ -187,8 +191,8 @@ export default function DocumentScanScreen() {
 
       if (step === 'front') {
         setFrontImage(base64);
-        // Doc-only documents (birthCertificate, 0-4) have no portrait — skip selfie
-        setStep(isDocOnly ? 'done' : 'selfie');
+        // Doc-only + family mode: no separate selfie — face capture via liveness
+        setStep(skipSelfie ? 'done' : 'selfie');
       } else if (step === 'selfie') {
         setSelfieImage(base64);
         setStep('done');
@@ -234,8 +238,14 @@ export default function DocumentScanScreen() {
       setFrontImage(null);
       setStep('front');
     } else if (step === 'done') {
-      setSelfieImage(null);
-      setStep('selfie');
+      if (skipSelfie) {
+        // No selfie step in this flow — retake the document itself
+        setFrontImage(null);
+        setStep('front');
+      } else {
+        setSelfieImage(null);
+        setStep('selfie');
+      }
     }
   };
 
@@ -269,12 +279,15 @@ export default function DocumentScanScreen() {
       <SafeAreaView className="flex-1 items-center justify-center bg-[#111111]" edges={['top', 'bottom']}>
         <Text className="mb-2 text-[20px] font-bold text-white">Capture Complete!</Text>
         <Text className="mb-8 text-center text-[14px] text-white/70 px-6">
-          Document and selfie captured successfully.{"\n"}
-          Tap continue to verify.
+          {skipSelfie
+            ? 'Document captured successfully.'
+            : 'Document and selfie captured successfully.'}
+          {"\n"}
+          Tap continue to proceed.
         </Text>
         <View className="flex-row gap-3">
           <Pressable onPress={handleRetake} className="rounded-btn border border-white/30 px-6 py-3">
-            <Text className="text-[14px] font-bold text-white">Retake Selfie</Text>
+            <Text className="text-[14px] font-bold text-white">{skipSelfie ? 'Retake Document' : 'Retake Selfie'}</Text>
           </Pressable>
           <Pressable onPress={handleContinue} className="rounded-btn bg-primary px-6 py-3">
             <Text className="text-[14px] font-bold text-white">Continue</Text>
@@ -324,18 +337,6 @@ export default function DocumentScanScreen() {
               {scanError}
             </Text>
           ) : null}
-
-          {/* Fallback to the manual camera if the native scanner fails */}
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Use manual camera capture"
-            onPress={() => {
-              setUseRegula(false);
-              setScanError(null);
-            }}
-            className="mt-8 px-4 py-2">
-            <Text className="text-[13px] text-white/50 underline">Use manual camera instead</Text>
-          </Pressable>
         </View>
       </SafeAreaView>
     );
@@ -363,7 +364,7 @@ export default function DocumentScanScreen() {
           {isFront ? (
             <View className="h-[175px] w-[280px] items-center justify-center rounded-btn border-[3px] border-dashed border-white/70" />
           ) : (
-            <View className="h-[220px] w-[220px] items-center justify-center rounded-full border-4 border-white/60" />
+            <View className="h-[300px] w-[300px] items-center justify-center rounded-full border-4 border-white/60" />
           )}
         </View>
 
