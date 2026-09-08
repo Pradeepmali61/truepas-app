@@ -14,7 +14,7 @@ import { Button, CheckboxRow, Chip, ChipRow, FloatingInput, Icon, Stepper } from
 import { Colors } from '@/constants/theme';
 import { ageBandFromAge, ageFromDob } from '@/features/family/hooks';
 
-const RELATIONSHIPS = ['Son', 'Daughter', 'Spouse', 'Parent', 'Sibling'] as const;
+const RELATIONSHIPS = ['Son', 'Daughter', 'Spouse', 'Sibling'] as const;
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
@@ -82,17 +82,26 @@ export default function AddFamilyScreen() {
   return (
     <ScreenContainer scroll={false} background={false}>
       {Platform.OS === 'web' ? (
-        <View style={[StyleSheet.absoluteFill, { backgroundImage: 'linear-gradient(180deg, #F8FBFF, #EAF4FF)' } as any]} />
+        <View style={[StyleSheet.absoluteFill, { backgroundImage: 'linear-gradient(180deg, #39c5fd, #9ce2fe, #f5fcff)' } as any]} />
       ) : (
-        <LinearGradient
-          colors={['#F8FBFF', '#EAF4FF']}
-          style={StyleSheet.absoluteFill}
-        />
+        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 240 }} pointerEvents="none">
+          <LinearGradient
+            colors={['#39c5fd', '#9ce2fe', '#f5fcff']}
+            style={{ flex: 1 }}
+          />
+        </View>
       )}
       <AppBackground />
-      <ScreenHeader title="Add Family Member" />
-      <Stepper total={4} done={1} />
-      <View className="flex-1 px-6">
+      {/* Scrollable form — gradient + watermark stay fixed behind it and cover
+          the full top safe area (status bar included), like the tab screens. */}
+      <ScrollView
+        className="flex-1"
+        contentContainerStyle={{ flexGrow: 1 }}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled">
+        <ScreenHeader title="Add Family Member" />
+        <Stepper total={4} done={1} />
+        <View className="flex-1 px-6">
         <View className="items-center pb-3 pt-[6px]">
           <Text accessibilityRole="header" className="text-center text-[16px] font-bold text-ink">
             Basic information
@@ -123,7 +132,7 @@ export default function AddFamilyScreen() {
                   ? Colors.primary
                   : Colors.borderInput;
               return (
-                <View style={{ marginBottom: 6 }}>
+                <View style={{ marginBottom: 6, marginHorizontal: 24 }}>
                   <Text allowFontScaling={false} style={{ fontSize: 12, marginBottom: 6, color: fieldState.error?.message ? Colors.warning : hasValue ? Colors.primary : Colors.textFaint, fontWeight: '500' }}>
                     Date of Birth
                   </Text>
@@ -187,6 +196,7 @@ export default function AddFamilyScreen() {
           <Button label="Continue" onPress={onSubmit} disabled={!consented} />
         </View>
       </View>
+      </ScrollView>
 
       {/* Date Picker Modal — same as the signup page */}
       <Modal visible={showDatePicker} transparent animationType="slide" onRequestClose={() => setShowDatePicker(false)}>

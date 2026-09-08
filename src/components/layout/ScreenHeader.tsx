@@ -3,6 +3,7 @@ import { Pressable, Text, View } from 'react-native';
 
 import { Icon } from '@/components/ui';
 import { Colors } from '@/constants/theme';
+import { fontScale, scale } from '@/utils/responsive';
 
 interface ScreenHeaderProps {
   title: string;
@@ -16,7 +17,7 @@ export function ScreenHeader({ title, rightAction, light = false }: ScreenHeader
   const color = light ? '#FFFFFF' : Colors.ink;
   return (
     <View style={{
-      height: 64,
+      height: scale(64, 56),
       flexDirection: 'row',
       alignItems: 'center',
       paddingHorizontal: 16,
@@ -33,10 +34,10 @@ export function ScreenHeader({ title, rightAction, light = false }: ScreenHeader
           alignItems: 'center',
           justifyContent: 'center',
         }}>
-        <Icon name="back" size={22} color={color} />
+        <Icon name="back" size={scale(22, 20)} color={color} />
       </Pressable>
       <View style={{ flex: 1, alignItems: 'center' }}>
-        <Text style={{ fontSize: 20, fontWeight: '700', color }}>
+        <Text allowFontScaling={false} style={{ fontSize: fontScale(20), fontWeight: '700', color }}>
           {title}
         </Text>
       </View>

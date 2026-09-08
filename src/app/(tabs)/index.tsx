@@ -14,6 +14,7 @@ import { useBookings } from '@/features/history/hooks';
 import { useProfilePicture } from '@/features/profile/hooks';
 import { useAppSelector } from '@/store';
 import type { Booking, IdentityDocument } from '@/types/domain';
+import { fontScale, scale } from '@/utils/responsive';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const cardWidth = Math.round(SCREEN_WIDTH * 0.44);
@@ -66,9 +67,9 @@ function DocCard({ doc, onPress, width }: { doc: IdentityDocument; onPress: () =
     pressed.value = withSpring(0, { stiffness: 400, damping: 25 });
   };
 
-  const statusLabel = doc.status === 'verified' ? 'Valid' : doc.status === 'pending' ? 'Pending' : 'Failed';
-  const statusColor = doc.status === 'verified' ? '#059669' : doc.status === 'pending' ? '#D97706' : '#EF4444';
-  const statusBg = doc.status === 'verified' ? '#ECFDF5' : doc.status === 'pending' ? '#FFFBEB' : '#FEF2F2';
+  const statusLabel = doc.status === 'verified' ? 'Valid' : 'Failed';
+  const statusColor = doc.status === 'verified' ? '#059669' : '#EF4444';
+  const statusBg = doc.status === 'verified' ? '#ECFDF5' : '#FEF2F2';
 
   return (
     <Pressable
@@ -92,6 +93,76 @@ function DocCard({ doc, onPress, width }: { doc: IdentityDocument; onPress: () =
           <DocIllustration type={doc.type} />
         </Animated.View>
       </Animated.View>
+    </Pressable>
+  );
+}
+
+function SearchResultRow({ doc, onPress }: { doc: IdentityDocument; onPress: () => void }) {
+  const accent = DOC_ACCENT[doc.type];
+  const isVerified = doc.status === 'verified';
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`${doc.label}, ${doc.number}`}
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: scale(14),
+        backgroundColor: '#FFFFFF',
+        borderRadius: 16,
+        paddingHorizontal: scale(16),
+        paddingVertical: scale(14),
+        marginBottom: scale(10),
+        ...Elevation.small,
+      }}>
+      <View style={{
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: scale(56, 48, 64),
+        height: scale(56, 48, 64),
+        borderRadius: scale(16, 14, 18),
+        backgroundColor: accent.bg,
+        borderWidth: 1,
+        borderColor: accent.icon + '20',
+      }}>
+        {doc.type === 'drivingLicense' ? (
+          <Image source={require('@/assets/images/car-simple.png')} style={{ width: 40, height: 40 }} resizeMode="contain" />
+        ) : doc.type === 'passport' ? (
+          <Image source={require('@/assets/images/passport-simple.png')} style={{ width: 40, height: 40 }} resizeMode="contain" />
+        ) : doc.type === 'greenCard' ? (
+          <Image source={require('@/assets/images/liberty-simple.png')} style={{ width: 40, height: 40 }} resizeMode="contain" />
+        ) : doc.type === 'usVisa' ? (
+          <Image source={require('@/assets/images/usa-simple.png')} style={{ width: 40, height: 40 }} resizeMode="contain" />
+        ) : doc.type === 'birthCertificate' ? (
+          <Image source={require('@/assets/images/baby-simple.png')} style={{ width: 40, height: 40 }} resizeMode="contain" />
+        ) : (
+          <Icon name={doc.type} size={26} color={accent.icon} />
+        )}
+      </View>
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Text allowFontScaling={false} style={{ fontSize: fontScale(16), fontWeight: '700', color: '#111827' }} numberOfLines={1}>
+          {doc.label}
+        </Text>
+        <Text allowFontScaling={false} style={{ fontSize: fontScale(12), color: '#6B7280', marginTop: 2 }} numberOfLines={1}>
+          {doc.number}
+        </Text>
+      </View>
+      <View style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 3,
+        backgroundColor: isVerified ? '#ECFDF5' : '#FEF2F2',
+        borderRadius: 8,
+        paddingHorizontal: scale(7, 6),
+        paddingVertical: scale(3, 2),
+      }}>
+        <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: isVerified ? '#059669' : '#EF4444' }} />
+        <Text allowFontScaling={false} style={{ fontSize: fontScale(10), fontWeight: '700', color: isVerified ? '#059669' : '#EF4444' }}>
+          {isVerified ? 'Verified' : 'Failed'}
+        </Text>
+      </View>
+      <Icon name="chevron" size={scale(16, 14)} color={Colors.textFaint} />
     </Pressable>
   );
 }
@@ -231,6 +302,32 @@ export default function IdentityScreen() {
         />
       </View>
 
+      {query.trim().length > 0 ? (
+        <View style={{ paddingHorizontal: 20 }}>
+          {isPending ? (
+            <Text style={{ paddingTop: 24, textAlign: 'center', fontSize: 13, color: Colors.textFaint }}>
+              Loading documents…
+            </Text>
+          ) : isError ? (
+            <Text style={{ paddingTop: 24, textAlign: 'center', fontSize: 13, color: '#EF4444' }}>
+              Couldn&apos;t load documents.
+            </Text>
+          ) : filtered.length === 0 ? (
+            <Text style={{ paddingTop: 24, textAlign: 'center', fontSize: 13, color: Colors.textFaint }}>
+              No documents match your search.
+            </Text>
+          ) : (
+            filtered.map((doc) => (
+              <SearchResultRow
+                key={doc.id}
+                doc={doc}
+                onPress={() => router.push(`/document/${doc.id}` as never)}
+              />
+            ))
+          )}
+        </View>
+      ) : (
+      <>
       <View className="flex-row items-center justify-between px-5 pb-3">
         <Text className="text-[16px] font-bold text-ink">Upcoming trips</Text>
         <Pressable
@@ -254,7 +351,7 @@ export default function IdentityScreen() {
                 booking={booking}
                 onPress={
                   booking.id === DUMMY_TRIP.id
-                    ? () => router.push('/(tabs)/history' as never)
+                    ? () => router.push({ pathname: '/(tabs)/history', params: { tab: 'upcoming' } } as never)
                     : () => router.push(`/booking/${booking.id}` as never)
                 }
               />
@@ -331,13 +428,15 @@ export default function IdentityScreen() {
                 booking={booking}
                 onPress={
                   booking.id === DUMMY_PAST_TRIP.id
-                    ? () => router.push('/(tabs)/history' as never)
+                    ? () => router.push({ pathname: '/(tabs)/history', params: { tab: 'past' } } as never)
                     : () => router.push(`/booking/${booking.id}` as never)
                 }
               />
             );
           })()}
         </View>
+      </>
+      )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -359,32 +458,32 @@ function TripCard({ booking, onPress }: { booking: Booking; onPress: () => void 
       style={{
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 14,
+        gap: scale(14),
         backgroundColor: '#FFFFFF',
         borderRadius: 16,
-        paddingHorizontal: 16,
-        paddingVertical: 14,
-        marginBottom: 10,
+        paddingHorizontal: scale(16),
+        paddingVertical: scale(14),
+        marginBottom: scale(10),
         ...Elevation.small,
       }}>
       {imageSource ? (
-        <View style={{ width: 64, height: 64, borderRadius: 18, overflow: 'hidden' }}>
-          <Image source={imageSource} style={{ width: 64, height: 64 }} resizeMode="cover" />
+        <View style={{ width: scale(64, 56, 72), height: scale(64, 56, 72), borderRadius: scale(18, 16), overflow: 'hidden' }}>
+          <Image source={imageSource} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
         </View>
       ) : (
-        <View style={{ width: 64, height: 64, borderRadius: 18, backgroundColor: '#E2E8F0', alignItems: 'center', justifyContent: 'center' }}>
-          <Icon name="hotel" size={28} color={Colors.ink} />
+        <View style={{ width: scale(64, 56, 72), height: scale(64, 56, 72), borderRadius: scale(18, 16), backgroundColor: '#E2E8F0', alignItems: 'center', justifyContent: 'center' }}>
+          <Icon name="hotel" size={scale(28, 24)} color={Colors.ink} />
         </View>
       )}
       <View style={{ flex: 1, minWidth: 0 }}>
-        <Text style={{ fontSize: 16, fontWeight: '700', color: '#111827' }} numberOfLines={1}>
+        <Text allowFontScaling={false} style={{ fontSize: fontScale(16), fontWeight: '700', color: '#111827' }} numberOfLines={1}>
           {booking.venue}
         </Text>
-        <Text style={{ fontSize: 12, fontWeight: '400', color: '#6B7280', marginTop: 2 }} numberOfLines={1}>
+        <Text allowFontScaling={false} style={{ fontSize: fontScale(12), fontWeight: '400', color: '#6B7280', marginTop: 2 }} numberOfLines={1}>
           {booking.location} · {booking.checkIn}–{booking.checkOut}
         </Text>
       </View>
-      <Icon name="chevron" size={16} color={Colors.textFaint} />
+      <Icon name="chevron" size={scale(16, 14)} color={Colors.textFaint} />
     </Pressable>
   );
 }

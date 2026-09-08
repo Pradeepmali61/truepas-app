@@ -72,12 +72,14 @@ export default function FamilyDocumentScreen() {
   return (
     <ScreenContainer scroll={false} background={false}>
       {Platform.OS === 'web' ? (
-        <View style={[StyleSheet.absoluteFill, { backgroundImage: 'linear-gradient(180deg, #F8FBFF, #EAF4FF)' } as any]} />
+        <View style={[StyleSheet.absoluteFill, { backgroundImage: 'linear-gradient(180deg, #39c5fd, #9ce2fe, #f5fcff)' } as any]} />
       ) : (
-        <LinearGradient
-          colors={['#F8FBFF', '#EAF4FF']}
-          style={StyleSheet.absoluteFill}
-        />
+        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 240 }}>
+          <LinearGradient
+            colors={['#39c5fd', '#9ce2fe', '#f5fcff']}
+            style={{ flex: 1 }}
+          />
+        </View>
       )}
       <AppBackground />
       <ScreenHeader title="Add Family Member" />

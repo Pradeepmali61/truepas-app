@@ -66,7 +66,7 @@ export default function FamilyProcessingScreen() {
         const doc = await addDocument.mutateAsync({
           type: docType,
           label: DOC_LABELS[docType],
-          number: String(Math.floor(10000000 + Math.random() * 89999999)),
+          number: 'PENDING',
           expiresAt: null,
           personId,
         });
@@ -104,7 +104,7 @@ export default function FamilyProcessingScreen() {
         const doc = await addDocument.mutateAsync({
           type: docType,
           label: DOC_LABELS[docType],
-          number: String(Math.floor(10000000 + Math.random() * 89999999)),
+          number: 'PENDING',
           expiresAt: null,
           personId: member.id,
         });
@@ -149,12 +149,14 @@ export default function FamilyProcessingScreen() {
   return (
     <ScreenContainer scroll={false} background={false}>
       {Platform.OS === 'web' ? (
-        <View style={[StyleSheet.absoluteFill, { backgroundImage: 'linear-gradient(180deg, #F8FBFF, #EAF4FF)' } as any]} />
+        <View style={[StyleSheet.absoluteFill, { backgroundImage: 'linear-gradient(180deg, #39c5fd, #9ce2fe, #f5fcff)' } as any]} />
       ) : (
-        <LinearGradient
-          colors={['#F8FBFF', '#EAF4FF']}
-          style={StyleSheet.absoluteFill}
-        />
+        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 240 }}>
+          <LinearGradient
+            colors={['#39c5fd', '#9ce2fe', '#f5fcff']}
+            style={{ flex: 1 }}
+          />
+        </View>
       )}
       <AppBackground />
       <View className="flex-1 items-center justify-center px-6">

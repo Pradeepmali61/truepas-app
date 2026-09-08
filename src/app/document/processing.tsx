@@ -1,3 +1,4 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
@@ -7,7 +8,7 @@ import { ScreenContainer } from '@/components/layout/ScreenContainer';
 import { Button } from '@/components/ui';
 import { Icon } from '@/components/ui/Icon';
 import { Colors } from '@/constants/theme';
-import { useAddDocument } from '@/features/documents/hooks';
+import { documentKeys, useAddDocument } from '@/features/documents/hooks';
 import { clearDocumentImages, saveDocumentImages } from '@/services/documentImageStore';
 import { clearScanResult, getScanResult } from '@/services/scanStore';
 import { useAppSelector } from '@/store';
@@ -46,8 +47,17 @@ export default function DocumentProcessingScreen() {
   // session/API error doesn't pile up duplicate documents.
   const createdDocRef = useRef<IdentityDocument | null>(null);
   const addDocument = useAddDocument();
+  const queryClient = useQueryClient();
   const profileName = useAppSelector((state) => state.auth.user?.fullName ?? 'User');
   const profileDob = useAppSelector((state) => state.auth.user?.dateOfBirth ?? '');
+
+  // Refresh document lists + identity summary AFTER verification completes —
+  // the addDocument invalidation fires while the doc is still `pending`, so
+  // without this the list shows a stale pre-verify status (e.g. "Failed").
+  const refreshDocumentCaches = () => {
+    queryClient.invalidateQueries({ queryKey: documentKeys.all });
+    queryClient.invalidateQueries({ queryKey: ['identity'] });
+  };
 
   useEffect(() => {
     if (hasStarted.current) return;
@@ -68,13 +78,16 @@ export default function DocumentProcessingScreen() {
       try {
         // Step 1: Add document (metadata only — backend will fill in extracted data).
         // On Retry, reuse the document created by the previous attempt.
+        // NOTE: `number` is a required backend field (min 2 chars) but the real
+        // number comes from server-side OCR during /verify — never fabricate a
+        // random one here. "PENDING" is overwritten by the backend after verify.
         let doc = createdDocRef.current;
         if (!doc) {
           setStatus('adding');
           doc = await addDocument.mutateAsync({
             type: docType,
             label: DOC_LABELS[docType],
-            number: String(Math.floor(10000000 + Math.random() * 89999999)),
+            number: 'PENDING',
             expiresAt: null,
           });
           createdDocRef.current = doc;
@@ -137,16 +150,17 @@ export default function DocumentProcessingScreen() {
             console.warn('[DocProcessing] Replace lookup failed — keeping existing documents:', e);
           }
 
+          refreshDocumentCaches();
           setStatus('done');
           // Pass backend-returned extracted data to the verified screen.
-          // The backend should return these fields (like Facepe's backend does)
-          // — see BUG_REPORT_BACKEND_EXTRACTED_DATA.md for the full contract.
+          // docNumber comes from the POST-VERIFY document (real masked number),
+          // not the pre-verify placeholder.
           router.replace({
             pathname: '/document/verified',
             params: {
               docId: doc.id,
               docLabel: DOC_LABELS[docType],
-              docNumber: doc.number ?? '',
+              docNumber: result.document?.number ?? doc.number ?? '',
               extractedName: result.extractedName ?? '',
               extractedDob: result.extractedDob ?? '',
               matchScore: result.matchScore != null ? String(result.matchScore) : '',
@@ -179,6 +193,7 @@ export default function DocumentProcessingScreen() {
             console.warn('[DocProcessing] Failed-attempt cleanup error:', e);
           }
 
+          refreshDocumentCaches();
           router.replace({
             pathname: '/document/mismatch',
             params: {

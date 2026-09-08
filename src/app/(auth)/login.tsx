@@ -4,7 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { KeyboardAvoidingView, Modal, Platform, Pressable, TextInput as RNTextInput, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Modal, Platform, Pressable, TextInput as RNTextInput, ScrollView, Text, View } from 'react-native';
 
 import { api } from '@/api';
 import { toApiError } from '@/api/errors';
@@ -81,10 +81,12 @@ export default function LoginScreen() {
 
   return (
     <ScreenContainer scroll={false}>
-      <LinearGradient
-        colors={['#F8FBFF', '#EAF4FF']}
-        style={StyleSheet.absoluteFill}
-      />
+      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 240 }}>
+        <LinearGradient
+          colors={['#39c5fd', '#9ce2fe', '#f5fcff']}
+          style={{ flex: 1 }}
+        />
+      </View>
       <AppBackground />
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         <View className="flex-1 px-6 pb-6">
@@ -158,7 +160,6 @@ export default function LoginScreen() {
                 value={value}
                 onChangeText={onChange}
                 error={fieldState.error?.message}
-                gradient
                 rightSlot={
                   <Pressable
                     accessibilityRole="button"

@@ -5,18 +5,18 @@ import { mockApi } from '@/api/mock';
 /**
  * Single source of truth used by every hook/screen in the app.
  *
- * - While the backend is not ready, `mockApi` serves data from JSON
- *   fixtures in `src/api/data/`.
- * - Once the backend team exposes real endpoints, set
- *   `EXPO_PUBLIC_USE_MOCK_API=false` in `.env` (and `EXPO_PUBLIC_API_URL`
- *   to the real base URL) — no other code needs to change.
+ * - The REAL backend (`endpoints.ts`) is the default — the backend is live
+ *   and every build (preview/production) must talk to it. The base URL is
+ *   baked in via `EXPO_PUBLIC_API_URL` (client.ts has a hardcoded fallback).
+ * - Mock mode is strictly opt-in: set `EXPO_PUBLIC_USE_MOCK_API=true` to
+ *   serve data from JSON fixtures in `src/api/data/` (no backend needed).
  *
  * Fallback mode (`EXPO_PUBLIC_FALLBACK_TO_MOCK=true`):
  *   If the real API returns 503 or a network error, the call is retried
  *   against `mockApi` so UI development can continue even when the
- *   backend is down. Set to "false" for strict real-only mode.
+ *   backend is down. Default is strict real-only mode.
  */
-const useMockApi = process.env.EXPO_PUBLIC_USE_MOCK_API !== 'false';
+const useMockApi = process.env.EXPO_PUBLIC_USE_MOCK_API === 'true';
 const fallbackToMock = process.env.EXPO_PUBLIC_FALLBACK_TO_MOCK === 'true';
 
 /**

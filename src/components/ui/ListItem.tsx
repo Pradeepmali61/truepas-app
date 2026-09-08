@@ -1,6 +1,7 @@
 import { Pressable, Text, View } from 'react-native';
 
 import { Icon, IconName } from '@/components/ui/Icon';
+import { fontScale, scale } from '@/utils/responsive';
 
 interface ListItemProps {
   icon?: IconName;
@@ -26,17 +27,19 @@ export function ListItem({
     <>
       {icon ? (
         <View
-          className="h-10 w-10 items-center justify-center rounded-btn"
-          style={{ backgroundColor: iconBg }}>
-          <Icon name={icon} size={18} />
+          className="items-center justify-center rounded-btn"
+          style={{ width: scale(40, 36), height: scale(40, 36), backgroundColor: iconBg }}>
+          <Icon name={icon} size={scale(18, 16)} />
         </View>
       ) : null}
       <View className="flex-1">
-        <Text className="text-[14px] font-medium text-ink">{title}</Text>
-        {subtitle ? <Text className="text-[12px] text-muted">{subtitle}</Text> : null}
+        <Text allowFontScaling={false} style={{ fontSize: fontScale(14), fontWeight: '500', color: '#000000' }}>{title}</Text>
+        {subtitle ? (
+          <Text allowFontScaling={false} style={{ fontSize: fontScale(12), color: '#666666' }}>{subtitle}</Text>
+        ) : null}
       </View>
       {rightSlot}
-      {showChevron ? <Icon name="chevron" size={18} color="#e5e5ea" /> : null}
+      {showChevron ? <Icon name="chevron" size={scale(18, 16)} color="#e5e5ea" /> : null}
     </>
   );
 
@@ -46,12 +49,13 @@ export function ListItem({
         accessibilityRole="button"
         accessibilityLabel={title}
         onPress={onPress}
-        className="min-h-[56px] flex-row items-center gap-3 px-5 py-3 active:bg-canvas">
+        className="flex-row items-center gap-3 px-5 py-3 active:bg-canvas"
+        style={{ minHeight: scale(56, 48) }}>
         {content}
       </Pressable>
     );
   }
   return (
-    <View className="min-h-[56px] flex-row items-center gap-3 px-5 py-3">{content}</View>
+    <View className="flex-row items-center gap-3 px-5 py-3" style={{ minHeight: scale(56, 48) }}>{content}</View>
   );
 }

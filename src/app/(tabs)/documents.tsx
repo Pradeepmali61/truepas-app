@@ -7,8 +7,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ErrorState, Icon, Skeleton } from '@/components/ui';
 import { Colors, Elevation } from '@/constants/theme';
 import { useDocuments } from '@/features/documents/hooks';
-import { useAppSelector } from '@/store';
 import type { DocumentType, IdentityDocument } from '@/types/domain';
+import { fontScale, scale } from '@/utils/responsive';
 
 const DOC_ACCENT: Record<DocumentType, { bg: string; icon: string }> = {
   passport:         { bg: '#F5F7FF', icon: '#4F46E5' },
@@ -30,20 +30,20 @@ const DocCard = memo(function DocCard({ doc, onPress }: { doc: IdentityDocument;
       style={{
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 14,
+        gap: scale(14),
         backgroundColor: '#FFFFFF',
         borderRadius: 16,
-        paddingHorizontal: 16,
-        paddingVertical: 14,
-        marginBottom: 10,
+        paddingHorizontal: scale(16),
+        paddingVertical: scale(14),
+        marginBottom: scale(10),
         ...Elevation.small,
       }}>
       <View style={{
         alignItems: 'center',
         justifyContent: 'center',
-        width: 64,
-        height: 64,
-        borderRadius: 18,
+        width: scale(64, 56, 72),
+        height: scale(64, 56, 72),
+        borderRadius: scale(18, 16, 20),
         backgroundColor: accent.bg,
         borderWidth: 1,
         borderColor: accent.icon + '20',
@@ -63,8 +63,8 @@ const DocCard = memo(function DocCard({ doc, onPress }: { doc: IdentityDocument;
         )}
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={{ fontSize: 16, fontWeight: '700', color: '#111827' }}>{doc.label}</Text>
-        <Text style={{ fontSize: 12, color: '#6B7280', marginTop: 2 }} numberOfLines={1}>
+        <Text allowFontScaling={false} style={{ fontSize: fontScale(16), fontWeight: '700', color: '#111827' }}>{doc.label}</Text>
+        <Text allowFontScaling={false} style={{ fontSize: fontScale(12), color: '#6B7280', marginTop: 2 }} numberOfLines={1}>
           {doc.number}
         </Text>
       </View>
@@ -75,13 +75,13 @@ const DocCard = memo(function DocCard({ doc, onPress }: { doc: IdentityDocument;
           gap: 3,
           backgroundColor: isVerified ? '#ECFDF5' : '#FEF2F2',
           borderRadius: 8,
-          paddingHorizontal: 7,
-          paddingVertical: 3,
+          paddingHorizontal: scale(7, 6),
+          paddingVertical: scale(3, 2),
         }}>
           <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: isVerified ? '#059669' : '#EF4444' }} />
-          <Text style={{ fontSize: 10, fontWeight: '700', color: isVerified ? '#059669' : '#EF4444' }}>{doc.status}</Text>
+          <Text allowFontScaling={false} style={{ fontSize: fontScale(10), fontWeight: '700', color: isVerified ? '#059669' : '#EF4444' }}>{isVerified ? 'Verified' : 'Failed'}</Text>
         </View>
-        <Icon name="chevron" size={16} color={Colors.textFaint} />
+        <Icon name="chevron" size={scale(16, 14)} color={Colors.textFaint} />
       </View>
     </Pressable>
   );
@@ -103,25 +103,21 @@ export default function DocumentsScreen() {
   const router = useRouter();
   const [query, setQuery] = useState('');
   const { data: documents, isPending, isError, isRefetching, refetch } = useDocuments();
-  const userId = useAppSelector((state) => state.auth.user?.id);
 
-  // Defensive: this tab shows only the account owner's documents. The self
-  // `GET /documents` call is scoped by the BFF, but if a family member's
-  // document (tagged with their personId) ever comes through, drop it here.
-  const ownDocuments = useMemo(
-    () => (documents ?? []).filter((doc) => !doc.personId || doc.personId === userId),
-    [documents, userId],
-  );
+  // NOTE: no client-side personId filtering here. The BFF already scopes the
+  // self `GET /documents` call to the account owner, and document.personId is
+  // an identity-proofing person id — a DIFFERENT namespace from auth.user.id,
+  // so comparing them would wrongly filter out every document.
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return ownDocuments;
-    return ownDocuments.filter(
+    if (!q) return documents ?? [];
+    return (documents ?? []).filter(
       (doc) => doc.label.toLowerCase().includes(q) || doc.number.toLowerCase().includes(q)
     );
-  }, [ownDocuments, query]);
+  }, [documents, query]);
 
-  const isEmpty = !isPending && !isError && ownDocuments.length === 0;
+  const isEmpty = !isPending && !isError && (documents?.length ?? 0) === 0;
 
   return (
     <SafeAreaView className="flex-1" edges={['top']} style={{ backgroundColor: '#F8FBFF' }}>

@@ -12,6 +12,7 @@ import { Colors } from '@/constants/theme';
 import { useDocument, useRemoveDocument } from '@/features/documents/hooks';
 import { getDocumentImageUri } from '@/services/documentImageStore';
 import type { IdentityDocument, IssuedDoc } from '@/types/domain';
+import { fontScale, scale } from '@/utils/responsive';
 
 type CombinedDoc = IssuedDoc | IdentityDocument;
 
@@ -122,9 +123,8 @@ export default function DocumentDetailScreen() {
   const title = getTitle(doc);
   const status = isIdentityDocument(doc) ? doc.status : doc.status;
   const isVerified = status === 'verified' || status === 'Active';
-  const isPendingStatus = status === 'pending';
-  const statusLabel = isVerified ? 'VERIFIED' : isPendingStatus ? 'PENDING' : 'FAILED';
-  const statusColor = isVerified ? '#34D399' : isPendingStatus ? '#FBBF24' : '#F87171';
+  const statusLabel = isVerified ? 'VERIFIED' : 'FAILED';
+  const statusColor = isVerified ? '#34D399' : '#F87171';
   const docType = isIdentityDocument(doc) ? doc.type : doc.icon;
   const isLicense = docType.toLowerCase().includes('license');
 
@@ -249,8 +249,8 @@ export default function DocumentDetailScreen() {
                     </View>
                     <View style={styles.docDetailItem}>
                       <Text style={styles.docDetailLabel}>STATUS</Text>
-                      <Text style={[styles.docDetailValue, { color: isVerified ? '#059669' : isPendingStatus ? '#D97706' : '#EF4444' }]}>
-                        {isVerified ? 'Verified' : isPendingStatus ? 'Pending' : 'Failed'}
+                      <Text style={[styles.docDetailValue, { color: isVerified ? '#059669' : '#EF4444' }]}>
+                        {isVerified ? 'Verified' : 'Failed'}
                       </Text>
                     </View>
                     <View style={styles.docDetailItem}>
@@ -365,7 +365,7 @@ export default function DocumentDetailScreen() {
 const styles = StyleSheet.create({
   cardWrapper: {
     width: '100%',
-    height: 280,
+    height: scale(280, 240, 320),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -389,11 +389,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingHorizontal: scale(20),
+    paddingVertical: scale(16),
   },
   cardTitle: {
-    fontSize: 14,
+    fontSize: fontScale(14),
     fontWeight: '800',
     color: '#FFFFFF',
     textTransform: 'uppercase',
@@ -405,12 +405,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(255,255,255,0.2)',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingHorizontal: scale(10),
+    paddingVertical: scale(4),
     borderRadius: 12,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.4)',
-    minWidth: 80,
+    minWidth: scale(80, 72),
     flexShrink: 0,
     marginLeft: 8,
   },
@@ -421,22 +421,22 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
   statusText: {
-    fontSize: 10,
+    fontSize: fontScale(10),
     fontWeight: '700',
     color: '#FFFFFF',
     letterSpacing: 0.5,
   },
   docMainInfo: {
-    padding: 20,
+    padding: scale(20),
     flexDirection: 'row',
   },
   docAvatarContainer: {
-    width: 96,
-    height: 96,
+    width: scale(96, 84, 104),
+    height: scale(96, 84, 104),
     borderRadius: 12,
     overflow: 'hidden',
     backgroundColor: '#F3F4F6',
-    marginRight: 16,
+    marginRight: scale(16, 12),
     borderWidth: 1,
     borderColor: '#E5E7EB',
   },
@@ -452,7 +452,7 @@ const styles = StyleSheet.create({
   },
   docImageContainer: {
     flex: 1,
-    padding: 12,
+    padding: scale(12),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -468,34 +468,34 @@ const styles = StyleSheet.create({
   },
   docDetailItem: {
     width: '50%',
-    marginBottom: 14,
+    marginBottom: scale(14, 12),
   },
   docDetailLabel: {
-    fontSize: 9,
+    fontSize: fontScale(9, 8),
     fontWeight: '700',
     color: '#9CA3AF',
     marginBottom: 2,
     letterSpacing: 0.5,
   },
   docDetailValue: {
-    fontSize: 13,
+    fontSize: fontScale(13),
     fontWeight: '700',
     color: '#111827',
-    lineHeight: 18,
+    lineHeight: fontScale(18),
   },
   actionsRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     flexWrap: 'wrap',
-    gap: 12,
-    marginTop: 20,
+    gap: scale(12),
+    marginTop: scale(20, 16),
   },
   flipActionBtn: {
     flexDirection: 'row',
     backgroundColor: '#08B6FC',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
+    paddingVertical: scale(12, 10),
+    paddingHorizontal: scale(20, 16),
     borderRadius: 30,
     alignItems: 'center',
     gap: 8,
@@ -508,8 +508,8 @@ const styles = StyleSheet.create({
   removeActionBtn: {
     flexDirection: 'row',
     backgroundColor: '#FEF2F2',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
+    paddingVertical: scale(12, 10),
+    paddingHorizontal: scale(20, 16),
     borderRadius: 30,
     alignItems: 'center',
     gap: 8,
@@ -518,12 +518,12 @@ const styles = StyleSheet.create({
   },
   removeActionText: {
     color: Colors.error,
-    fontSize: 14,
+    fontSize: fontScale(14),
     fontWeight: '600',
   },
   flipActionText: {
     color: '#FFFFFF',
-    fontSize: 14,
+    fontSize: fontScale(14),
     fontWeight: '600',
   },
 });

@@ -3,6 +3,7 @@ import { forwardRef, useState } from 'react';
 import { StyleSheet, Text, TextInput, TextInputProps, View } from 'react-native';
 
 import { Colors } from '@/constants/theme';
+import { fontScale, scale } from '@/utils/responsive';
 
 interface FloatingInputProps extends TextInputProps {
   label: string;
@@ -29,7 +30,8 @@ export const FloatingInput = forwardRef<TextInput, FloatingInputProps>(
           ref={ref}
           accessibilityLabel={label}
           placeholderTextColor={Colors.textFaint}
-          className="flex-1 text-[16px] font-medium text-ink"
+          className="flex-1 font-medium text-ink"
+          style={{ fontSize: fontScale(16), fontWeight: '500' }}
           onFocus={(event) => {
             setFocused(true);
             onFocus?.(event);
@@ -49,13 +51,13 @@ export const FloatingInput = forwardRef<TextInput, FloatingInputProps>(
         {gradient ? (
           <>
             <View className="mb-1">
-              <Text allowFontScaling={false} className="text-[11px]" style={{ color: labelColor }}>
+              <Text allowFontScaling={false} style={{ fontSize: fontScale(11), color: labelColor }}>
                 {label}
               </Text>
             </View>
             <View
-              className="h-[56px] flex-row items-center rounded-[8px] border bg-transparent px-4"
-              style={{ borderColor }}>
+              className="flex-row items-center rounded-[8px] border bg-transparent px-4"
+              style={{ borderColor, height: scale(56, 52) }}>
               <LinearGradient
                 colors={['#ffffff', '#f0f6ff']}
                 start={{ x: 0, y: 0 }}
@@ -67,12 +69,12 @@ export const FloatingInput = forwardRef<TextInput, FloatingInputProps>(
           </>
         ) : (
           <View style={{ marginBottom: 6 }}>
-            <Text allowFontScaling={false} className="text-[12px] mb-1.5" style={{ color: labelColor, fontWeight: '500' }}>
+            <Text allowFontScaling={false} style={{ fontSize: fontScale(12), marginBottom: 6, color: labelColor, fontWeight: '500' }}>
               {label}
             </Text>
             <View
-              className="h-[56px] flex-row items-center rounded-[12px] border bg-white px-4"
-              style={{ borderColor }}>
+              className="flex-row items-center rounded-[12px] border bg-white px-4"
+              style={{ borderColor, height: scale(56, 52) }}>
               {inputBody}
             </View>
           </View>
@@ -80,8 +82,8 @@ export const FloatingInput = forwardRef<TextInput, FloatingInputProps>(
         {error ? (
           <Text
             accessibilityLiveRegion="polite"
-            className="mt-1 px-1 text-[11px]"
-            style={{ color: Colors.warning }}>
+            className="mt-1 px-1"
+            style={{ fontSize: fontScale(11), color: Colors.warning }}>
             {error}
           </Text>
         ) : null}

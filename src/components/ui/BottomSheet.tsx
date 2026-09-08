@@ -1,10 +1,10 @@
 import { useEffect } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-  withTiming,
+    useAnimatedStyle,
+    useSharedValue,
+    withSpring,
+    withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -15,9 +15,12 @@ interface BottomSheetProps {
   onClose: () => void;
   title?: string;
   children: React.ReactNode;
+  /** Extra bottom offset — e.g. the floating tab bar height on tab screens,
+   *  since the sheet anchors to the screen bottom which the tab bar overlays. */
+  bottomInset?: number;
 }
 
-export function BottomSheet({ visible, onClose, title, children }: BottomSheetProps) {
+export function BottomSheet({ visible, onClose, title, children, bottomInset = 0 }: BottomSheetProps) {
   const insets = useSafeAreaInsets();
   const translateY = useSharedValue(400);
   const backdropOpacity = useSharedValue(0);
@@ -51,13 +54,13 @@ export function BottomSheet({ visible, onClose, title, children }: BottomSheetPr
         style={[
           {
             position: 'absolute',
-            bottom: 0,
+            bottom: bottomInset,
             left: 0,
             right: 0,
             backgroundColor: Colors.bgWhite,
             borderTopLeftRadius: Radius.sheet,
             borderTopRightRadius: Radius.sheet,
-            paddingBottom: insets.bottom + 8,
+            paddingBottom: bottomInset ? 12 : insets.bottom + 8,
             shadowColor: '#000',
             shadowOffset: { width: 0, height: -4 },
             shadowOpacity: 0.15,

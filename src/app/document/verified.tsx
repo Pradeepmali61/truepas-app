@@ -79,7 +79,9 @@ export default function DocumentVerifiedScreen() {
     setIsFlipped(!isFlipped);
   };
 
-  const isReview = outcome === 'review';
+  // Binary outcome (like DL): approved → VERIFIED, everything else (review,
+  // manual_review, rejected) → FAILED. No intermediate "review" state in UI.
+  const isFailed = outcome !== 'approved';
   const title = docLabel ?? 'Document';
 
   return (
@@ -96,28 +98,28 @@ export default function DocumentVerifiedScreen() {
       <ScreenHeader title="Verified" />
 
       <View className="flex-1 items-center px-6 pt-2">
-        {/* Success icon */}
+        {/* Result icon */}
         <View style={{
           width: 72,
           height: 72,
           borderRadius: 36,
-          backgroundColor: '#ECFDF5',
+          backgroundColor: isFailed ? '#FEF2F2' : '#ECFDF5',
           alignItems: 'center',
           justifyContent: 'center',
           ...Elevation.small,
         }}>
-          <Icon name="checkCircle" size={36} color="#059669" />
+          <Icon name={isFailed ? 'cross' : 'checkCircle'} size={36} color={isFailed ? '#EF4444' : '#059669'} />
         </View>
 
         <Text
           accessibilityRole="header"
           className="mb-1 mt-4 text-[22px] font-bold text-ink">
-          {isReview ? 'Document under review' : 'Document Verified'}
+          {isFailed ? 'Verification Failed' : 'Document Verified'}
         </Text>
 
         <Text className="mb-4 text-center text-[14px] text-muted">
-          {isReview
-            ? 'Your document has been received and is being reviewed'
+          {isFailed
+            ? 'We could not verify this document. Please scan it again.'
             : 'Your document has been verified successfully'}
         </Text>
 
@@ -148,9 +150,9 @@ export default function DocumentVerifiedScreen() {
               style={styles.docCardHeader}>
               <Text style={styles.countryName}>{title}</Text>
               <View style={styles.idCardStatusBadge}>
-                <View style={styles.idCardStatusDot} />
+                <View style={[styles.idCardStatusDot, isFailed && { backgroundColor: '#F87171' }]} />
                 <Text style={styles.idCardStatusText}>
-                  {isReview ? 'REVIEW' : 'VERIFIED'}
+                  {isFailed ? 'FAILED' : 'VERIFIED'}
                 </Text>
               </View>
             </LinearGradient>

@@ -1,4 +1,3 @@
-import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -52,6 +51,9 @@ export default function FamilyMemberScreen() {
 
   const handlePickProfilePicture = async () => {
     try {
+      // Lazy-require: keeps expo-image-picker's native module out of the
+      // startup import chain so older dev clients don't crash on launch.
+      const ImagePicker = require('expo-image-picker');
       if (Platform.OS === 'ios') {
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (status !== 'granted') {
@@ -100,6 +102,12 @@ export default function FamilyMemberScreen() {
   if (isPending) {
     return (
       <SafeAreaView className="flex-1 bg-white" edges={['top', 'bottom']}>
+        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 240 }}>
+          <LinearGradient
+            colors={['#39c5fd', '#9ce2fe', '#f5fcff']}
+            style={{ flex: 1 }}
+          />
+        </View>
         <AppBackground />
         <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, height: 56 }}>
           <Pressable onPress={() => router.back()} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
@@ -120,6 +128,12 @@ export default function FamilyMemberScreen() {
   if (!member) {
     return (
       <SafeAreaView className="flex-1 bg-white" edges={['top', 'bottom']}>
+        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 240 }}>
+          <LinearGradient
+            colors={['#39c5fd', '#9ce2fe', '#f5fcff']}
+            style={{ flex: 1 }}
+          />
+        </View>
         <AppBackground />
         <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, height: 56 }}>
           <Pressable onPress={() => router.back()} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
@@ -152,6 +166,12 @@ export default function FamilyMemberScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-white" edges={['top', 'bottom']}>
+      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 240 }}>
+        <LinearGradient
+          colors={['#39c5fd', '#9ce2fe', '#f5fcff']}
+          style={{ flex: 1 }}
+        />
+      </View>
       <AppBackground />
       {/* Header */}
       <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, height: 56 }}>
@@ -307,7 +327,7 @@ export default function FamilyMemberScreen() {
                 <View style={{ flex: 1 }}>
                   <Text style={{ fontSize: 15, fontWeight: '600', color: Colors.ink }}>{doc.label}</Text>
                   <Text style={{ fontSize: 13, fontWeight: '400', color: Colors.textMuted, marginTop: 2 }}>
-                    {doc.status === 'verified' ? 'Verified' : doc.status === 'failed' ? 'Failed' : 'Pending'}
+                    {doc.status === 'verified' ? 'Verified' : 'Failed'}
                     {doc.expiresAt ? ` · Expires ${new Date(doc.expiresAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}` : ''}
                   </Text>
                 </View>

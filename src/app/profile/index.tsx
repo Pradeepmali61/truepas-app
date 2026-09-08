@@ -1,4 +1,4 @@
-import * as ImagePicker from 'expo-image-picker';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { ActivityIndicator, Image, Platform, Pressable, Text, View } from 'react-native';
 
@@ -38,6 +38,9 @@ export default function ProfileScreen() {
 
   const handlePickProfilePicture = async () => {
     try {
+      // Lazy-require: keeps expo-image-picker's native module out of the
+      // startup import chain so older dev clients don't crash on launch.
+      const ImagePicker = require('expo-image-picker');
       // Android uses the system photo picker — no storage permission needed.
       if (Platform.OS === 'ios') {
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -90,13 +93,13 @@ export default function ProfileScreen() {
               resizeMode="cover"
             />
           ) : (
-            <View
-              className="items-center justify-center bg-faint"
-              style={{ width: 72, height: 72, borderRadius: 16 }}>
-              <Text style={{ fontSize: 24, fontWeight: '700', color: Colors.textMuted }}>
+            <LinearGradient
+              colors={['#08B6FC', '#84dbfe']}
+              style={{ width: 72, height: 72, borderRadius: 24, alignItems: 'center', justifyContent: 'center' }}>
+              <Text style={{ fontSize: 24, fontWeight: '700', color: '#FFFFFF' }}>
                 {initials}
               </Text>
-            </View>
+            </LinearGradient>
           )}
           {isUploading && (
             <View
@@ -104,7 +107,7 @@ export default function ProfileScreen() {
                 position: 'absolute',
                 width: 72,
                 height: 72,
-                borderRadius: 16,
+                borderRadius: 24,
                 backgroundColor: 'rgba(0,0,0,0.45)',
                 alignItems: 'center',
                 justifyContent: 'center',

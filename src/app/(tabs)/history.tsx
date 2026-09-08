@@ -1,16 +1,17 @@
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
-import { memo, useMemo, useState } from 'react';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { memo, useEffect, useMemo, useState } from 'react';
 import { FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BottomSheet, ErrorState, Icon, Skeleton } from '@/components/ui';
 import { DUMMY_PAST_TRIP, DUMMY_TRIP } from '@/constants/dummyTrip';
 import { Colors, Elevation } from '@/constants/theme';
 import { useBookings } from '@/features/history/hooks';
 import type { Booking } from '@/types/domain';
+import { fontScale, scale } from '@/utils/responsive';
 
 type BookingTab = 'upcoming' | 'past';
 type SortOption = 'recent' | 'oldest';
@@ -32,28 +33,28 @@ const BookingCard = memo(function BookingCard({ item, onPress }: { item: Booking
       style={{
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 14,
+        gap: scale(14),
         backgroundColor: '#FFFFFF',
         borderRadius: 16,
-        paddingHorizontal: 16,
-        paddingVertical: 14,
-        marginBottom: 10,
+        paddingHorizontal: scale(16),
+        paddingVertical: scale(14),
+        marginBottom: scale(10),
         ...Elevation.small,
       }}>
       {imageSource ? (
-        <View style={{ width: 64, height: 64, borderRadius: 18, overflow: 'hidden' }}>
-          <Image source={imageSource} style={{ width: 64, height: 64 }} contentFit={item.image === 'disney cruise' ? 'contain' : 'cover'} transition={200} cachePolicy="memory-disk" />
+        <View style={{ width: scale(64, 56, 72), height: scale(64, 56, 72), borderRadius: scale(18, 16), overflow: 'hidden' }}>
+          <Image source={imageSource} style={{ width: '100%', height: '100%' }} contentFit={item.image === 'disney cruise' ? 'contain' : 'cover'} transition={200} cachePolicy="memory-disk" />
         </View>
       ) : (
-        <View style={{ width: 64, height: 64, borderRadius: 18, backgroundColor: '#E2E8F0', alignItems: 'center', justifyContent: 'center' }}>
-          <Icon name="hotel" size={28} color={Colors.ink} />
+        <View style={{ width: scale(64, 56, 72), height: scale(64, 56, 72), borderRadius: scale(18, 16), backgroundColor: '#E2E8F0', alignItems: 'center', justifyContent: 'center' }}>
+          <Icon name="hotel" size={scale(28, 24)} color={Colors.ink} />
         </View>
       )}
       <View style={{ flex: 1, minWidth: 0 }}>
-        <Text style={{ fontSize: 16, fontWeight: '700', color: '#111827' }} numberOfLines={1}>
+        <Text allowFontScaling={false} style={{ fontSize: fontScale(16), fontWeight: '700', color: '#111827' }} numberOfLines={1}>
           {item.venue}
         </Text>
-        <Text style={{ fontSize: 12, fontWeight: '400', color: '#6B7280', marginTop: 2 }} numberOfLines={1}>
+        <Text allowFontScaling={false} style={{ fontSize: fontScale(12), fontWeight: '400', color: '#6B7280', marginTop: 2 }} numberOfLines={1}>
           {item.location} · {item.checkIn}–{item.checkOut}
         </Text>
       </View>
@@ -64,13 +65,13 @@ const BookingCard = memo(function BookingCard({ item, onPress }: { item: Booking
           gap: 3,
           backgroundColor: isCompleted ? '#ECFDF5' : '#FEF2F2',
           borderRadius: 8,
-          paddingHorizontal: 7,
-          paddingVertical: 3,
+          paddingHorizontal: scale(7, 6),
+          paddingVertical: scale(3, 2),
         }}>
           <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: isCompleted ? '#059669' : '#EF4444' }} />
-          <Text style={{ fontSize: 10, fontWeight: '700', color: isCompleted ? '#059669' : '#EF4444' }}>{isCompleted ? 'Completed' : 'Failed'}</Text>
+          <Text allowFontScaling={false} style={{ fontSize: fontScale(10), fontWeight: '700', color: isCompleted ? '#059669' : '#EF4444' }}>{isCompleted ? 'Completed' : 'Failed'}</Text>
         </View>
-        <Icon name="chevron" size={16} color={Colors.textFaint} />
+        <Icon name="chevron" size={scale(16, 14)} color={Colors.textFaint} />
       </View>
     </Pressable>
   );
@@ -90,12 +91,23 @@ function BookingSkeleton() {
 
 export default function HistoryScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+  // When navigated to with an explicit ?tab= (e.g. Home trip cards), open that
+  // category — the tab screen stays mounted, so plain useState would otherwise
+  // keep showing whatever category was last selected.
+  const { tab: tabParam } = useLocalSearchParams<{ tab?: string }>();
   const { data: bookings, isPending, isError, isRefetching, refetch } = useBookings();
   const [tab, setTab] = useState<BookingTab>('past');
   const [sortOption, setSortOption] = useState<SortOption>('recent');
   const [showSortSheet, setShowSortSheet] = useState(false);
   const [showFilterSheet, setShowFilterSheet] = useState(false);
   const [filterStatus, setFilterStatus] = useState<'all' | 'completed' | 'failed'>('all');
+
+  useEffect(() => {
+    if (tabParam === 'upcoming' || tabParam === 'past') {
+      setTab(tabParam);
+    }
+  }, [tabParam]);
 
   const visible = useMemo(() => {
     let list = bookings ?? [];
@@ -221,7 +233,9 @@ export default function HistoryScreen() {
         );
       })()}
 
-      <BottomSheet visible={showSortSheet} onClose={() => setShowSortSheet(false)} title="Sort by">
+      {/* bottomInset = floating tab bar height (64 + bottom inset) — without it
+          the sheet's lower options hide behind the tab bar */}
+      <BottomSheet visible={showSortSheet} onClose={() => setShowSortSheet(false)} title="Sort by" bottomInset={64 + insets.bottom}>
         {(['recent', 'oldest'] as const).map((opt) => (
           <Pressable
             key={opt}
@@ -240,7 +254,7 @@ export default function HistoryScreen() {
         ))}
       </BottomSheet>
 
-      <BottomSheet visible={showFilterSheet} onClose={() => setShowFilterSheet(false)} title="Filter">
+      <BottomSheet visible={showFilterSheet} onClose={() => setShowFilterSheet(false)} title="Filter" bottomInset={64 + insets.bottom}>
         {(['all', 'completed', 'failed'] as const).map((opt) => (
           <Pressable
             key={opt}
