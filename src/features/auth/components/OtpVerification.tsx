@@ -27,6 +27,13 @@ interface OtpVerificationProps {
    * for email purpose, or store registrationToken for phone purpose).
    */
   onVerified: (response: VerifyOtpResponse) => void;
+  /**
+   * Actually re-sends the OTP (backend has no generic resend endpoint, so each
+   * screen re-calls the endpoint that originally triggered the code — e.g.
+   * register for phone, account-details for email). When omitted the resend
+   * button is hidden instead of pretending to resend.
+   */
+  onResend?: () => Promise<void>;
 }
 
 const OTP_LENGTH = 6;
@@ -43,10 +50,12 @@ export function OtpVerification({
   purpose,
   identifier,
   onVerified,
+  onResend,
 }: OtpVerificationProps) {
   const [code, setCode] = useState('');
   const [verifyState, setVerifyState] = useState<VerifyState>('idle');
   const [errorMsg, setErrorMsg] = useState('');
+  const [resending, setResending] = useState(false);
   const { seconds, reset } = useCountdown(RESEND_SECONDS);
   const shakeX = useSharedValue(0);
   const verifyOtp = useVerifyOtp();
@@ -104,12 +113,23 @@ export function OtpVerification({
     }
   };
 
-  const handleResend = () => {
-    reset();
-    setCode('');
-    setVerifyState('idle');
+  const handleResend = async () => {
+    if (!onResend || resending) return;
     setErrorMsg('');
+    setResending(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    try {
+      await onResend();
+      // Fresh code sent — restart the cooldown and clear any partial entry.
+      reset();
+      setCode('');
+      setVerifyState('idle');
+    } catch (err: any) {
+      setVerifyState('error');
+      setErrorMsg(err?.message ?? 'Could not resend code. Please try again.');
+    } finally {
+      setResending(false);
+    }
   };
 
   const shakeStyle = { transform: [{ translateX: shakeX }] };
@@ -167,11 +187,17 @@ export function OtpVerification({
               <Text className="mt-2 text-[14px] font-medium text-muted">
                 Resend code in {formatCountdown(seconds)}
               </Text>
-            ) : (
-              <Pressable accessibilityRole="button" accessibilityLabel="Resend code" onPress={handleResend}>
-                <Text className="mt-2 text-[14px] font-medium text-primary underline">Resend code</Text>
+            ) : onResend ? (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Resend code"
+                onPress={handleResend}
+                disabled={resending}>
+                <Text className="mt-2 text-[14px] font-medium text-primary underline">
+                  {resending ? 'Sending…' : 'Resend code'}
+                </Text>
               </Pressable>
-            )}
+            ) : null}
           </>
         )}
       </View>

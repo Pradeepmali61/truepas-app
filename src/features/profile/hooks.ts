@@ -1,14 +1,18 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { api } from '@/api';
-import { saveLocalProfileImage } from '@/services/profileImageStore';
+import { getLocalProfileImage, saveLocalProfileImage } from '@/services/profileImageStore';
 
 const PROFILE_PICTURE_KEY = ['profile-picture'] as const;
 
 /**
  * Profile picture source — backend presigned URL when available, otherwise
  * the locally persisted image (backend S3 endpoint is not shipped yet).
+ *
+ * The local file is ALWAYS loaded as a fallback so the picture survives
+ * logout/login (the React Query cache is cleared on logout and the backend
+ * endpoint 404s until it ships).
  */
 export function useProfilePicture() {
   const query = useQuery({
@@ -18,8 +22,24 @@ export function useProfilePicture() {
     retry: false,
   });
   const [localUri, setLocalUri] = useState<string | null>(null);
+
+  useEffect(() => {
+    getLocalProfileImage()
+      .then(setLocalUri)
+      .catch(() => {});
+  }, []);
+
+  // Cache-bust ONLY local file URIs: saveLocalProfileImage overwrites the
+  // same path on every upload, so React Native's Image cache would show the
+  // stale picture. Backend presigned URLs are left untouched — appending a
+  // query param would invalidate the S3 signature.
+  const rawUrl = query.data?.url ?? localUri;
+  const url = rawUrl && rawUrl.startsWith('file://')
+    ? `${rawUrl}?t=${encodeURIComponent(query.data?.updated_at ?? '0')}`
+    : rawUrl;
+
   return {
-    url: query.data?.url ?? localUri,
+    url,
     isLoading: query.isPending,
   };
 }
@@ -30,7 +50,6 @@ export function useProfilePicture() {
  */
 export function useUploadProfilePicture() {
   const queryClient = useQueryClient();
-  const [localUri, setLocalUri] = useState<string | null>(null);
   return useMutation({
     mutationFn: async (imageUri: string) => {
       try {
@@ -39,7 +58,6 @@ export function useUploadProfilePicture() {
         // Backend not ready — store locally so the picture still shows
         console.warn('[ProfilePicture] Backend upload unavailable, storing locally:', (err as any)?.message);
         const uri = await saveLocalProfileImage(imageUri);
-        setLocalUri(uri);
         return { url: uri, expires_in: 0, updated_at: new Date().toISOString() };
       }
     },

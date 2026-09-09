@@ -1,8 +1,11 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect } from 'react';
 
+import { api } from '@/api';
+import { clearRegistrationToken } from '@/api/client';
 import { OtpVerification } from '@/features/auth/components/OtpVerification';
 import { sessionStarted } from '@/features/auth/slice';
+import { accountDetailsStore } from '@/services/accountDetailsStore';
 import { secureStorage } from '@/services/secureStorage';
 import { useAppDispatch } from '@/store';
 
@@ -30,6 +33,17 @@ export default function VerifyEmailScreen() {
       progress={35}
       purpose="email"
       identifier={{ email: email ?? '' }}
+      onResend={async () => {
+        // The backend has no dedicated resend endpoint — the email OTP is sent
+        // by POST /auth/account-details. Re-submit the stashed payload (the
+        // registration token is still in api/client memory) to trigger a
+        // fresh email.
+        const payload = accountDetailsStore.get();
+        if (!payload) {
+          throw new Error('Registration session expired. Please sign up again.');
+        }
+        await api.completeAccountDetails(payload);
+      }}
       onVerified={async (response) => {
         console.log('[VerifyEmail] Verification response:', JSON.stringify({
           ok: response.ok,
@@ -37,6 +51,10 @@ export default function VerifyEmailScreen() {
           hasUser: !!response.user,
           hasAccessToken: !!response.accessToken,
         }));
+        // Registration session fully consumed — release the in-memory token
+        // and the stashed account-details payload.
+        clearRegistrationToken();
+        accountDetailsStore.clear();
         // Email verification during registration returns AuthResponse fields
         // (user, accessToken, refreshToken) embedded in VerifyOtpResponse.
         if (response.user && response.accessToken) {

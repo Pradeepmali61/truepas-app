@@ -3,7 +3,7 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Controller, useForm } from 'react-hook-form';
+import { Controller, useForm, useWatch } from 'react-hook-form';
 import { KeyboardAvoidingView, Modal, Platform, Pressable, TextInput as RNTextInput, ScrollView, Text, View } from 'react-native';
 
 import { api } from '@/api';
@@ -46,6 +46,10 @@ export default function LoginScreen() {
     resolver: zodResolver(loginSchema),
     defaultValues: { identifier: '', password: '' },
   });
+  // The country-code picker only makes sense for phone identifiers — hide it
+  // as soon as the user starts typing an email address.
+  const identifierValue = useWatch({ control, name: 'identifier' }) ?? '';
+  const isEmailIdentifier = /\S@\S/.test(identifierValue);
 
   const onSubmit = handleSubmit(async (values) => {
     setSubmitting(true);
@@ -103,19 +107,22 @@ export default function LoginScreen() {
         </View>
 
         <View className="mb-6">
-          {/* Identifier with country code — same layout as register screen */}
+          {/* Identifier with country code — same layout as register screen.
+              The picker is hidden while the identifier looks like an email. */}
           <View className="mb-4" style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}>
-            <Pressable onPress={() => setPickerOpen(true)} style={{ width: 90 }}>
-              <Text className="mb-1.5 text-[12px]" style={{ color: Colors.textFaint, fontWeight: '500' }}>Code</Text>
-              <View
-                className="h-[56px] flex-row items-center rounded-[12px] border bg-white px-3"
-                style={{ borderColor: Colors.borderInput }}>
-                <Text style={{ fontSize: 15, fontWeight: '500', color: Colors.ink }} numberOfLines={1}>
-                  {selectedCountry.flag} {selectedCountry.code}
-                </Text>
-                <Text style={{ fontSize: 14, color: Colors.textMuted, marginLeft: 'auto' }}>▾</Text>
-              </View>
-            </Pressable>
+            {!isEmailIdentifier && (
+              <Pressable onPress={() => setPickerOpen(true)} style={{ width: 90 }}>
+                <Text className="mb-1.5 text-[12px]" style={{ color: Colors.textFaint, fontWeight: '500' }}>Code</Text>
+                <View
+                  className="h-[56px] flex-row items-center rounded-[12px] border bg-white px-3"
+                  style={{ borderColor: Colors.borderInput }}>
+                  <Text style={{ fontSize: 15, fontWeight: '500', color: Colors.ink }} numberOfLines={1}>
+                    {selectedCountry.flag} {selectedCountry.code}
+                  </Text>
+                  <Text style={{ fontSize: 14, color: Colors.textMuted, marginLeft: 'auto' }}>▾</Text>
+                </View>
+              </Pressable>
+            )}
             <View style={{ flex: 1 }}>
               <Controller
                 control={control}

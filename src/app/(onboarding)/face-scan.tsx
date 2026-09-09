@@ -16,8 +16,10 @@ export default function FaceScanScreen() {
       mode="enroll"
       onSuccess={() => router.replace('/(onboarding)/face-enrolled')}
       onError={(msg) => {
-        // Navigate to error screen; the LivenessCamera itself shows retry UI
-        router.push({ pathname: '/face-update/error', params: { message: msg } });
+        // `retry` sends the error screen's Retry button back to THIS flow —
+        // without it the shared error screen routed registration retries into
+        // the face-update (mode="update") flow.
+        router.push({ pathname: '/face-update/error', params: { message: msg, retry: '/(onboarding)/face-scan' } });
       }}
     />
   );

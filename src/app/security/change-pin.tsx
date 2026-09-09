@@ -2,6 +2,7 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Text, View } from 'react-native';
 
+import { toApiError } from '@/api/errors';
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
 import { TopBar } from '@/components/layout/TopBar';
 import { Icon, PinDots, PinPad } from '@/components/ui';
@@ -35,7 +36,7 @@ export default function ChangePinScreen() {
               { text: 'OK', onPress: () => router.back() },
             ]);
           } catch (err: any) {
-            Alert.alert('Error', err?.message ?? 'Could not update PIN. Please try again.', [
+            Alert.alert('Error', toApiError(err).message ?? 'Could not update PIN. Please try again.', [
               { text: 'OK', onPress: () => router.back() },
             ]);
           }

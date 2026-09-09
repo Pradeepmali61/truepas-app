@@ -1,11 +1,24 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Alert, ScrollView, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Button, FloatingInput } from '@/components/ui';
+import { Button, FloatingInput, Icon } from '@/components/ui';
 import { Colors } from '@/constants/theme';
 import { useForgotPassword, useResetPassword, useVerifyOtp } from '@/features/auth/mutations';
+
+/** Eye toggle matching the change-password page pattern. */
+function PasswordEye({ visible, onToggle }: { visible: boolean; onToggle: () => void }) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={visible ? 'Hide password' : 'Show password'}
+      onPress={onToggle}
+      className="h-9 w-9 items-center justify-center">
+      <Icon name={visible ? 'eyeClosed' : 'eye'} size={20} color="#999" />
+    </Pressable>
+  );
+}
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
@@ -14,6 +27,8 @@ export default function ForgotPasswordScreen() {
   const [otp, setOtp] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showNew, setShowNew] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [error, setError] = useState('');
 
   const forgotPassword = useForgotPassword();
@@ -86,6 +101,16 @@ export default function ForgotPasswordScreen() {
             <FloatingInput label="OTP Code" value={otp} onChangeText={(v) => setOtp(v.replace(/\D/g, '').slice(0, 6))} keyboardType="number-pad" />
             {error ? <Text style={{ fontSize: 13, color: '#EF4444', textAlign: 'center', marginBottom: 12 }}>{error}</Text> : null}
             <Button label="Verify" onPress={handleVerifyOtp} loading={verifyOtp.isPending} />
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Resend code"
+              onPress={handleSendOtp}
+              disabled={forgotPassword.isPending}
+              style={{ alignItems: 'center', marginTop: 16 }}>
+              <Text style={{ fontSize: 14, fontWeight: '500', color: Colors.primary, textDecorationLine: 'underline' }}>
+                {forgotPassword.isPending ? 'Sending…' : 'Resend code'}
+              </Text>
+            </Pressable>
           </>
         )}
 
@@ -94,8 +119,22 @@ export default function ForgotPasswordScreen() {
             <Text style={{ fontSize: 14, color: Colors.textMuted, textAlign: 'center', marginBottom: 24 }}>
               Enter your new password below.
             </Text>
-            <FloatingInput label="New Password" value={newPassword} onChangeText={setNewPassword} secureTextEntry />
-            <FloatingInput label="Confirm Password" value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry />
+            <FloatingInput
+              label="New Password"
+              value={newPassword}
+              onChangeText={setNewPassword}
+              secureTextEntry={!showNew}
+              autoCapitalize="none"
+              rightSlot={<PasswordEye visible={showNew} onToggle={() => setShowNew((v) => !v)} />}
+            />
+            <FloatingInput
+              label="Confirm Password"
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+              secureTextEntry={!showConfirm}
+              autoCapitalize="none"
+              rightSlot={<PasswordEye visible={showConfirm} onToggle={() => setShowConfirm((v) => !v)} />}
+            />
             {error ? <Text style={{ fontSize: 13, color: '#EF4444', textAlign: 'center', marginBottom: 12 }}>{error}</Text> : null}
             <Button label="Reset Password" onPress={handleReset} loading={resetPassword.isPending} />
           </>

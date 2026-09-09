@@ -4,10 +4,13 @@ import { Text, View } from 'react-native';
 import { ScreenContainer, Spacer } from '@/components/layout/ScreenContainer';
 import { Button, Icon, InfoBanner } from '@/components/ui';
 
-/** Update face — ROC retry error. Never marks success on failure (PRD). */
+/** Update face — ROC retry error. Never marks success on failure (PRD).
+ *  `retry` param (when set) routes Retry back to the flow that failed —
+ *  registration passes '/(onboarding)/face-scan', the default is the
+ *  face-update camera. */
 export default function FaceUpdateErrorScreen() {
   const router = useRouter();
-  const { message } = useLocalSearchParams<{ message?: string }>();
+  const { message, retry } = useLocalSearchParams<{ message?: string; retry?: string }>();
 
   return (
     <ScreenContainer scroll={false}>
@@ -29,7 +32,7 @@ export default function FaceUpdateErrorScreen() {
       </View>
       <Spacer />
       <View className="px-6 pb-6">
-        <Button label="Retry Now" onPress={() => router.replace('/face-update/camera')} />
+        <Button label="Retry Now" onPress={() => router.replace((retry as any) ?? '/face-update/camera')} />
         <View className="mt-3">
           <Button label="Try Again Later" variant="link" onPress={() => router.dismissTo('/(tabs)')} />
         </View>

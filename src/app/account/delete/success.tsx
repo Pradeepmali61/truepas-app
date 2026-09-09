@@ -1,4 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query';
+import { useRouter } from 'expo-router';
 import { Text, View } from 'react-native';
 
 import { ScreenContainer, Spacer } from '@/components/layout/ScreenContainer';
@@ -16,6 +17,7 @@ const VERIFIED_SYSTEMS: { icon: IconName; label: string }[] = [
 /** Delete account — success with all-3-systems verification (PRD). */
 export default function DeleteSuccessScreen() {
   const dispatch = useAppDispatch();
+  const router = useRouter();
   const queryClient = useQueryClient();
 
   return (
@@ -52,7 +54,16 @@ export default function DeleteSuccessScreen() {
       </View>
       <Spacer />
       <View className="px-6 pb-6">
-        <Button label="Close App" onPress={() => { queryClient.clear(); dispatch(sessionEnded()); }} />
+        <Button
+          label="Close App"
+          onPress={() => {
+            queryClient.clear();
+            dispatch(sessionEnded());
+            // Session is gone — the entry gate won't re-render, so navigate
+            // explicitly to the auth flow.
+            router.dismissTo('/(auth)/welcome' as never);
+          }}
+        />
       </View>
     </ScreenContainer>
   );

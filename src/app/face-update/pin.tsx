@@ -2,6 +2,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Text, View } from 'react-native';
 
+import { toApiError } from '@/api/errors';
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
 import { ScreenHeader } from '@/components/layout/ScreenHeader';
 import { Icon, PinDots, PinPad } from '@/components/ui';
@@ -30,7 +31,9 @@ export default function FaceUpdatePinScreen() {
             params: personId ? { personId } : {},
           });
         } catch (err: any) {
-          Alert.alert('Incorrect PIN', err?.message ?? 'Please try again.', [
+          // toApiError maps raw axios messages ("Request failed with status
+          // code 400") to user-presentable copy.
+          Alert.alert('Incorrect PIN', toApiError(err).message ?? 'Please try again.', [
             { text: 'OK', onPress: () => setPin('') },
           ]);
         }

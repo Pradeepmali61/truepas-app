@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 
 import { api } from '@/api';
+import { toApiError } from '@/api/errors';
 import type {
     LivenessChallenge,
     LivenessChallengeResponse,
@@ -62,7 +63,9 @@ export function useLivenessSession() {
       return challenge;
     } catch (err: any) {
       console.error('[Liveness] Challenge creation failed:', err?.message, JSON.stringify(err?.response?.data));
-      setState({ ...initialState, phase: 'failed', error: err?.message ?? 'Failed to start liveness challenge' });
+      // toApiError maps raw axios messages ("Request failed with status code
+      // 429") to user-presentable copy ("Too many attempts...").
+      setState({ ...initialState, phase: 'failed', error: toApiError(err).message });
       throw err;
     }
   }, []);

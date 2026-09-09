@@ -5,13 +5,13 @@ import { Controller, useForm } from 'react-hook-form';
 import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { clearRegistrationToken } from '@/api/client';
 import { ScreenContainer, Spacer } from '@/components/layout/ScreenContainer';
 import { TopBar } from '@/components/layout/TopBar';
 import { Button, FloatingInput, Icon, InfoBanner, ProgressTrack } from '@/components/ui';
 import { Colors } from '@/constants/theme';
 import { useCompleteAccountDetails } from '@/features/auth/mutations';
 import { AccountDetailsForm, accountDetailsSchema } from '@/features/auth/schemas';
+import { accountDetailsStore } from '@/services/accountDetailsStore';
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
@@ -55,6 +55,9 @@ export default function AccountDetailsScreen() {
   const onSubmit = handleSubmit(async (values) => {
     setSubmitError(null);
     console.log('[AccountDetails] Submitting:', { fullName: values.fullName, email: values.email, dateOfBirth: values.dateOfBirth });
+    // Stash for the verify-email "Resend code" button — the email OTP is
+    // (re)sent by re-submitting this payload (no dedicated resend endpoint).
+    accountDetailsStore.stash(values);
     try {
       const response = await completeAccount.mutateAsync({
         fullName: values.fullName,
@@ -65,8 +68,9 @@ export default function AccountDetailsScreen() {
         confirmPassword: values.confirmPassword,
       });
       console.log('[AccountDetails] Response:', JSON.stringify(response));
-      // Registration token is consumed; clear it. Navigate to verify-email.
-      clearRegistrationToken();
+      // Keep the registration token in memory — verify-email needs it for the
+      // OTP call AND for resending the email. It is cleared after email
+      // verification succeeds (see verify-email onVerified).
       // Pass email to verify-email screen for the OTP request
       router.push({
         pathname: '/(auth)/verify-email',

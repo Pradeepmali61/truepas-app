@@ -16,6 +16,7 @@ import {
 } from 'react-native-vision-camera-face-detector';
 import { runOnJS } from 'react-native-worklets';
 
+import { toApiError } from '@/api/errors';
 import { Icon } from '@/components/ui/Icon';
 import { Colors } from '@/constants/theme';
 import { useEnrollFace, useUpdateFace } from '@/features/auth/mutations';
@@ -30,8 +31,10 @@ interface LivenessCameraProps {
   personId?: string;
   /** Called after successful face enrollment/update. */
   onSuccess: () => void;
-  /** Called on unrecoverable error. */
-  onError: (message: string) => void;
+  /** Called on unrecoverable error. Recoverable failures (step rejected,
+   *  429 rate limit, network) are handled in-place by the built-in failed
+   *  UI with a retry cooldown, so this rarely fires. */
+  onError?: (message: string) => void;
 }
 
 // Calibration thresholds (per guide §4.5 — tune on real devices)
@@ -91,7 +94,7 @@ function sideArcPath(startDeg: number, endDeg: number): string {
  *
  * NO manual button press — detection is fully automatic.
  */
-export function LivenessCamera({ mode, personId, onSuccess, onError }: LivenessCameraProps) {
+export function LivenessCamera({ mode, personId, onSuccess }: LivenessCameraProps) {
   const { hasPermission, requestPermission } = useCameraPermission();
   const [capturing, setCapturing] = useState(false);
   // Camera preview is stopped briefly before navigating away — unmounting an
@@ -126,12 +129,38 @@ export function LivenessCamera({ mode, personId, onSuccess, onError }: LivenessC
     }
   }, [hasPermission, requestPermission]);
 
+  // ── In-place failure handling (fixes the 429 retry loop) ─────────────
+  // Failures fail the session LOCALLY instead of navigating away:
+  //  1. phase leaves 'challenging' immediately → the frame processor's
+  //     onFaceSample guard stops re-submitting evidence (previously a 429
+  //     on evidence kept the phase 'challenging' and resubmitted every
+  //     ~100ms during the 400ms navigation settle window).
+  //  2. The built-in failed UI shows toApiError's friendly copy with a
+  //     retry cooldown — 10s after a 429 (retrying sooner only burns more
+  //     rate-limit quota), 3s for other failures.
+  const { failSession } = liveness;
+  const [cooldownLeft, setCooldownLeft] = useState(0);
+  const failWithCooldown = useCallback((err: unknown, fallback: string) => {
+    const apiErr = toApiError(err);
+    setCooldownLeft(apiErr.status === 429 ? 10 : 3);
+    failSession(apiErr.message || fallback);
+  }, [failSession]);
+
+  // 1s countdown while the failed UI is visible; Try Again stays disabled
+  // until it reaches 0. setState runs inside the interval callback (not
+  // synchronously in the effect body) to avoid cascading renders.
+  useEffect(() => {
+    if (liveness.phase !== 'failed' || cooldownLeft <= 0) return;
+    const t = setInterval(() => setCooldownLeft((s) => Math.max(0, s - 1)), 1000);
+    return () => clearInterval(t);
+  }, [liveness.phase, cooldownLeft]);
+
   // Start liveness challenge when permission is granted, and restart after
   // reset (Try Again) — depends on phase so idle→start works every time.
   useEffect(() => {
     if (hasPermission && liveness.phase === 'idle') {
       liveness.startSession(personId).catch((err) => {
-        onError(err?.message ?? 'Failed to start liveness challenge');
+        failWithCooldown(err, 'Failed to start liveness challenge');
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -151,12 +180,6 @@ export function LivenessCamera({ mode, personId, onSuccess, onError }: LivenessC
     await new Promise((resolve) => setTimeout(resolve, 400));
     navigate();
   }, []);
-
-  // Report errors to the parent after the camera has settled (parent usually
-  // navigates on error, which unmounts this component).
-  const reportError = useCallback(async (message: string) => {
-    await settleCameraThen(() => onError(message));
-  }, [onError, settleCameraThen]);
 
   // Begin step when challenge phase starts or step advances
   useEffect(() => {
@@ -222,11 +245,14 @@ export function LivenessCamera({ mode, personId, onSuccess, onError }: LivenessC
         data: err?.config?.data,
         contentType: err?.config?.headers?.['Content-Type'] ?? err?.config?.headers?.get?.('Content-Type'),
       }));
-      reportError(err?.message ?? 'Liveness step rejected');
+      // Fail in place — leaves 'challenging' so the frame processor stops
+      // resubmitting evidence (the old navigation path left the phase
+      // unchanged and caused a 429 resubmission storm).
+      failWithCooldown(err, 'Liveness step rejected');
     } finally {
       submittingRef.current = false;
     }
-  }, [liveness, onError]);
+  }, [liveness, failWithCooldown]);
 
   // Create a runOnJS wrapper for the face sample handler.
   // IMPORTANT: runOnJS(fn) binds fn at creation time — passing onFaceSample directly
@@ -294,7 +320,7 @@ export function LivenessCamera({ mode, personId, onSuccess, onError }: LivenessC
 
       if (!photoFile) {
         console.error('[Liveness] capturePhotoToFile returned null');
-        reportError('Failed to capture photo');
+        failWithCooldown(new Error('Failed to capture photo'), 'Failed to capture photo');
         return;
       }
       console.log('[Liveness] Photo captured:', photoFile.filePath);
@@ -315,7 +341,9 @@ export function LivenessCamera({ mode, personId, onSuccess, onError }: LivenessC
 
       if (result.status !== 'passed') {
         console.error('[Liveness] Finalize not passed:', result.status, result.message);
-        reportError(result.message || 'Liveness verification failed');
+        // finalize() already flipped the phase to 'failed' — just set the
+        // retry cooldown and stay in place (no navigation).
+        setCooldownLeft(3);
         return;
       }
 
@@ -341,11 +369,11 @@ export function LivenessCamera({ mode, personId, onSuccess, onError }: LivenessC
       await settleCameraThen(onSuccess);
     } catch (err: any) {
       console.error('[Liveness] captureAndFinalize ERROR:', err?.message, err?.response?.data ? JSON.stringify(err.response.data) : '', err?.stack);
-      reportError(err?.message ?? 'Face enrollment failed');
+      failWithCooldown(err, 'Face enrollment failed');
     } finally {
       setCapturing(false);
     }
-  }, [capturing, liveness, mode, personId, enrollFace, updateFace, dispatch, onSuccess, onError, photoOutput]);
+  }, [capturing, liveness, mode, personId, enrollFace, updateFace, dispatch, onSuccess, failWithCooldown, photoOutput]);
 
   // Auto-finalize when phase becomes 'finalizing'
   useEffect(() => {
@@ -406,15 +434,22 @@ export function LivenessCamera({ mode, personId, onSuccess, onError }: LivenessC
     );
   }
 
-  // Error state
+  // Error state — friendly message (from toApiError) + retry cooldown so a
+  // 429 isn't hammered (each immediate retry burns more rate-limit quota).
   if (liveness.phase === 'failed') {
     return (
       <SafeAreaView className="flex-1 items-center justify-center bg-[#F8FBFF]" edges={['top', 'bottom']}>
         <Text className="mb-4 text-center text-[16px] text-[#111827] px-6">{liveness.error ?? 'Liveness check failed'}</Text>
         <Pressable
           onPress={() => liveness.reset()}
-          className="rounded-btn bg-primary px-6 py-3">
-          <Text className="text-[14px] font-bold text-white">Try Again</Text>
+          disabled={cooldownLeft > 0}
+          accessibilityRole="button"
+          accessibilityLabel="Try liveness check again"
+          accessibilityState={{ disabled: cooldownLeft > 0 }}
+          className={`rounded-btn bg-primary px-6 py-3 ${cooldownLeft > 0 ? 'opacity-50' : 'active:opacity-80'}`}>
+          <Text className="text-[14px] font-bold text-white">
+            {cooldownLeft > 0 ? `Try Again in ${cooldownLeft}s` : 'Try Again'}
+          </Text>
         </Pressable>
       </SafeAreaView>
     );
