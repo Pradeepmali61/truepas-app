@@ -1,41 +1,49 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
+import { Eye, EyeOff, Lock } from 'lucide-react-native';
 import { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, View } from 'react-native';
 
+import { toApiError } from '@/api/errors';
+import { FormField, Alert as InlineAlert, ScreenHeader } from '@/components/composite';
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
-import { ScreenHeader } from '@/components/layout/ScreenHeader';
-import { Button, FloatingInput, Icon } from '@/components/ui';
+import { Button, Input } from '@/components/ui';
 import { useChangePassword } from '@/features/auth/mutations';
 import { sessionEnded } from '@/features/auth/slice';
 import { useAppDispatch } from '@/store';
+import { useThemeTokens } from '@/theme';
+import { iconSize } from '@/theme/tokens';
 
-/** Eye toggle matching the login page pattern. */
-function PasswordEye({ visible, onToggle }: { visible: boolean; onToggle: () => void }) {
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={visible ? 'Hide password' : 'Show password'}
-      onPress={onToggle}
-      className="h-9 w-9 items-center justify-center">
-      <Icon name={visible ? 'eyeClosed' : 'eye'} size={20} color="#999" />
-    </Pressable>
-  );
-}
-
-/** Change Password — verify current, enter new password. */
+/**
+ * Change password — POST /auth/change-password { currentPassword, newPassword }.
+ * Success revokes refresh sessions and the current access token, so local
+ * state is cleared and the user is returned to login.
+ */
 export default function ChangePasswordScreen() {
   const router = useRouter();
   const dispatch = useAppDispatch();
   const queryClient = useQueryClient();
+  const theme = useThemeTokens();
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [error, setError] = useState('');
   const [showCurrent, setShowCurrent] = useState(false);
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [error, setError] = useState('');
   const changePassword = useChangePassword();
+
+  const eye = (visible: boolean, toggle: () => void) => (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={visible ? 'Hide password' : 'Show password'}
+      onPress={toggle}
+      hitSlop={8}>
+      {visible
+        ? <EyeOff size={iconSize.sm} color={theme.colors.textMuted} />
+        : <Eye size={iconSize.sm} color={theme.colors.textMuted} />}
+    </Pressable>
+  );
 
   const handleChange = async () => {
     if (!currentPassword || !newPassword || !confirmPassword) {
@@ -53,62 +61,83 @@ export default function ChangePasswordScreen() {
     setError('');
     try {
       await changePassword.mutateAsync({ currentPassword, newPassword });
-      // Contract: change-password revokes refresh sessions and the current
-      // access token becomes stale. Clear local state and send to login.
+      // Contract: success revokes refresh sessions and the current access
+      // token — clear local state and send the user back to login.
       queryClient.clear();
       dispatch(sessionEnded());
       Alert.alert('Success', 'Your password has been updated. Please log in again.', [
         { text: 'OK', onPress: () => router.replace('/(auth)/login') },
       ]);
     } catch (err: any) {
-      setError(err?.message ?? 'Could not update password. Please try again.');
+      setError(toApiError(err).message || 'Could not update password. Please try again.');
     }
   };
 
   return (
-    <ScreenContainer scroll={false}>
-      <ScreenHeader title="Change Password" />
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1 }} showsVerticalScrollIndicator={false}>
-          <View style={{ flexGrow: 1, paddingHorizontal: 24, paddingTop: 16 }}>
-            <Text style={{ fontSize: 14, color: '#6B7280', marginBottom: 20, textAlign: 'center' }}>
-              Enter your current password and choose a new one.
-            </Text>
+    <ScreenContainer scroll={false} background={false}>
+      <ScreenHeader title="Change password" onBack={router.back} />
+      <ScrollView
+        contentContainerStyle={{ padding: theme.spacing[4], paddingTop: theme.spacing[6], gap: theme.spacing[4] }}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}>
+        <FormField label="Current password" required error={error || undefined}>
+          <Input
+            value={currentPassword}
+            onChangeText={setCurrentPassword}
+            placeholder="Current password"
+            secureTextEntry={!showCurrent}
+            autoCapitalize="none"
+            autoCorrect={false}
+            iconLeft={<Lock size={iconSize.sm} color={theme.colors.textMuted} />}
+            iconRight={eye(showCurrent, () => setShowCurrent((v) => !v))}
+          />
+        </FormField>
 
-            <FloatingInput
-              label="Current Password"
-              value={currentPassword}
-              onChangeText={setCurrentPassword}
-              secureTextEntry={!showCurrent}
-              rightSlot={<PasswordEye visible={showCurrent} onToggle={() => setShowCurrent((v) => !v)} />}
-            />
-            <FloatingInput
-              label="New Password"
-              value={newPassword}
-              onChangeText={setNewPassword}
-              secureTextEntry={!showNew}
-              rightSlot={<PasswordEye visible={showNew} onToggle={() => setShowNew((v) => !v)} />}
-            />
-            <FloatingInput
-              label="Confirm New Password"
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-              secureTextEntry={!showConfirm}
-              rightSlot={<PasswordEye visible={showConfirm} onToggle={() => setShowConfirm((v) => !v)} />}
-            />
+        <FormField label="New password" required helperText="8+ characters, one number, one symbol.">
+          <Input
+            value={newPassword}
+            onChangeText={setNewPassword}
+            placeholder="New password"
+            secureTextEntry={!showNew}
+            autoCapitalize="none"
+            autoCorrect={false}
+            iconLeft={<Lock size={iconSize.sm} color={theme.colors.textMuted} />}
+            iconRight={eye(showNew, () => setShowNew((v) => !v))}
+          />
+        </FormField>
 
-            {error ? (
-              <Text style={{ fontSize: 13, color: '#EF4444', marginTop: 8, textAlign: 'center' }}>
-                {error}
-              </Text>
-            ) : null}
+        <FormField label="Confirm new password" required>
+          <Input
+            value={confirmPassword}
+            onChangeText={setConfirmPassword}
+            placeholder="Repeat password"
+            secureTextEntry={!showConfirm}
+            autoCapitalize="none"
+            autoCorrect={false}
+            iconLeft={<Lock size={iconSize.sm} color={theme.colors.textMuted} />}
+            iconRight={eye(showConfirm, () => setShowConfirm((v) => !v))}
+          />
+        </FormField>
 
-            <View style={{ paddingTop: 16, paddingBottom: 24 }}>
-              <Button label="Update Password" onPress={handleChange} loading={changePassword.isPending} />
-            </View>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+        <InlineAlert variant="warning" title="You'll be signed out">
+          All sessions end when the password changes. Sign in again afterwards.
+        </InlineAlert>
+      </ScrollView>
+
+      <View
+        style={{
+          padding: theme.spacing[4],
+          borderTopWidth: theme.sizes.fieldBorderWidth,
+          borderTopColor: theme.colors.borderSubtle,
+          backgroundColor: theme.colors.surface,
+        }}>
+        <Button
+          label="Update password"
+          size="lg"
+          loading={changePassword.isPending}
+          onPress={handleChange}
+        />
+      </View>
     </ScreenContainer>
   );
 }
