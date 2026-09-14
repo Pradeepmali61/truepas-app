@@ -99,7 +99,6 @@ const GROUPS: { title: string; screens: ScreenEntry[] }[] = [
     title: 'ACCOUNT & LEGAL',
     screens: [
       { label: 'Delete account — warning', route: '/account/delete', preset: 'auth-face' },
-      { label: 'Delete account — confirm', route: '/account/delete/confirm', preset: 'auth-face' },
       { label: 'Delete account — processing', route: '/account/delete/processing', preset: 'auth-face' },
       { label: 'Delete account — success', route: '/account/delete/success', preset: 'auth-face' },
       { label: 'Data & privacy', route: '/legal/data-privacy', preset: 'auth-face' },
