@@ -60,8 +60,8 @@ export default function DeleteSuccessScreen() {
             queryClient.clear();
             dispatch(sessionEnded());
             // Session is gone — the entry gate won't re-render, so navigate
-            // explicitly to the auth flow.
-            router.dismissTo('/(auth)/welcome' as never);
+            // explicitly to the login screen.
+            router.dismissTo('/(auth)/login' as never);
           }}
         />
       </View>

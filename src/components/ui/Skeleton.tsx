@@ -1,74 +1,81 @@
-import { useEffect, useState } from 'react';
-import { AccessibilityInfo, View } from 'react-native';
-import Animated, {
-    useAnimatedStyle,
-    useSharedValue,
-    withRepeat,
-    withTiming,
-} from 'react-native-reanimated';
+import { useEffect, useRef } from "react";
+import { Animated, View, type StyleProp, type ViewStyle } from "react-native";
+import { makeStyles } from "../../theme";
 
-interface SkeletonProps {
-  width?: number | `${number}%`;
+export interface SkeletonProps {
+  variant?: "rect" | "text" | "circle";
+  width?: number | string;
   height?: number;
+  lines?: number;
+  /** Optional border radius override (dp). */
   radius?: number;
-  className?: string;
+  style?: StyleProp<ViewStyle>;
 }
 
-export function Skeleton({ width = '100%', height = 16, radius = 8, className = '' }: SkeletonProps) {
-  const [reducedMotion, setReducedMotion] = useState(false);
-  const translateX = useSharedValue(-width.valueOf());
-  const opacity = useSharedValue(0.4);
-
+function usePulse() {
+  const opacity = useRef(new Animated.Value(1)).current;
   useEffect(() => {
-    AccessibilityInfo.isReduceMotionEnabled().then(setReducedMotion);
-    const sub = AccessibilityInfo.addEventListener('reduceMotionChanged', setReducedMotion);
-    return () => sub.remove();
-  }, []);
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(opacity, { toValue: 0.45, duration: 700, useNativeDriver: true }),
+        Animated.timing(opacity, { toValue: 1, duration: 700, useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [opacity]);
+  return opacity;
+}
 
-  useEffect(() => {
-    if (reducedMotion) {
-      opacity.value = withRepeat(withTiming(1, { duration: 700 }), -1, true);
-    } else {
-      const w = typeof width === 'number' ? width : 200;
-      translateX.value = withRepeat(withTiming(w, { duration: 1000 }), -1, false);
-    }
-  }, [reducedMotion, width, translateX, opacity]);
+export function Skeleton({ variant = "rect", width, height, lines = 1, radius, style }: SkeletonProps) {
+  const styles = useStyles();
+  const opacity = usePulse();
 
-  const shimmerStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: translateX.value }],
-  }));
-
-  const pulseStyle = useAnimatedStyle(() => ({ opacity: opacity.value }));
-
-  if (reducedMotion) {
+  if (variant === "text" && lines > 1) {
     return (
-      <Animated.View
-        accessibilityLabel="Loading"
-        className={`bg-canvas ${className}`}
-        style={[{ width, height, borderRadius: radius }, pulseStyle]}
-      />
+      <View style={styles.group} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+        {Array.from({ length: lines }, (_, i) => (
+          <Bone
+            key={i}
+            opacity={opacity}
+            style={[styles.text, { width: i === lines - 1 ? "75%" : "100%" }]}
+          />
+        ))}
+      </View>
     );
   }
 
-  const w = typeof width === 'number' ? width : 200;
-
   return (
-    <View
-      accessibilityLabel="Loading"
-      className={`bg-canvas ${className}`}
-      style={{ width, height, borderRadius: radius, overflow: 'hidden' }}>
-      <Animated.View
-        style={[
-          {
-            position: 'absolute',
-            top: 0,
-            bottom: 0,
-            width: w * 0.5,
-            backgroundColor: 'rgba(255,255,255,0.15)',
-          },
-          shimmerStyle,
-        ]}
-      />
-    </View>
+    <Bone
+      opacity={opacity}
+      style={[
+        variant === "circle" && styles.circle,
+        variant === "text" && styles.text,
+        variant === "rect" && styles.rect,
+        width != null && { width } as ViewStyle,
+        height != null && { height },
+        radius != null && { borderRadius: radius },
+        style,
+      ]}
+    />
   );
 }
+
+function Bone({ opacity, style }: { opacity: Animated.Value; style: StyleProp<ViewStyle> }) {
+  const styles = useStyles();
+  return (
+    <Animated.View
+      style={[styles.bone, style, { opacity }]}
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+    />
+  );
+}
+
+const useStyles = makeStyles((t) => ({
+  bone: { backgroundColor: t.colors.surfaceSunken },
+  rect: { borderRadius: t.radii.md, minHeight: 16 },
+  text: { borderRadius: t.radii.sm, height: 12 },
+  circle: { borderRadius: t.radii.full, width: 40, height: 40 },
+  group: { gap: t.spacing[2] },
+}));

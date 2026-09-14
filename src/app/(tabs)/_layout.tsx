@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Animated, LayoutChangeEvent, Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Icon } from '@/components/ui/Icon';
+import { Icon } from '@/components/ui';
 import { Colors } from '@/constants/theme';
 import { useAppSelector } from '@/store';
 
@@ -105,7 +105,7 @@ function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
           indicatorStyle,
         ]}
       />
-      {state.routes.map((route, index) => {
+      {state.routes.map((route: typeof state.routes[number], index: number) => {
         const { options } = descriptors[route.key];
         const isFocused = state.index === index;
         const label = (options.tabBarLabel as string) ?? (options.title as string) ?? route.name;
@@ -142,28 +142,28 @@ export default function TabsLayout() {
         name="index"
         options={{
           title: 'Home',
-          tabBarIcon: ({ color, size }) => <Icon name="identity" size={size} color={color} />,
+          tabBarIcon: ({ color, size }) => <Icon name="identity" size={size} color={color as string} />,
         }}
       />
       <Tabs.Screen
         name="documents"
         options={{
           title: 'Documents',
-          tabBarIcon: ({ color, size }) => <Icon name="documents" size={size} color={color} />,
+          tabBarIcon: ({ color, size }) => <Icon name="documents" size={size} color={color as string} />,
         }}
       />
       <Tabs.Screen
         name="family"
         options={{
           title: 'Family',
-          tabBarIcon: ({ color, size }) => <Icon name="family" size={size} color={color} />,
+          tabBarIcon: ({ color, size }) => <Icon name="family" size={size} color={color as string} />,
         }}
       />
       <Tabs.Screen
         name="history"
         options={{
           title: 'History',
-          tabBarIcon: ({ color, size }) => <Icon name="history" size={size} color={color} />,
+          tabBarIcon: ({ color, size }) => <Icon name="history" size={size} color={color as string} />,
         }}
       />
     </Tabs>

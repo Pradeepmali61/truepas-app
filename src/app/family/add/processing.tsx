@@ -3,13 +3,14 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-native';
 
+import { api } from '@/api';
 import { AppBackground } from '@/components/layout/AppBackground';
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
 import { Button, Icon } from '@/components/ui';
 import { Colors } from '@/constants/theme';
 import { useAddDocument } from '@/features/documents/hooks';
 import { useAddFamilyMember } from '@/features/family/hooks';
-import { saveDocumentImages } from '@/services/documentImageStore';
+import { clearDocumentImages, saveDocumentImages } from '@/services/documentImageStore';
 import { clearScanResult, getScanResult } from '@/services/scanStore';
 import type { DocumentType } from '@/types/domain';
 
@@ -71,6 +72,26 @@ export default function FamilyProcessingScreen() {
           personId,
         });
         console.log('[FamilyAdd] Document created:', JSON.stringify({ id: doc.id, personId: doc.personId, type: doc.type, label: doc.label }));
+        // Facepe-style REPLACE: the member's previous document of this type
+        // is superseded by the new capture — remove the old one so duplicate
+        // scans don't pile up in the member's document list.
+        try {
+          const existing = await api.getDocuments(personId);
+          const duplicates = (existing ?? []).filter(
+            (d) => d.type === docType && d.id !== doc.id,
+          );
+          for (const dup of duplicates) {
+            try {
+              await api.removeDocument(dup.id);
+              await clearDocumentImages(dup.id);
+              console.log('[FamilyAdd] Replaced existing member document:', dup.id, dup.type);
+            } catch (e) {
+              console.warn('[FamilyAdd] Failed to remove duplicate:', dup.id, e);
+            }
+          }
+        } catch (e) {
+          console.warn('[FamilyAdd] Replace lookup failed — keeping existing documents:', e);
+        }
         // Persist captured image locally so it can be shown in document detail
         try {
           await saveDocumentImages(doc.id, {

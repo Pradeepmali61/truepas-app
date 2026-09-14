@@ -7,7 +7,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppBackground } from '@/components/layout/AppBackground';
 import { ScreenHeader } from '@/components/layout/ScreenHeader';
 import { Icon, Skeleton } from '@/components/ui';
-import { DUMMY_PAST_TRIP, DUMMY_TRIP } from '@/constants/dummyTrip';
 import { Colors, Elevation, Gradients } from '@/constants/theme';
 import { useBooking } from '@/features/history/hooks';
 
@@ -21,10 +20,7 @@ const BOOKING_IMAGES: Record<string, any> = {
 export default function BookingDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data: booking, isPending } = useBooking(id);
-  // Dummy trips live only in the UI layer — resolve them from shared constants
-  const resolvedBooking =
-    booking ??
-    (id === DUMMY_TRIP.id ? DUMMY_TRIP : id === DUMMY_PAST_TRIP.id ? DUMMY_PAST_TRIP : null);
+  const resolvedBooking = booking;
   const [docsExpanded, setDocsExpanded] = useState(false);
   const [membersExpanded, setMembersExpanded] = useState(false);
 

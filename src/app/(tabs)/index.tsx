@@ -2,12 +2,10 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Dimensions, FlatList, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import Animated, { Easing as REasing, useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
+import Animated, { Easing as REasing, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Icon, Skeleton } from '@/components/ui';
-import { DocIllustration } from '@/components/ui/DocIllustration';
-import { DUMMY_PAST_TRIP, DUMMY_TRIP } from '@/constants/dummyTrip';
+import { Icon } from '@/components/ui';
 import { Colors, Elevation } from '@/constants/theme';
 import { useDocuments } from '@/features/documents/hooks';
 import { useBookings } from '@/features/history/hooks';
@@ -42,60 +40,6 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
 });
-
-function DocCard({ doc, onPress, width }: { doc: IdentityDocument; onPress: () => void; width?: number }) {
-  const scale = useSharedValue(1);
-  const pressed = useSharedValue(0);
-  const accent = DOC_ACCENT[doc.type];
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
-  const shadowStyle = useAnimatedStyle(() => ({
-    elevation: pressed.value * 4 + 2,
-    shadowColor: '#000',
-    shadowOpacity: 0.04 + pressed.value * 0.06,
-    shadowRadius: 8 + pressed.value * 8,
-    shadowOffset: { width: 0, height: 2 + pressed.value * 4 },
-  }));
-
-  const onPressIn = () => {
-    scale.value = withSpring(0.98, { stiffness: 400, damping: 25 });
-    pressed.value = withSpring(1, { stiffness: 400, damping: 25 });
-  };
-  const onPressOut = () => {
-    scale.value = withSpring(1, { stiffness: 400, damping: 25 });
-    pressed.value = withSpring(0, { stiffness: 400, damping: 25 });
-  };
-
-  const statusLabel = doc.status === 'verified' ? 'Valid' : 'Failed';
-  const statusColor = doc.status === 'verified' ? '#059669' : '#EF4444';
-  const statusBg = doc.status === 'verified' ? '#ECFDF5' : '#FEF2F2';
-
-  return (
-    <Pressable
-      onPress={onPress}
-      onPressIn={onPressIn}
-      onPressOut={onPressOut}
-      accessibilityRole="button"
-      accessibilityLabel={doc.label}
-      style={{ width, marginHorizontal: 6, marginVertical: 8 }}>
-      <Animated.View style={[{ width: '100%' }, animatedStyle]}>
-        <Animated.View
-          style={{
-            backgroundColor: '#FFFFFF',
-            borderRadius: 20,
-            flexDirection: 'column',
-            paddingHorizontal: 14,
-            paddingVertical: 10,
-            ...shadowStyle,
-          }}>
-
-          <DocIllustration type={doc.type} />
-        </Animated.View>
-      </Animated.View>
-    </Pressable>
-  );
-}
 
 function SearchResultRow({ doc, onPress }: { doc: IdentityDocument; onPress: () => void }) {
   const accent = DOC_ACCENT[doc.type];
@@ -190,10 +134,10 @@ function ProgressDot({ active, index }: { active: boolean; index: number }) {
   );
 }
 
-/** Identity tab — document list (mockup: "Identity Tab — Document List"). */
+/** Identity tab â€” document list (mockup: "Identity Tab â€” Document List"). */
 export default function IdentityScreen() {
   const router = useRouter();
-  const { data: documents, isPending, isRefetching, isError, refetch } = useDocuments();
+  const { data: documents, isPending, isError } = useDocuments();
   const { data: bookings } = useBookings();
   const { url: profilePictureUrl } = useProfilePicture();
   const user = useAppSelector((state) => state.auth.user);
@@ -261,7 +205,9 @@ export default function IdentityScreen() {
         </Pressable>
       </View>
 
-      <Image source={require('@/assets/images/background2.png')} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100%', opacity: 0.12 }} resizeMode="cover" pointerEvents="none" />
+      <View pointerEvents="none" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
+        <Image source={require('@/assets/images/background2.png')} style={{ width: '100%', height: '100%', opacity: 0.12 }} resizeMode="cover" />
+      </View>
 
       <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 240 }} pointerEvents="none">
         <LinearGradient
@@ -306,7 +252,7 @@ export default function IdentityScreen() {
         <View style={{ paddingHorizontal: 20 }}>
           {isPending ? (
             <Text style={{ paddingTop: 24, textAlign: 'center', fontSize: 13, color: Colors.textFaint }}>
-              Loading documents…
+              Loading documentsâ€¦
             </Text>
           ) : isError ? (
             <Text style={{ paddingTop: 24, textAlign: 'center', fontSize: 13, color: '#EF4444' }}>
@@ -341,19 +287,32 @@ export default function IdentityScreen() {
       </View>
 
       {(() => {
-        // Real upcoming bookings + the always-present dummy trip at the end
-        const upcoming = [...(bookings ?? []).filter((b) => b.status === 'upcoming'), DUMMY_TRIP];
+        // Real upcoming bookings only â€” no dummy filler
+        const upcoming = (bookings ?? []).filter((b) => b.status === 'upcoming');
+        if (upcoming.length === 0) {
+          return (
+            <View style={{ paddingHorizontal: 20 }}>
+              <View style={{
+                backgroundColor: '#FFFFFF',
+                borderRadius: 16,
+                paddingVertical: 18,
+                alignItems: 'center',
+                ...Elevation.small,
+              }}>
+                <Text style={{ fontSize: 13, color: Colors.textMuted }}>
+                  No upcoming trips yet.
+                </Text>
+              </View>
+            </View>
+          );
+        }
         return (
           <View style={{ paddingHorizontal: 20 }}>
             {upcoming.map((booking) => (
               <TripCard
                 key={booking.id}
                 booking={booking}
-                onPress={
-                  booking.id === DUMMY_TRIP.id
-                    ? () => router.push({ pathname: '/(tabs)/history', params: { tab: 'upcoming' } } as never)
-                    : () => router.push(`/booking/${booking.id}` as never)
-                }
+                onPress={() => router.push(`/booking/${booking.id}` as never)}
               />
             ))}
           </View>
@@ -412,29 +371,23 @@ export default function IdentityScreen() {
           </View>
         </View>
 
-        {/* Recent trips — most recent completed trip only */}
-        <View style={{ marginTop: 24, paddingHorizontal: 20 }}>
-          <Text style={{ fontSize: 18, fontWeight: '700', color: Colors.ink, marginBottom: 12 }}>Recent Trips</Text>
-          {(() => {
-            // Most recent completed trip — falls back to the always-present
-            // dummy past trip when the user has no real completed bookings.
-            const recent = (bookings ?? [])
-              .filter((b) => b.status === 'completed')
-              .sort((a, b) => new Date(b.checkOut).getTime() - new Date(a.checkOut).getTime())
-              .slice(0, 1);
-            const booking = recent[0] ?? DUMMY_PAST_TRIP;
-            return (
+        {/* Recent trips â€” most recent completed trip only (hidden when none) */}
+        {(() => {
+          const recent = (bookings ?? [])
+            .filter((b) => b.status === 'completed')
+            .sort((a, b) => new Date(b.checkOut).getTime() - new Date(a.checkOut).getTime())
+            .slice(0, 1);
+          if (recent.length === 0) return null;
+          return (
+            <View style={{ marginTop: 24, paddingHorizontal: 20 }}>
+              <Text style={{ fontSize: 18, fontWeight: '700', color: Colors.ink, marginBottom: 12 }}>Recent Trips</Text>
               <TripCard
-                booking={booking}
-                onPress={
-                  booking.id === DUMMY_PAST_TRIP.id
-                    ? () => router.push({ pathname: '/(tabs)/history', params: { tab: 'past' } } as never)
-                    : () => router.push(`/booking/${booking.id}` as never)
-                }
+                booking={recent[0]}
+                onPress={() => router.push(`/booking/${recent[0].id}` as never)}
               />
-            );
-          })()}
-        </View>
+            </View>
+          );
+        })()}
       </>
       )}
       </ScrollView>
@@ -480,7 +433,7 @@ function TripCard({ booking, onPress }: { booking: Booking; onPress: () => void 
           {booking.venue}
         </Text>
         <Text allowFontScaling={false} style={{ fontSize: fontScale(12), fontWeight: '400', color: '#6B7280', marginTop: 2 }} numberOfLines={1}>
-          {booking.location} · {booking.checkIn}–{booking.checkOut}
+          {booking.location} Â· {booking.checkIn}â€“{booking.checkOut}
         </Text>
       </View>
       <Icon name="chevron" size={scale(16, 14)} color={Colors.textFaint} />
@@ -488,124 +441,3 @@ function TripCard({ booking, onPress }: { booking: Booking; onPress: () => void 
   );
 }
 
-function DocCardSkeleton() {
-  return (
-    <View style={{ width: '100%', backgroundColor: '#FFFFFF', borderRadius: 20, paddingHorizontal: 14, paddingVertical: 10, gap: 8 }}>
-      <Skeleton width={'100%'} height={130} radius={12} />
-      <Skeleton width={120} height={15} radius={4} />
-      <Skeleton width={80} height={12} radius={4} />
-    </View>
-  );
-}
-
-function timeAgo(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const days = Math.floor(diff / 86400000);
-  if (days <= 0) return 'Today';
-  if (days === 1) return 'Yesterday';
-  if (days < 7) return `${days} days ago`;
-  if (days < 30) return `${Math.floor(days / 7)}w ago`;
-  return `${Math.floor(days / 30)}mo ago`;
-}
-
-function RecentActivity({ documents }: { documents: IdentityDocument[] }) {
-  const sorted = useMemo(() => {
-    return [...documents].sort((a, b) => new Date(b.addedAt).getTime() - new Date(a.addedAt).getTime()).slice(0, 3);
-  }, [documents]);
-
-  const expiringSoon = useMemo(() => {
-    const now = Date.now();
-    const sixMonths = now + 1000 * 60 * 60 * 24 * 180;
-    return documents
-      .filter((d) => d.expiresAt && new Date(d.expiresAt).getTime() <= sixMonths && new Date(d.expiresAt).getTime() > now)
-      .sort((a, b) => new Date(a.expiresAt!).getTime() - new Date(b.expiresAt!).getTime());
-  }, [documents]);
-
-  if (sorted.length === 0 && expiringSoon.length === 0) return null;
-
-  return (
-    <View style={{ gap: 12 }}>
-      {/* Expiring soon alert */}
-      {expiringSoon.length > 0 && (
-        <View style={{
-          backgroundColor: '#FFFBEB',
-          borderRadius: 14,
-          paddingHorizontal: 14,
-          paddingVertical: 12,
-          borderWidth: 1,
-          borderColor: '#FDE68A',
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: 10,
-        }}>
-          <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: '#FEF3C7', alignItems: 'center', justifyContent: 'center' }}>
-            <Icon name="warning" size={16} color="#D97706" />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 14, fontWeight: '600', color: '#92400E' }}>
-              {expiringSoon.length === 1 ? `${expiringSoon[0].label} expires soon` : `${expiringSoon.length} documents expiring soon`}
-            </Text>
-            {expiringSoon[0].expiresAt && (
-              <Text style={{ fontSize: 12, fontWeight: '400', color: '#B45309', marginTop: 1 }}>
-                Next: {new Date(expiringSoon[0].expiresAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-              </Text>
-            )}
-          </View>
-        </View>
-      )}
-
-      {/* Recent activity feed */}
-      {sorted.length > 0 && (
-        <View style={{ gap: 8 }}>
-          <Text style={{ fontSize: 14, fontWeight: '600', color: '#374151', marginBottom: 2 }}>
-            Recent activity
-          </Text>
-          {sorted.map((doc) => (
-            <View key={doc.id} style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 10,
-              backgroundColor: '#FFFFFF',
-              borderRadius: 12,
-              paddingHorizontal: 12,
-              paddingVertical: 10,
-              borderWidth: 1,
-              borderColor: '#F1F5F9',
-            }}>
-              <View style={{
-                width: 40, height: 40, borderRadius: 12,
-                backgroundColor: DOC_ACCENT[doc.type].bg,
-                alignItems: 'center', justifyContent: 'center',
-                borderWidth: 1,
-                borderColor: DOC_ACCENT[doc.type].icon + '18',
-              }}>
-                {doc.type === 'drivingLicense' ? (
-                  <Image source={require('../../../assets/images/car-simple.png')} style={{ width: 30, height: 30 }} resizeMode="contain" />
-                ) : doc.type === 'passport' ? (
-                  <Image source={require('../../../assets/images/passport-simple.png')} style={{ width: 30, height: 30 }} resizeMode="contain" />
-                ) : doc.type === 'greenCard' ? (
-                  <Image source={require('../../../assets/images/liberty-simple.png')} style={{ width: 30, height: 30 }} resizeMode="contain" />
-                ) : doc.type === 'usVisa' ? (
-                  <Image source={require('../../../assets/images/usa-simple.png')} style={{ width: 30, height: 30 }} resizeMode="contain" />
-                ) : doc.type === 'birthCertificate' ? (
-                  <Image source={require('../../../assets/images/baby-simple.png')} style={{ width: 30, height: 30 }} resizeMode="contain" />
-                ) : (
-                  <Icon name={doc.type} size={20} color={DOC_ACCENT[doc.type].icon} />
-                )}
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 13, fontWeight: '500', color: '#111827' }} numberOfLines={1}>
-                  {doc.label} scanned
-                </Text>
-                <Text style={{ fontSize: 12, fontWeight: '400', color: '#9CA3AF' }}>
-                  {timeAgo(doc.addedAt)}
-                </Text>
-              </View>
-              <Icon name="check" size={14} color="#059669" />
-            </View>
-          ))}
-        </View>
-      )}
-    </View>
-  );
-}

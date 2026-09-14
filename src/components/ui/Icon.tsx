@@ -1,101 +1,30 @@
-import React from 'react';
-import { Image, ImageSourcePropType, View } from 'react-native';
-import Svg from 'react-native-svg';
+import { cloneElement, isValidElement, type ReactElement, type ReactNode } from "react";
+import type { SvgProps } from "react-native-svg";
+import { useThemeTokens } from "../../theme";
 
-import * as IconPaths from './iconPaths';
+export type IconSize = "xs" | "sm" | "md" | "lg" | "xl";
 
-
-/**
- * Central icon registry — SVG-based.
- * All SVGs use the `color` prop to control stroke color.
- */
-
-export type IconName =
-  | 'identity'
-  | 'documents'
-  | 'family'
-  | 'history'
-  | 'back'
-  | 'bell'
-  | 'settings'
-  | 'camera'
-  | 'face'
-  | 'shield'
-  | 'lock'
-  | 'check'
-  | 'checkCircle'
-  | 'cross'
-  | 'warning'
-  | 'info'
-  | 'calendar'
-  | 'cake'
-  | 'trash'
-  | 'clock'
-  | 'search'
-  | 'plus'
-  | 'chevron'
-  | 'chevronDown'
-  | 'document'
-  | 'passport'
-  | 'drivingLicense'
-  | 'idCard'
-  | 'greenCard'
-  | 'birthCertificate'
-  | 'usVisa'
-  | 'selfie'
-  | 'smartphone'
-  | 'phone'
-  | 'email'
-  | 'eye'
-  | 'eyeClosed'
-  | 'edit'
-  | 'logout'
-  | 'hotel'
-  | 'invoice'
-  | 'qr'
-  | 'sparkle'
-  | 'hourglass'
-  | 'location'
-  | 'otpcode'
-  | 'inbox'
-  | 'scanFace'
-  | 'user'
-  | 'more';
-
-const IMAGE_SOURCES: Record<string, ImageSourcePropType> = {};
-
-interface IconProps {
-  name: IconName;
-  size?: number;
+export interface IconProps {
+  /** A lucide-react-native element, e.g. <Search /> */
+  children: ReactNode;
+  size?: IconSize;
   color?: string;
+  /** Set when the icon conveys meaning; decorative icons are hidden from AT */
   accessibilityLabel?: string;
 }
 
-export function Icon({ name, size = 22, color = '#000000', accessibilityLabel }: IconProps) {
-  const imageSource = IMAGE_SOURCES[name];
-  if (imageSource) {
-    return (
-      <View style={{ width: size, height: size, justifyContent: 'center', alignItems: 'center' }}>
-        <Image source={imageSource} style={{ width: size, height: size }} resizeMode="contain" />
-      </View>
-    );
-  }
-  const path = (IconPaths as Record<string, (c: string) => React.ReactNode>)[name];
-  if (path) {
-    return (
-      <View style={{ width: size, height: size, justifyContent: 'center', alignItems: 'center' }}>
-        <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-          {path(color)}
-        </Svg>
-      </View>
-    );
-  }
-  const fallback = IconPaths.check;
-  return (
-    <View style={{ width: size, height: size, justifyContent: 'center', alignItems: 'center' }}>
-      <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-        {fallback(color)}
-      </Svg>
-    </View>
-  );
+/** Normalizes icon sizing to the token scale and applies a11y attributes. */
+export function Icon({ children, size = "md", color, accessibilityLabel }: IconProps) {
+  const theme = useThemeTokens();
+  if (!isValidElement(children)) return null;
+  const px = theme.iconSize[size];
+  return cloneElement(children as ReactElement<SvgProps>, {
+    width: px,
+    height: px,
+    size: px,
+    color: color ?? theme.colors.textSecondary,
+    accessibilityLabel,
+    accessibilityElementsHidden: !accessibilityLabel,
+    importantForAccessibility: accessibilityLabel ? "yes" : "no-hide-descendants",
+  } as Partial<SvgProps>);
 }

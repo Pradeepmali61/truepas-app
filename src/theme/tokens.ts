@@ -1,0 +1,206 @@
+import type { TextStyle, ViewStyle } from "react-native";
+
+/**
+ * TRUEPAS UI NATIVE — DESIGN TOKENS (layer 2: non-color scales)
+ * Same scales as the web system (truepas-ui). Values are numbers —
+ * React Native consumes dp, not CSS lengths. Value types are widened
+ * (number/weight union) so ThemeProvider `tokens` overrides accept any value.
+ */
+
+export const spacing: Record<
+  "0" | "0.5" | "1" | "1.5" | "2" | "3" | "4" | "5" | "6" | "8" | "10" | "12" | "16" | "20",
+  number
+> = {
+  0: 0,
+  0.5: 2,
+  1: 4,
+  1.5: 6,
+  2: 8,
+  3: 12,
+  4: 16,
+  5: 20,
+  6: 24,
+  8: 32,
+  10: 40,
+  12: 48,
+  16: 64,
+  20: 80,
+};
+
+export const radii: Record<"none" | "sm" | "md" | "lg" | "xl" | "2xl" | "full", number> = {
+  none: 0,
+  sm: 4,
+  md: 6,
+  lg: 8,
+  xl: 12,
+  "2xl": 16,
+  full: 9999,
+};
+
+export const fontSize: Record<
+  "xs" | "sm" | "base" | "md" | "lg" | "xl" | "2xl" | "3xl" | "4xl",
+  number
+> = {
+  xs: 12,
+  sm: 13,
+  base: 14,
+  md: 16,
+  lg: 18,
+  xl: 20,
+  "2xl": 24,
+  "3xl": 30,
+  "4xl": 36,
+};
+
+export const lineHeight: Record<"tight" | "snug" | "normal" | "relaxed", number> = {
+  tight: 1.2,
+  snug: 1.35,
+  normal: 1.5,
+  relaxed: 1.65,
+};
+
+export const fontWeight: Record<
+  "regular" | "medium" | "semibold" | "bold",
+  NonNullable<TextStyle["fontWeight"]>
+> = {
+  regular: "400",
+  medium: "500",
+  semibold: "600",
+  bold: "700",
+};
+
+export const letterSpacing: Record<"tight" | "normal" | "wide" | "caps", number> = {
+  tight: -0.16,
+  normal: 0,
+  wide: 0.3,
+  caps: 0.9,
+};
+
+/**
+ * Font stacks — one family per weight so iOS/Android resolve the exact face
+ * (Inter for UI, JetBrains Mono for codes/amounts/IDs). The families below
+ * must be registered at runtime — see useTruepasFonts() in fonts.ts.
+ */
+export const fontFamily: Record<"sans" | "mono", Record<"regular" | "medium" | "semibold" | "bold", string>> = {
+  sans: {
+    regular: "Inter_400Regular",
+    medium: "Inter_500Medium",
+    semibold: "Inter_600SemiBold",
+    bold: "Inter_700Bold",
+  },
+  mono: {
+    regular: "JetBrainsMono_400Regular",
+    medium: "JetBrainsMono_500Medium",
+    semibold: "JetBrainsMono_600SemiBold",
+    bold: "JetBrainsMono_700Bold",
+  },
+};
+
+/** Component metrics — heights in dp */
+export const sizes: Record<
+  | "heightXs"
+  | "heightSm"
+  | "heightMd"
+  | "heightLg"
+  | "touchTarget"
+  | "controlPaddingXSm"
+  | "controlPaddingXMd"
+  | "controlPaddingXLg"
+  | "cardPadding"
+  | "sidebarWidth"
+  | "headerHeight"
+  | "fieldBorderWidth",
+  number
+> = {
+  heightXs: 28,
+  heightSm: 32,
+  heightMd: 40,
+  heightLg: 48,
+  touchTarget: 44,
+  controlPaddingXSm: 12,
+  controlPaddingXMd: 16,
+  controlPaddingXLg: 20,
+  cardPadding: 24,
+  sidebarWidth: 256,
+  headerHeight: 56,
+  fieldBorderWidth: 1,
+};
+
+export const iconSize: Record<"xs" | "sm" | "md" | "lg" | "xl", number> = {
+  xs: 12,
+  sm: 16,
+  md: 20,
+  lg: 24,
+  xl: 32,
+};
+
+type ShadowKey = "none" | "sm" | "md" | "lg" | "xl";
+
+/** Elevation presets — iOS shadows + Android elevation in one object */
+export const shadows: Record<ShadowKey, ViewStyle> = {
+  none: {},
+  sm: {
+    shadowColor: "#030712",
+    shadowOpacity: 0.06,
+    shadowRadius: 2,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 1,
+  },
+  md: {
+    shadowColor: "#030712",
+    shadowOpacity: 0.09,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
+  },
+  lg: {
+    shadowColor: "#030712",
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 8,
+  },
+  xl: {
+    shadowColor: "#030712",
+    shadowOpacity: 0.16,
+    shadowRadius: 24,
+    shadowOffset: { width: 0, height: 12 },
+    elevation: 16,
+  },
+};
+
+/** Dark variants (applied via theme.shadows — see themes.ts) */
+export const darkShadows: Record<ShadowKey, ViewStyle> = {
+  none: {},
+  sm: { shadowColor: "#000", shadowOpacity: 0.4, shadowRadius: 2, shadowOffset: { width: 0, height: 1 }, elevation: 1 },
+  md: { shadowColor: "#000", shadowOpacity: 0.5, shadowRadius: 4, shadowOffset: { width: 0, height: 2 }, elevation: 3 },
+  lg: { shadowColor: "#000", shadowOpacity: 0.55, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 8 },
+  xl: { shadowColor: "#000", shadowOpacity: 0.6, shadowRadius: 24, shadowOffset: { width: 0, height: 12 }, elevation: 16 },
+};
+
+export const duration: Record<"instant" | "fast" | "normal" | "slow", number> = {
+  instant: 75,
+  fast: 120,
+  normal: 200,
+  slow: 320,
+};
+
+export const zIndex: Record<
+  "base" | "sticky" | "header" | "drawer" | "modal" | "popover" | "toast",
+  number
+> = {
+  base: 0,
+  sticky: 100,
+  header: 200,
+  drawer: 400,
+  modal: 500,
+  popover: 600,
+  toast: 800,
+};
+
+export const opacity: Record<"disabled" | "muted" | "overlay" | "pressed", number> = {
+  disabled: 0.5,
+  muted: 0.7,
+  overlay: 0.5,
+  pressed: 0.85,
+};

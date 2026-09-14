@@ -35,6 +35,15 @@ const OPTIONS_0_4: DocOption[] = [
   { id: 'usVisa', label: 'US Visa', icon: 'usVisa' },
 ];
 
+// Adults can hold any document type, including driving license and ID card.
+const OPTIONS_18_PLUS: DocOption[] = [
+  { id: 'passport', label: 'Passport', icon: 'passport' },
+  { id: 'drivingLicense', label: "Driver's License", icon: 'drivingLicense' },
+  { id: 'greenCard', label: 'US Green Card', icon: 'greenCard' },
+  { id: 'usVisa', label: 'US Visa', icon: 'usVisa' },
+  { id: 'idCard', label: 'Identity Card', icon: 'idCard' },
+];
+
 /** Add family — step 2: document. 5-17 → doc + selfie + face; 0-4 → doc only (PRD). */
 export default function FamilyDocumentScreen() {
   const router = useRouter();
@@ -47,7 +56,7 @@ export default function FamilyDocumentScreen() {
   const isMinorWithFace = band !== '0-4';
   const firstName = (name ?? 'Member').split(' ')[0];
 
-  const docOptions = isMinorWithFace ? OPTIONS_5_17 : OPTIONS_0_4;
+  const docOptions = band === '18+' ? OPTIONS_18_PLUS : isMinorWithFace ? OPTIONS_5_17 : OPTIONS_0_4;
   const [selectedDocType, setSelectedDocType] = useState<DocOption>(docOptions[0]);
   const [pickerOpen, setPickerOpen] = useState(false);
 

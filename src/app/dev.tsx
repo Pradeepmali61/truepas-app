@@ -104,9 +104,23 @@ const GROUPS: { title: string; screens: ScreenEntry[] }[] = [
     ],
   },
   {
+    title: 'GFF DESIGN DEMO',
+    screens: [
+      { label: 'GFF — Sign in', route: '/demo/signin', preset: 'unauth' },
+      { label: 'GFF — OTP verify', route: '/demo/otp', preset: 'unauth' },
+      { label: 'GFF — Event home', route: '/demo/home', preset: 'unauth' },
+    ],
+  },
+  {
     title: 'NOTIFICATION',
     screens: [
       { label: 'Age-18 transition', route: '/notification/age-18', preset: 'auth-face' },
+    ],
+  },
+  {
+    title: 'UI SHOWCASE',
+    screens: [
+      { label: 'Truepas UI Native — component showcase', route: '/demo/ui', preset: 'auth-face' },
     ],
   },
 ];

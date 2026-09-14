@@ -1,7 +1,7 @@
-import { useRouter } from 'expo-router';
+﻿import { useRouter } from 'expo-router';
 import { Pressable, Text, View } from 'react-native';
 
-import { Icon } from '@/components/ui/Icon';
+import { Icon } from '@/components/ui';
 
 interface TopBarProps {
   title: string;
@@ -32,3 +32,4 @@ export function TopBar({ title, showBack = true, rightSlot }: TopBarProps) {
     </View>
   );
 }
+

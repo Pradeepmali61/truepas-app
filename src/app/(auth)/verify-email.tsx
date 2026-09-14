@@ -20,9 +20,17 @@ export default function VerifyEmailScreen() {
   useEffect(() => {
     console.log('[VerifyEmail] Params received:', { email });
     if (!email) {
-      console.error('[VerifyEmail] Missing email param! Email OTP verification will fail.');
+      // Direct navigation (dev-screen jump / reload on this route) — the OTP
+      // screen is useless without the email. Send the user back to register
+      // instead of rendering a broken OTP form.
+      console.warn('[VerifyEmail] Missing email param — redirecting to register.');
+      router.replace('/(auth)/register');
     }
-  }, [email]);
+  }, [email, router]);
+
+  if (!email) {
+    return null;
+  }
 
   return (
     <OtpVerification

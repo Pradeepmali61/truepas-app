@@ -2,7 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Controller, useForm } from 'react-hook-form';
+import { Controller, useForm, useWatch } from 'react-hook-form';
 import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { z } from 'zod';
@@ -38,8 +38,8 @@ export default function AddFamilyScreen() {
   const insets = useSafeAreaInsets();
   const [relationship, setRelationship] = useState<(typeof RELATIONSHIPS)[number]>('Son');
   const [consented, setConsented] = useState(false);
-  // DOB calendar picker (same as the signup page) — family members are minors,
-  // so default the year to something recent instead of signup's 2000.
+  // DOB calendar picker (same as the signup page) — defaults to a recent year
+  // since most family members are children.
   const [showDatePicker, setShowDatePicker] = useState(false);
   const currentYear = new Date().getFullYear();
   const [selectedYear, setSelectedYear] = useState(currentYear - 5);
@@ -50,6 +50,11 @@ export default function AddFamilyScreen() {
     resolver: zodResolver(basicInfoSchema),
     defaultValues: { fullName: '', dateOfBirth: '' },
   });
+  // Age is computed live from the entered DOB so the consent wording and the
+  // next step adapt to adults vs minors (any age can now be added).
+  const dobValue = useWatch({ control, name: 'dateOfBirth' }) ?? '';
+  const enteredAge = ageFromDob(dobValue);
+  const isAdultMember = Number.isFinite(enteredAge) && enteredAge >= 18;
 
   const years = Array.from({ length: 100 }, (_, i) => currentYear - i);
   const daysInMonth = getDaysInMonth(selectedYear, selectedMonth);
@@ -69,10 +74,8 @@ export default function AddFamilyScreen() {
     const age = ageFromDob(values.dateOfBirth);
     const band = ageBandFromAge(age);
     console.log('[FamilyAdd] DOB entered:', values.dateOfBirth, '| calculated age:', age, '| band:', band);
-    if (band === '18+') {
-      router.push({ pathname: '/family/add/rejected', params: { name: values.fullName, age: String(age) } });
-      return;
-    }
+    // Any age can be added now — 18+ members go through the same document
+    // flow; their detail page offers the independent-account option.
     router.push({
       pathname: '/family/add/document',
       params: { name: values.fullName, band, dob: values.dateOfBirth, relationship },
@@ -189,7 +192,11 @@ export default function AddFamilyScreen() {
           <CheckboxRow
             checked={consented}
             onToggle={() => setConsented((v) => !v)}
-            label="I confirm I am the parent/legal guardian and consent to identity verification on behalf of this minor."
+            label={
+              isAdultMember
+                ? 'I confirm I am authorized to add this family member and consent to identity verification on their behalf.'
+                : 'I confirm I am the parent/legal guardian and consent to identity verification on behalf of this minor.'
+            }
           />
         </View>
         <View className="pb-6 pt-4">

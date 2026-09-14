@@ -5,8 +5,9 @@ import { FlatList, Image, Pressable, RefreshControl, Text, TextInput, View } fro
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ErrorState, Icon, Skeleton } from '@/components/ui';
-import { Colors, Elevation } from '@/constants/theme';
+import { Elevation } from '@/constants/theme';
 import { useDocuments } from '@/features/documents/hooks';
+import { useTheme } from '@/features/theme/ThemeProvider';
 import type { DocumentType, IdentityDocument } from '@/types/domain';
 import { fontScale, scale } from '@/utils/responsive';
 
@@ -19,19 +20,34 @@ const DOC_ACCENT: Record<DocumentType, { bg: string; icon: string }> = {
   usVisa:           { bg: '#FAF9FF', icon: '#7C3AED' },
 };
 
+const STATUS_META: Record<string, { label: string; bg: string; dot: string; text: string }> = {
+  verified: { label: 'Verified', bg: '#ECFDF5', dot: '#059669', text: '#059669' },
+  pending:  { label: 'Pending',  bg: '#FFFBEB', dot: '#D97706', text: '#D97706' },
+  failed:   { label: 'Failed',   bg: '#FEF2F2', dot: '#EF4444', text: '#EF4444' },
+};
+
+function formatExpiry(expiresAt?: string | null): string | null {
+  if (!expiresAt) return null;
+  const d = new Date(expiresAt);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
 const DocCard = memo(function DocCard({ doc, onPress }: { doc: IdentityDocument; onPress: () => void }) {
+  const { colors } = useTheme();
   const accent = DOC_ACCENT[doc.type] ?? { bg: '#EEF2FF', icon: '#4F46E5' };
-  const isVerified = doc.status === 'verified';
+  const status = STATUS_META[doc.status] ?? STATUS_META.pending;
+  const expiry = formatExpiry(doc.expiresAt);
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={`${doc.label}, ${doc.number}`}
+      accessibilityLabel={`${doc.label}, ${doc.number}, ${status.label}`}
       style={{
         flexDirection: 'row',
         alignItems: 'center',
         gap: scale(14),
-        backgroundColor: '#FFFFFF',
+        backgroundColor: colors.bgWhite,
         borderRadius: 16,
         paddingHorizontal: scale(16),
         paddingVertical: scale(14),
@@ -62,32 +78,38 @@ const DocCard = memo(function DocCard({ doc, onPress }: { doc: IdentityDocument;
           <Icon name={doc.type} size={34} color={accent.icon} />
         )}
       </View>
-      <View style={{ flex: 1 }}>
+      <View style={{ flex: 1, minWidth: 0 }}>
         <Text allowFontScaling={false} style={{ fontSize: fontScale(16), fontWeight: '700', color: '#111827' }}>{doc.label}</Text>
         <Text allowFontScaling={false} style={{ fontSize: fontScale(12), color: '#6B7280', marginTop: 2 }} numberOfLines={1}>
           {doc.number}
         </Text>
+        {expiry ? (
+          <Text allowFontScaling={false} style={{ fontSize: fontScale(11), color: colors.textFaint, marginTop: 2 }} numberOfLines={1}>
+            Expires {expiry}
+          </Text>
+        ) : null}
       </View>
       <View style={{ alignItems: 'flex-end', gap: 6 }}>
         <View style={{
           flexDirection: 'row',
           alignItems: 'center',
           gap: 3,
-          backgroundColor: isVerified ? '#ECFDF5' : '#FEF2F2',
+          backgroundColor: status.bg,
           borderRadius: 8,
           paddingHorizontal: scale(7, 6),
           paddingVertical: scale(3, 2),
         }}>
-          <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: isVerified ? '#059669' : '#EF4444' }} />
-          <Text allowFontScaling={false} style={{ fontSize: fontScale(10), fontWeight: '700', color: isVerified ? '#059669' : '#EF4444' }}>{isVerified ? 'Verified' : 'Failed'}</Text>
+          <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: status.dot }} />
+          <Text allowFontScaling={false} style={{ fontSize: fontScale(10), fontWeight: '700', color: status.text }}>{status.label}</Text>
         </View>
-        <Icon name="chevron" size={scale(16, 14)} color={Colors.textFaint} />
+        <Icon name="chevron" size={scale(16, 14)} color={colors.textFaint} />
       </View>
     </Pressable>
   );
 });
 
 function DocSkeleton() {
+  const { colors } = useTheme();
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 16, paddingVertical: 14, marginBottom: 10 }}>
       <Skeleton width={48} height={48} radius={24} />
@@ -100,6 +122,7 @@ function DocSkeleton() {
 }
 
 export default function DocumentsScreen() {
+  const { colors, headerGradient } = useTheme();
   const router = useRouter();
   const [query, setQuery] = useState('');
   const { data: documents, isPending, isError, isRefetching, refetch } = useDocuments();
@@ -120,11 +143,13 @@ export default function DocumentsScreen() {
   const isEmpty = !isPending && !isError && (documents?.length ?? 0) === 0;
 
   return (
-    <SafeAreaView className="flex-1" edges={['top']} style={{ backgroundColor: '#F8FBFF' }}>
-      <Image source={require('../../../assets/images/background2.png')} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100%', opacity: 0.12 }} resizeMode="cover" pointerEvents="none" />
+    <SafeAreaView className="flex-1" edges={['top']} style={{ backgroundColor: colors.bg }}>
+      <View pointerEvents="none" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
+        <Image source={require('../../../assets/images/background2.png')} style={{ width: '100%', height: '100%', opacity: 0.12 }} resizeMode="cover" />
+      </View>
       <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 240 }}>
         <LinearGradient
-          colors={['#39c5fd', '#9ce2fe', '#f5fcff']}
+          colors={[...headerGradient]}
           style={{ flex: 1 }}
         />
       </View>
@@ -142,28 +167,38 @@ export default function DocumentsScreen() {
           alignItems: 'center',
           borderRadius: 16,
           borderWidth: 1,
-          borderColor: Colors.divider,
-          backgroundColor: '#FFFFFF',
+          borderColor: colors.divider,
+          backgroundColor: colors.bgWhite,
           paddingHorizontal: 16,
           paddingVertical: 4,
           ...Elevation.small,
         }}>
         <View style={{ marginRight: 12 }}>
-          <Icon name="search" size={20} color={Colors.textFaint} />
+          <Icon name="search" size={20} color={colors.textFaint} />
         </View>
         <TextInput
           value={query}
           onChangeText={setQuery}
           placeholder="Search documents"
-          placeholderTextColor={Colors.textFaint}
+          placeholderTextColor={colors.textFaint}
           accessibilityLabel="Search issued documents"
-          style={{ flex: 1, fontSize: 15, color: Colors.ink }}
+          style={{ flex: 1, fontSize: 15, color: colors.ink, paddingVertical: 12 }}
         />
+        {query.length > 0 && (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Clear search"
+            onPress={() => setQuery('')}
+            className="active:opacity-70"
+            style={{ width: 32, height: 32, alignItems: 'center', justifyContent: 'center' }}>
+            <Icon name="cross" size={16} color={colors.textFaint} />
+          </Pressable>
+        )}
       </View>
 
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, marginBottom: 12 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          <Text style={{ fontSize: 20, fontWeight: '700', color: Colors.ink }}>My Documents</Text>
+          <Text style={{ fontSize: 20, fontWeight: '700', color: colors.ink }}>My Documents</Text>
         </View>
         <Pressable
           accessibilityRole="button"
@@ -186,8 +221,8 @@ export default function DocumentsScreen() {
         />
       ) : isEmpty ? (
         <View className="flex-1 items-center justify-center px-6">
-          <View className="mb-5 h-24 w-24 items-center justify-center rounded-full" style={{ backgroundColor: Colors.surface }}>
-            <Icon name="documents" size={48} color={Colors.primary} />
+          <View className="mb-5 h-24 w-24 items-center justify-center rounded-full" style={{ backgroundColor: colors.surface }}>
+            <Icon name="documents" size={48} color={colors.primary} />
           </View>
           <Text accessibilityRole="header" className="mb-2 text-[20px] font-bold text-ink">
             No documents yet
@@ -200,18 +235,35 @@ export default function DocumentsScreen() {
         <FlatList
           data={filtered}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 20 }}
+          style={{ flex: 1 }}
+          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 110 }}
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={
-            <Text className="pt-10 text-center text-[13px] text-muted">
-              No documents match your search.
-            </Text>
+            <View className="items-center pt-10 px-6">
+              <Icon name="search" size={32} color={colors.textFaint} />
+              <Text className="mt-3 text-center text-[15px] font-semibold text-ink">
+                No documents match
+              </Text>
+              <Text className="mt-1 text-center text-[13px] leading-[19px] text-muted">
+                Try a different name or number.
+              </Text>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Clear search"
+                onPress={() => setQuery('')}
+                className="active:opacity-70"
+                style={{ marginTop: 14 }}>
+                <Text style={{ fontSize: 14, fontWeight: '600', color: colors.primary, textDecorationLine: 'underline' }}>
+                  Clear search
+                </Text>
+              </Pressable>
+            </View>
           }
           renderItem={({ item }) => (
             <DocCard doc={item} onPress={() => router.push(`/document/${item.id}` as never)} />
           )}
           refreshControl={
-            <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={Colors.primary} />
+            <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.primary} />
           }
         />
       )}

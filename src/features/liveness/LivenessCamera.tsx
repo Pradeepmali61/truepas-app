@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+﻿import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -17,7 +17,7 @@ import {
 import { runOnJS } from 'react-native-worklets';
 
 import { toApiError } from '@/api/errors';
-import { Icon } from '@/components/ui/Icon';
+import { Icon } from '@/components/ui';
 import { Colors } from '@/constants/theme';
 import { useEnrollFace, useUpdateFace } from '@/features/auth/mutations';
 import { faceEnrollmentCompleted } from '@/features/auth/slice';
@@ -37,12 +37,12 @@ interface LivenessCameraProps {
   onError?: (message: string) => void;
 }
 
-// Calibration thresholds (per guide §4.5 — tune on real devices)
+// Calibration thresholds (per guide Â§4.5 â€” tune on real devices)
 const BLINK_CLOSED_THRESHOLD = 0.35;
 const BLINK_OPEN_THRESHOLD = 0.6;
 const YAW_THRESHOLD = 12; // degrees
 
-/** Per-action UI copy — big icon + short title + helper line so the user
+/** Per-action UI copy â€” big icon + short title + helper line so the user
  *  instantly knows what to do. Backend `ui_copy` is shown as the subtitle. */
 const ACTION_UI: Record<string, { title: string; helper: string; icon: string; iconRotate: string }> = {
   blink: {
@@ -84,20 +84,20 @@ function sideArcPath(startDeg: number, endDeg: number): string {
  * Full liveness challenge camera using react-native-vision-camera v5
  * + ML Kit face detector.
  *
- * Flow (per REACT_NATIVE_KYC_INTEGRATION_GUIDE.md §4):
+ * Flow (per REACT_NATIVE_KYC_INTEGRATION_GUIDE.md Â§4):
  *  1. Request camera permissions
  *  2. Create liveness challenge (server-provided sequence)
  *  3. Frame processor auto-detects blink/turn via ML Kit face landmarks
- *  4. When action detected → automatically submit evidence (metadata only, NO image)
- *  5. After all steps: capture high-res photo → finalize
+ *  4. When action detected â†’ automatically submit evidence (metadata only, NO image)
+ *  5. After all steps: capture high-res photo â†’ finalize
  *  6. Call face enroll/update with session credentials
  *
- * NO manual button press — detection is fully automatic.
+ * NO manual button press â€” detection is fully automatic.
  */
 export function LivenessCamera({ mode, personId, onSuccess }: LivenessCameraProps) {
   const { hasPermission, requestPermission } = useCameraPermission();
   const [capturing, setCapturing] = useState(false);
-  // Camera preview is stopped briefly before navigating away — unmounting an
+  // Camera preview is stopped briefly before navigating away â€” unmounting an
   // ACTIVE Camera on the new architecture (Fabric) can dispatch a
   // topCameraReady event after the JS view is gone, which crashes the app.
   const [cameraActive, setCameraActive] = useState(true);
@@ -107,7 +107,7 @@ export function LivenessCamera({ mode, personId, onSuccess }: LivenessCameraProp
   const liveness = useLivenessSession();
   const enrollFace = useEnrollFace();
   const updateFace = useUpdateFace();
-  // Absolute overlays ignore SafeAreaView padding — apply insets manually
+  // Absolute overlays ignore SafeAreaView padding â€” apply insets manually
   const insets = useSafeAreaInsets();
 
   const device = useCameraDevice('front');
@@ -129,14 +129,14 @@ export function LivenessCamera({ mode, personId, onSuccess }: LivenessCameraProp
     }
   }, [hasPermission, requestPermission]);
 
-  // ── In-place failure handling (fixes the 429 retry loop) ─────────────
+  // â”€â”€ In-place failure handling (fixes the 429 retry loop) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // Failures fail the session LOCALLY instead of navigating away:
-  //  1. phase leaves 'challenging' immediately → the frame processor's
+  //  1. phase leaves 'challenging' immediately â†’ the frame processor's
   //     onFaceSample guard stops re-submitting evidence (previously a 429
   //     on evidence kept the phase 'challenging' and resubmitted every
   //     ~100ms during the 400ms navigation settle window).
   //  2. The built-in failed UI shows toApiError's friendly copy with a
-  //     retry cooldown — 10s after a 429 (retrying sooner only burns more
+  //     retry cooldown â€” 10s after a 429 (retrying sooner only burns more
   //     rate-limit quota), 3s for other failures.
   const { failSession } = liveness;
   const [cooldownLeft, setCooldownLeft] = useState(0);
@@ -156,7 +156,7 @@ export function LivenessCamera({ mode, personId, onSuccess }: LivenessCameraProp
   }, [liveness.phase, cooldownLeft]);
 
   // Start liveness challenge when permission is granted, and restart after
-  // reset (Try Again) — depends on phase so idle→start works every time.
+  // reset (Try Again) â€” depends on phase so idleâ†’start works every time.
   useEffect(() => {
     if (hasPermission && liveness.phase === 'idle') {
       liveness.startSession(personId).catch((err) => {
@@ -188,7 +188,7 @@ export function LivenessCamera({ mode, personId, onSuccess }: LivenessCameraProp
     }
   }, [liveness.phase, liveness.currentStepIndex, beginStep]);
 
-  // Handle face sample — auto-detect actions (called from JS thread via Worklets)
+  // Handle face sample â€” auto-detect actions (called from JS thread via Worklets)
   const onFaceSample = useCallback(async (leftEyeOpen: number, rightEyeOpen: number, yaw: number) => {
     if (liveness.phase !== 'challenging' || !liveness.challenge || submittingRef.current) return;
     const action = liveness.currentChallenge;
@@ -206,21 +206,21 @@ export function LivenessCamera({ mode, personId, onSuccess }: LivenessCameraProp
       if (!eyesWereClosed.current || leftEyeOpen < BLINK_OPEN_THRESHOLD || rightEyeOpen < BLINK_OPEN_THRESHOLD) {
         return; // eyes not yet fully open after closing
       }
-      console.log('[Liveness] Blink: eyes REOPENED — blink complete!');
+      console.log('[Liveness] Blink: eyes REOPENED â€” blink complete!');
     } else {
       // ML Kit yaw: positive = subject turns to their LEFT, negative = to their RIGHT
       if (action === 'turn_right' && yaw > -YAW_THRESHOLD) return;
       if (action === 'turn_left' && yaw < YAW_THRESHOLD) return;
-      console.log(`[Liveness] Turn detected: yaw=${yaw.toFixed(1)}° crossed threshold ${YAW_THRESHOLD}°`);
+      console.log(`[Liveness] Turn detected: yaw=${yaw.toFixed(1)}Â° crossed threshold ${YAW_THRESHOLD}Â°`);
     }
 
-    // Action detected — check timing
+    // Action detected â€” check timing
     const durationMs = Date.now() - stepStartedAt.current;
     const { min_ms, max_ms } = liveness.challenge.step_time_limits;
     console.log(`[Liveness] Action detected: duration=${durationMs}ms (limits: ${min_ms}-${max_ms}ms)`);
-    if (durationMs < min_ms) return; // too fast — keep waiting
+    if (durationMs < min_ms) return; // too fast â€” keep waiting
     if (durationMs > max_ms) {
-      // too slow — fail the session locally so the retry UI shows and
+      // too slow â€” fail the session locally so the retry UI shows and
       // sample processing stops (phase leaves 'challenging').
       console.error('[Liveness] Step timed out:', durationMs, '>', max_ms);
       liveness.failSession('Time limit exceeded. Please try again.');
@@ -231,7 +231,7 @@ export function LivenessCamera({ mode, personId, onSuccess }: LivenessCameraProp
     const clientTsMs = Math.max(Date.now(), lastClientTs.current + 1);
     lastClientTs.current = clientTsMs;
 
-    // Submit evidence — metadata only, NO image (per guide §4.2)
+    // Submit evidence â€” metadata only, NO image (per guide Â§4.2)
     submittingRef.current = true;
     try {
       console.log(`[Liveness] Submitting evidence for step ${liveness.currentStepIndex}: ${action}`);
@@ -245,7 +245,7 @@ export function LivenessCamera({ mode, personId, onSuccess }: LivenessCameraProp
         data: err?.config?.data,
         contentType: err?.config?.headers?.['Content-Type'] ?? err?.config?.headers?.get?.('Content-Type'),
       }));
-      // Fail in place — leaves 'challenging' so the frame processor stops
+      // Fail in place â€” leaves 'challenging' so the frame processor stops
       // resubmitting evidence (the old navigation path left the phase
       // unchanged and caused a 429 resubmission storm).
       failWithCooldown(err, 'Liveness step rejected');
@@ -255,7 +255,7 @@ export function LivenessCamera({ mode, personId, onSuccess }: LivenessCameraProp
   }, [liveness, failWithCooldown]);
 
   // Create a runOnJS wrapper for the face sample handler.
-  // IMPORTANT: runOnJS(fn) binds fn at creation time — passing onFaceSample directly
+  // IMPORTANT: runOnJS(fn) binds fn at creation time â€” passing onFaceSample directly
   // would forever call the FIRST-render closure with stale liveness state
   // (phase 'idle'), so no action would ever be detected. Route through a ref
   // so the wrapper always invokes the latest callback.
@@ -269,7 +269,7 @@ export function LivenessCamera({ mode, personId, onSuccess }: LivenessCameraProp
 
   // Face detection via a dedicated CameraOutput (NOT a frame processor).
   // The library manages its own YUV output stream so ML Kit always gets a
-  // supported frame format — the useFrameOutput + detectFaces(frame) path
+  // supported frame format â€” the useFrameOutput + detectFaces(frame) path
   // crashes on Android with "Only JPEG and YUV_420_888 are supported now"
   // because frame output buffers are RGBA.
   // Created once; the latest handler is read through a ref.
@@ -286,7 +286,7 @@ export function LivenessCamera({ mode, personId, onSuccess }: LivenessCameraProp
     const leftEye = face.leftEyeOpenProbability ?? 1;
     const rightEye = face.rightEyeOpenProbability ?? 1;
     const yaw = face.yawAngle ?? 0;
-    console.log(`[Liveness] Sample: leftEye=${leftEye.toFixed(2)} rightEye=${rightEye.toFixed(2)} yaw=${yaw.toFixed(1)}°`);
+    console.log(`[Liveness] Sample: leftEye=${leftEye.toFixed(2)} rightEye=${rightEye.toFixed(2)} yaw=${yaw.toFixed(1)}Â°`);
 
     onFaceSampleJS(leftEye, rightEye, yaw);
   };
@@ -341,14 +341,14 @@ export function LivenessCamera({ mode, personId, onSuccess }: LivenessCameraProp
 
       if (result.status !== 'passed') {
         console.error('[Liveness] Finalize not passed:', result.status, result.message);
-        // finalize() already flipped the phase to 'failed' — just set the
+        // finalize() already flipped the phase to 'failed' â€” just set the
         // retry cooldown and stay in place (no navigation).
         setCooldownLeft(3);
         return;
       }
 
       // Enroll or update face with session credentials
-      // Per guide §5.2: send only livenessSessionId + sessionToken + personId
+      // Per guide Â§5.2: send only livenessSessionId + sessionToken + personId
       const facePayload = {
         livenessSessionId: result.session_id,
         sessionToken: liveness.sessionToken ?? '',
@@ -385,7 +385,7 @@ export function LivenessCamera({ mode, personId, onSuccess }: LivenessCameraProp
     }
   }, [liveness.phase, capturing, captureAndFinalize]);
 
-  // ── UI animation hooks (MUST be before any early return) ──────────────
+  // â”€â”€ UI animation hooks (MUST be before any early return) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // Brief "step done" flash when the step index advances
   const [stepDone, setStepDone] = useState(false);
   const prevStepRef = useRef(0);
@@ -434,7 +434,7 @@ export function LivenessCamera({ mode, personId, onSuccess }: LivenessCameraProp
     );
   }
 
-  // Error state — friendly message (from toApiError) + retry cooldown so a
+  // Error state â€” friendly message (from toApiError) + retry cooldown so a
   // 429 isn't hammered (each immediate retry burns more rate-limit quota).
   if (liveness.phase === 'failed') {
     return (
@@ -455,15 +455,15 @@ export function LivenessCamera({ mode, personId, onSuccess }: LivenessCameraProp
     );
   }
 
-  // Active challenge or finalizing — camera with frame processor, NO capture button
+  // Active challenge or finalizing â€” camera with frame processor, NO capture button
   const isFinalizing = liveness.phase === 'finalizing';
   const steps = liveness.challenge?.challenge_sequence ?? [];
   const action = liveness.currentChallenge;
   const actionUi = (action && ACTION_UI[action]) ?? null;
 
   // Progress arcs on the LEFT + RIGHT sides of the camera circle only.
-  // Progress flows clockwise: the right arc fills first (top→bottom), then
-  // the left arc (bottom→top). Whole ring turns green once capturing.
+  // Progress flows clockwise: the right arc fills first (topâ†’bottom), then
+  // the left arc (bottomâ†’top). Whole ring turns green once capturing.
   const progress = steps.length
     ? (isFinalizing ? 1 : Math.min(liveness.currentStepIndex / steps.length, 1))
     : 0;
@@ -489,7 +489,7 @@ export function LivenessCamera({ mode, personId, onSuccess }: LivenessCameraProp
 
   return (
     <SafeAreaView className="flex-1 bg-[#F8FBFF]" edges={['top', 'bottom']}>
-      {/* Close button — top right */}
+      {/* Close button â€” top right */}
       <Pressable
         onPress={() => router.back()}
         accessibilityRole="button"
@@ -501,7 +501,7 @@ export function LivenessCamera({ mode, personId, onSuccess }: LivenessCameraProp
       <View className="flex-1 items-center justify-center px-6">
         {/* Camera circle + progress arcs (Regula-style) */}
         <View style={{ width: 316, height: 316, alignItems: 'center', justifyContent: 'center' }}>
-          {/* Progress ring — left + right side arcs only (gaps at 12 and 6
+          {/* Progress ring â€” left + right side arcs only (gaps at 12 and 6
               o'clock). Right arc fills first, then the left one. */}
           <Svg width={316} height={316} style={{ position: 'absolute' }} pointerEvents="none">
             {/* Gray tracks */}
@@ -525,7 +525,7 @@ export function LivenessCamera({ mode, personId, onSuccess }: LivenessCameraProp
               outputs={[photoOutput, faceDetectorOutput]}
               mirrorMode="auto"
             />
-            {/* Face guide overlay — head outline, eyes, nose, mouth so the
+            {/* Face guide overlay â€” head outline, eyes, nose, mouth so the
                 user knows exactly where to position their face */}
             <Svg width={280} height={280} style={{ position: 'absolute', top: 0, left: 0 }} pointerEvents="none">
               <Ellipse cx={140} cy={132} rx={66} ry={84} stroke="#FFFFFF" strokeWidth={5} fill="none" />
@@ -572,3 +572,4 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 });
+

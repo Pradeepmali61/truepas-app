@@ -12,6 +12,9 @@ process.env.EXPO_ROUTER_APP_ROOT = path
 
 const config = getDefaultConfig(__dirname);
 
+// lucide-react-native ships ESM .mjs files — add to resolver so Metro can bundle them
+config.resolver.sourceExts = [...config.resolver.sourceExts, 'mjs'];
+
 const projectRoot = __dirname;
 
 const sourceExtensions = [
@@ -23,6 +26,8 @@ const sourceExtensions = [
   '.jsx',
   '.web.js',
   '.js',
+  '.web.mjs',
+  '.mjs',
   '.web.json',
   '.json',
 ];

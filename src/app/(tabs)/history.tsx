@@ -7,7 +7,6 @@ import { FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BottomSheet, ErrorState, Icon, Skeleton } from '@/components/ui';
-import { DUMMY_PAST_TRIP, DUMMY_TRIP } from '@/constants/dummyTrip';
 import { Colors, Elevation } from '@/constants/theme';
 import { useBookings } from '@/features/history/hooks';
 import type { Booking } from '@/types/domain';
@@ -113,12 +112,8 @@ export default function HistoryScreen() {
     let list = bookings ?? [];
     if (tab === 'past') {
       list = list.filter((b) => b.status === 'completed' || b.status === 'failed');
-      // The always-present dummy past trip — appended to real past bookings
-      list = [...list, DUMMY_PAST_TRIP];
     } else {
       list = list.filter((b) => b.status === 'upcoming');
-      // The always-present dummy trip — appended to real upcoming bookings
-      list = [...list, DUMMY_TRIP];
     }
     if (filterStatus !== 'all') {
       list = list.filter((b) => b.status === filterStatus);
@@ -214,7 +209,8 @@ export default function HistoryScreen() {
             <FlatList
               data={visible}
               keyExtractor={(item) => item.id}
-              contentContainerStyle={{ paddingHorizontal: 32, paddingBottom: 28 }}
+              style={{ flex: 1 }}
+              contentContainerStyle={{ paddingHorizontal: 32, paddingBottom: 100 }}
               showsVerticalScrollIndicator={false}
               ListEmptyComponent={
                 <Text style={{ paddingTop: 40, textAlign: 'center', fontSize: 14, color: Colors.textMuted }}>

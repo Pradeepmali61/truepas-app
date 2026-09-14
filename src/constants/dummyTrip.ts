@@ -1,4 +1,4 @@
-import type { Booking } from '@/types/domain';
+﻿import type { Booking } from '@/types/domain';
 
 /** Always-present sample trip — shows in the Upcoming sections (home +
  *  history) even when the user has no real upcoming bookings, and is

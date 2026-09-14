@@ -298,6 +298,42 @@ export default function FamilyMemberScreen() {
           />
         </View>
 
+        {/* Independent account offer — adults (18+) can have their own
+            Truepas account; ask the guardian right on the member's page. */}
+        {member.ageBand === '18+' && (
+          <View style={{ marginHorizontal: 16, marginTop: 16, backgroundColor: '#F0FAFF', borderRadius: 16, padding: 16, borderWidth: 1, borderColor: '#B8E7FC' }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              <View style={{
+                width: 40, height: 40, borderRadius: 12,
+                backgroundColor: '#FFFFFF',
+                alignItems: 'center', justifyContent: 'center',
+              }}>
+                <Icon name="user" size={20} color={Colors.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 15, fontWeight: '700', color: Colors.ink }}>Independent Truepas Account</Text>
+                <Text style={{ fontSize: 13, color: Colors.textMuted, marginTop: 2 }}>
+                  Would you like to create an independent Truepas account for {member.name.split(' ')[0]}?
+                </Text>
+              </View>
+            </View>
+            <Pressable
+              onPress={() => router.push('/(auth)/register' as never)}
+              accessibilityRole="button"
+              accessibilityLabel={`Create independent account for ${member.name}`}
+              style={{
+                marginTop: 12,
+                height: 44,
+                borderRadius: 12,
+                backgroundColor: Colors.primary,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}>
+              <Text style={{ fontSize: 15, fontWeight: '600', color: '#FFFFFF' }}>Create Account</Text>
+            </Pressable>
+          </View>
+        )}
+
         {/* Documents — the member's already scanned documents */}
         <View style={{ marginHorizontal: 16, marginTop: 16, backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 8, elevation: 2 }}>
           <Text style={{ fontSize: 14, fontWeight: '700', color: Colors.ink, marginBottom: 4 }}>Documents</Text>

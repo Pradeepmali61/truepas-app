@@ -1,14 +1,14 @@
-import { useRouter } from 'expo-router';
+﻿import { useRouter } from 'expo-router';
 import { useEffect } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
 
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
-import { Icon } from '@/components/ui/Icon';
+import { Icon } from '@/components/ui';
 import { Colors } from '@/constants/theme';
 
 const PROCESSING_MS = 2500;
 
-/** Delete account — processing across PostgreSQL, S3, ROC (PRD). */
+/** Delete account â€” processing across PostgreSQL, S3, ROC (PRD). */
 export default function DeleteProcessingScreen() {
   const router = useRouter();
 
@@ -25,7 +25,7 @@ export default function DeleteProcessingScreen() {
           accessibilityRole="header"
           accessibilityLiveRegion="polite"
           className="mb-1 mt-5 text-[16px] font-bold text-primary">
-          Deleting your data…
+          Deleting your dataâ€¦
         </Text>
         <View className="mt-4">
           <View className="my-[6px] flex-row items-center gap-2">
@@ -38,10 +38,11 @@ export default function DeleteProcessingScreen() {
           </View>
           <View className="my-[6px] flex-row items-center gap-2">
             <Icon name="hourglass" size={14} color={Colors.primary} />
-            <Text className="text-[13px] text-muted">Removing face template (ROC)…</Text>
+            <Text className="text-[13px] text-muted">Removing face template (ROC)â€¦</Text>
           </View>
         </View>
       </View>
     </ScreenContainer>
   );
 }
+

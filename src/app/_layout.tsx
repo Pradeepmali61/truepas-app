@@ -1,13 +1,14 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Provider } from 'react-redux';
 
-import { ToastProvider } from '@/components/ui';
+import { ToastProvider } from '@/components/composite';
+import { DevFloatingButton } from '@/components/layout/DevFloatingButton';
 import { store } from '@/store';
+import { ThemeProvider, useTheme, useTruepasFonts } from '@/theme';
 
 import '@/global.css';
 
@@ -20,35 +21,46 @@ const queryClient = new QueryClient({
   },
 });
 
-export default function RootLayout() {
-  const [loaded] = useFonts({
-    Satoshi: require('../../assets/fonts/Satoshi-Regular.ttf'),
-    'Satoshi-Medium': require('../../assets/fonts/Satoshi-Medium.ttf'),
-    'Satoshi-Bold': require('../../assets/fonts/Satoshi-Bold.ttf'),
-  });
+function RootShell({ children }: { children: React.ReactNode }) {
+  const [fontsLoaded] = useTruepasFonts();
+  const { resolvedScheme } = useTheme();
 
-  if (!loaded) {
-    return <View className="flex-1 items-center justify-center bg-white" />;
+  if (!fontsLoaded) {
+    return <View style={{ flex: 1, backgroundColor: '#f8fafc' }} />;
   }
 
+  return (
+    <>
+      <StatusBar style={resolvedScheme === 'dark' ? 'light' : 'dark'} />
+      {children}
+    </>
+  );
+}
+
+export default function RootLayout() {
   return (
     <Provider store={store}>
       <QueryClientProvider client={queryClient}>
         <SafeAreaProvider>
-          <ToastProvider>
-            <StatusBar style="dark" />
-            <Stack
-              screenOptions={{
-                headerShown: false,
-                animation: 'slide_from_right',
-                contentStyle: { backgroundColor: '#ffffff' },
-              }}>
-              <Stack.Screen name="dev" />
-              <Stack.Screen name="(auth)" />
-              <Stack.Screen name="(onboarding)" />
-              <Stack.Screen name="(tabs)" />
-            </Stack>
-          </ToastProvider>
+          <ThemeProvider scheme="system" brand="blue">
+            <ToastProvider>
+              <RootShell>
+                <Stack
+                  screenOptions={{
+                    headerShown: false,
+                    animation: 'slide_from_right',
+                    contentStyle: { backgroundColor: '#ffffff' },
+                  }}>
+                  <Stack.Screen name="dev" />
+                  <Stack.Screen name="(auth)" />
+                  <Stack.Screen name="(onboarding)" />
+                  <Stack.Screen name="(tabs)" />
+                </Stack>
+                {/* Dev-only overlay — absent from preview/production builds */}
+                <DevFloatingButton />
+              </RootShell>
+            </ToastProvider>
+          </ThemeProvider>
         </SafeAreaProvider>
       </QueryClientProvider>
     </Provider>

@@ -80,8 +80,8 @@ export default function ProfileScreen() {
     queryClient.clear();
     dispatch(sessionEnded());
     // The entry gate only redirects when the index route renders — navigate
-    // explicitly so the user lands on the auth flow immediately.
-    router.dismissTo('/(auth)/welcome' as never);
+    // explicitly so the user lands on the login screen immediately.
+    router.dismissTo('/(auth)/login' as never);
     toast.show('success', 'Logged out successfully');
   };
 
