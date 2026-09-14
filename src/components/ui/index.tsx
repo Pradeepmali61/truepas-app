@@ -3,7 +3,7 @@ import type { ViewStyle } from "react-native";
 import { AppIcon, type IconName } from "../app/AppIcon";
 import { Card as CoreCard } from "../composite/Card";
 import { ErrorState as CoreErrorState } from "../composite/states";
-import { Button as CoreButton, type ButtonVariant } from "./Button";
+import { Button as CoreButton, type ButtonSize, type ButtonVariant } from "./Button";
 import { Progress } from "./Progress";
 import { Switch } from "./Switch";
 
@@ -62,6 +62,7 @@ interface LegacyButtonProps {
   label: string;
   onPress?: () => void;
   variant?: LegacyVariant;
+  size?: ButtonSize;
   disabled?: boolean;
   loading?: boolean;
   className?: string;
@@ -83,6 +84,7 @@ export function Button({
   label,
   onPress,
   variant = "primary",
+  size = "md",
   disabled,
   loading,
   icon,
@@ -94,6 +96,7 @@ export function Button({
   return (
     <CoreButton
       variant={VARIANT_MAP[variant]}
+      size={size}
       onPress={onPress}
       disabled={disabled}
       loading={loading}

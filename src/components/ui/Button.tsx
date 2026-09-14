@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { Pressable, Text, View, type PressableProps, type StyleProp, type ViewStyle } from "react-native";
 import { makeStyles, useThemeTokens } from "../../theme";
 import { Spinner } from "./Spinner";
@@ -32,6 +32,7 @@ export function Button({
 }: ButtonProps) {
   const styles = useStyles();
   const theme = useThemeTokens();
+  const [pressed, setPressed] = useState(false);
   const isDisabled = disabled || loading;
 
   const spinnerColor =
@@ -42,7 +43,9 @@ export function Button({
       accessibilityRole="button"
       accessibilityState={{ disabled: isDisabled, busy: loading }}
       disabled={isDisabled}
-      style={({ pressed }) => [
+      onPressIn={() => setPressed(true)}
+      onPressOut={() => setPressed(false)}
+      style={[
         styles.base,
         styles[size],
         styles[variant],

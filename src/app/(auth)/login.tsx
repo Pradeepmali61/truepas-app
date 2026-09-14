@@ -10,8 +10,7 @@ import { toApiError } from '@/api/errors';
 import { BrandMark } from '@/components/app';
 import { FormField } from '@/components/composite';
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
-import { Input, Link, Typography } from '@/components/ui';
-import { Button } from '@/components/ui/Button';
+import { Button, Input, Link, Typography } from '@/components/ui';
 import { LoginForm, loginSchema } from '@/features/auth/schemas';
 import { sessionStarted } from '@/features/auth/slice';
 import { secureStorage } from '@/services/secureStorage';
@@ -126,14 +125,11 @@ export default function LoginScreen() {
 
         <View style={{ gap: theme.spacing[3], marginTop: theme.spacing[2] }}>
           <Button
-            fullWidth
+            label="Sign in"
             size="lg"
             loading={submitting}
             onPress={onSubmit}
-            style={{ backgroundColor: theme.colors.actionPrimary, width: '100%' }}
-          >
-            Sign in
-          </Button>
+          />
 
           <Typography variant="body-sm" color="muted" center>
             New to Truepas?{' '}
