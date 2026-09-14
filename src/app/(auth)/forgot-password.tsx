@@ -37,11 +37,12 @@ export default function ForgotPasswordScreen() {
     }
   };
 
-  const handleVerifyOtp = async () => {
-    if (otp.length !== 6) { setError('Enter 6-digit OTP'); return; }
+  const handleVerifyOtp = async (value?: string) => {
+    const code = typeof value === 'string' ? value : otp;
+    if (code.length !== 6) { setError('Enter 6-digit OTP'); return; }
     setError('');
     try {
-      await verifyOtp.mutateAsync({ otp, email, purpose: 'password_reset' });
+      await verifyOtp.mutateAsync({ otp: code, email, purpose: 'password_reset' });
       setStep('reset');
     } catch (err: any) {
       setError(err?.message ?? 'Invalid OTP. Please try again.');
@@ -101,7 +102,7 @@ export default function ForgotPasswordScreen() {
             <FormField label="Code" error={error || undefined}>
               <OtpInput value={otp} onChange={setOtp} onComplete={handleVerifyOtp} />
             </FormField>
-            <Button label="Verify" size="lg" loading={verifyOtp.isPending} onPress={handleVerifyOtp} />
+            <Button label="Verify" size="lg" loading={verifyOtp.isPending} onPress={() => void handleVerifyOtp()} />
             <View style={{ alignItems: 'center' }}>
               <Link onPress={handleSendOtp} accessibilityLabel="Resend code">
                 {forgotPassword.isPending ? 'Sending…' : 'Resend code'}
