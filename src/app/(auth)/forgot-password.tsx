@@ -1,27 +1,18 @@
 import { useRouter } from 'expo-router';
+import { Eye, EyeOff, Lock, Mail } from 'lucide-react-native';
 import { useState } from 'react';
-import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Alert, Pressable, View } from 'react-native';
 
-import { Button, FloatingInput, Icon } from '@/components/ui';
-import { Colors } from '@/constants/theme';
+import { FormField, OtpInput, ScreenHeader } from '@/components/composite';
+import { ScreenContainer } from '@/components/layout/ScreenContainer';
+import { Button, Input, Link, Typography } from '@/components/ui';
 import { useForgotPassword, useResetPassword, useVerifyOtp } from '@/features/auth/mutations';
-
-/** Eye toggle matching the change-password page pattern. */
-function PasswordEye({ visible, onToggle }: { visible: boolean; onToggle: () => void }) {
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={visible ? 'Hide password' : 'Show password'}
-      onPress={onToggle}
-      className="h-9 w-9 items-center justify-center">
-      <Icon name={visible ? 'eyeClosed' : 'eye'} size={20} color="#999" />
-    </Pressable>
-  );
-}
+import { useThemeTokens } from '@/theme';
+import { iconSize } from '@/theme/tokens';
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
+  const theme = useThemeTokens();
   const [step, setStep] = useState<'email' | 'otp' | 'reset'>('email');
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
@@ -73,73 +64,100 @@ export default function ForgotPasswordScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-white" edges={['top', 'bottom']}>
-      {/* Header */}
-      <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, height: 56 }}>
-        <Text style={{ flex: 1, textAlign: 'center', fontSize: 18, fontWeight: '700', color: Colors.ink }}>
-          {step === 'email' ? 'Forgot Password' : step === 'otp' ? 'Verify OTP' : 'Reset Password'}
-        </Text>
-      </View>
-
-      <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 20, flexGrow: 1 }}>
+    <ScreenContainer scroll background={false}>
+      <ScreenHeader title="Reset password" onBack={router.back} />
+      <View style={{ padding: theme.spacing[4], paddingTop: theme.spacing[6], gap: theme.spacing[4] }}>
         {step === 'email' && (
           <>
-            <Text style={{ fontSize: 14, color: Colors.textMuted, textAlign: 'center', marginBottom: 24 }}>
-              Enter your registered email and we'll send you a verification code.
-            </Text>
-            <FloatingInput label="Email" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
-            {error ? <Text style={{ fontSize: 13, color: '#EF4444', textAlign: 'center', marginBottom: 12 }}>{error}</Text> : null}
-            <Button label="Send Code" onPress={handleSendOtp} loading={forgotPassword.isPending} />
+            <View style={{ gap: theme.spacing[1] }}>
+              <Typography variant="h2">Find your account</Typography>
+              <Typography variant="body" color="secondary">
+                Enter your account email. If it exists, we'll send a reset code.
+              </Typography>
+            </View>
+            <FormField label="Email" error={error || undefined}>
+              <Input
+                value={email}
+                onChangeText={setEmail}
+                placeholder="ada@example.com"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+                iconLeft={<Mail size={iconSize.sm} color={theme.colors.textMuted} />}
+              />
+            </FormField>
+            <Button label="Send reset code" size="lg" loading={forgotPassword.isPending} onPress={handleSendOtp} />
           </>
         )}
 
         {step === 'otp' && (
           <>
-            <Text style={{ fontSize: 14, color: Colors.textMuted, textAlign: 'center', marginBottom: 24 }}>
-              We sent a 6-digit code to {email}. Enter it below.
-            </Text>
-            <FloatingInput label="OTP Code" value={otp} onChangeText={(v) => setOtp(v.replace(/\D/g, '').slice(0, 6))} keyboardType="number-pad" />
-            {error ? <Text style={{ fontSize: 13, color: '#EF4444', textAlign: 'center', marginBottom: 12 }}>{error}</Text> : null}
-            <Button label="Verify" onPress={handleVerifyOtp} loading={verifyOtp.isPending} />
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Resend code"
-              onPress={handleSendOtp}
-              disabled={forgotPassword.isPending}
-              style={{ alignItems: 'center', marginTop: 16 }}>
-              <Text style={{ fontSize: 14, fontWeight: '500', color: Colors.primary, textDecorationLine: 'underline' }}>
+            <View style={{ gap: theme.spacing[1] }}>
+              <Typography variant="h2">Check your email</Typography>
+              <Typography variant="body" color="secondary">
+                We sent a 6-digit code to {email}. Enter it below.
+              </Typography>
+            </View>
+            <FormField label="Code" error={error || undefined}>
+              <OtpInput value={otp} onChange={setOtp} onComplete={handleVerifyOtp} />
+            </FormField>
+            <Button label="Verify" size="lg" loading={verifyOtp.isPending} onPress={handleVerifyOtp} />
+            <View style={{ alignItems: 'center' }}>
+              <Link onPress={handleSendOtp} accessibilityLabel="Resend code">
                 {forgotPassword.isPending ? 'Sending…' : 'Resend code'}
-              </Text>
-            </Pressable>
+              </Link>
+            </View>
           </>
         )}
 
         {step === 'reset' && (
           <>
-            <Text style={{ fontSize: 14, color: Colors.textMuted, textAlign: 'center', marginBottom: 24 }}>
-              Enter your new password below.
-            </Text>
-            <FloatingInput
-              label="New Password"
-              value={newPassword}
-              onChangeText={setNewPassword}
-              secureTextEntry={!showNew}
-              autoCapitalize="none"
-              rightSlot={<PasswordEye visible={showNew} onToggle={() => setShowNew((v) => !v)} />}
-            />
-            <FloatingInput
-              label="Confirm Password"
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-              secureTextEntry={!showConfirm}
-              autoCapitalize="none"
-              rightSlot={<PasswordEye visible={showConfirm} onToggle={() => setShowConfirm((v) => !v)} />}
-            />
-            {error ? <Text style={{ fontSize: 13, color: '#EF4444', textAlign: 'center', marginBottom: 12 }}>{error}</Text> : null}
-            <Button label="Reset Password" onPress={handleReset} loading={resetPassword.isPending} />
+            <View style={{ gap: theme.spacing[1] }}>
+              <Typography variant="h2">Set new password</Typography>
+              <Typography variant="body" color="secondary">
+                Enter your new password below.
+              </Typography>
+            </View>
+            <FormField label="New password" error={error || undefined}>
+              <Input
+                value={newPassword}
+                onChangeText={setNewPassword}
+                placeholder="••••••••"
+                secureTextEntry={!showNew}
+                autoCapitalize="none"
+                autoCorrect={false}
+                iconLeft={<Lock size={iconSize.sm} color={theme.colors.textMuted} />}
+                iconRight={
+                  <Pressable onPress={() => setShowNew((v) => !v)}>
+                    {showNew
+                      ? <EyeOff size={iconSize.sm} color={theme.colors.textMuted} />
+                      : <Eye size={iconSize.sm} color={theme.colors.textMuted} />}
+                  </Pressable>
+                }
+              />
+            </FormField>
+            <FormField label="Confirm password">
+              <Input
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                placeholder="••••••••"
+                secureTextEntry={!showConfirm}
+                autoCapitalize="none"
+                autoCorrect={false}
+                iconLeft={<Lock size={iconSize.sm} color={theme.colors.textMuted} />}
+                iconRight={
+                  <Pressable onPress={() => setShowConfirm((v) => !v)}>
+                    {showConfirm
+                      ? <EyeOff size={iconSize.sm} color={theme.colors.textMuted} />
+                      : <Eye size={iconSize.sm} color={theme.colors.textMuted} />}
+                  </Pressable>
+                }
+              />
+            </FormField>
+            <Button label="Reset password" size="lg" loading={resetPassword.isPending} onPress={handleReset} />
           </>
         )}
-      </ScrollView>
-    </SafeAreaView>
+      </View>
+    </ScreenContainer>
   );
 }
