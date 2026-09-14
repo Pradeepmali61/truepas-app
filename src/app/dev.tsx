@@ -27,6 +27,9 @@ const GROUPS: { title: string; screens: ScreenEntry[] }[] = [
       { label: 'Verify email (OTP)', route: '/(auth)/verify-email', preset: 'unauth' },
       { label: 'Account details + PIN', route: '/(auth)/account-details', preset: 'unauth' },
       { label: 'Login', route: '/(auth)/login', preset: 'unauth' },
+      { label: 'Forgot — email', route: '/(auth)/forgot-password', preset: 'unauth' },
+      { label: 'Forgot — OTP code', route: '/(auth)/forgot-password?step=otp', preset: 'unauth' },
+      { label: 'Forgot — reset password', route: '/(auth)/forgot-password?step=reset', preset: 'unauth' },
     ],
   },
   {

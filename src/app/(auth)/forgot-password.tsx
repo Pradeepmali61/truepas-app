@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Eye, EyeOff, Lock, Mail } from 'lucide-react-native';
 import { useState } from 'react';
 import { Alert, Pressable, View } from 'react-native';
@@ -14,9 +14,14 @@ import { iconSize } from '@/theme/tokens';
 export default function ForgotPasswordScreen() {
   const router = useRouter();
   const theme = useThemeTokens();
-  const [step, setStep] = useState<'email' | 'otp' | 'reset'>('email');
+  // `?step=reset` lets the dev screen jump straight to the reset form (seeds a
+  // placeholder code so the OtpInput renders filled like the reference).
+  const { step: stepParam } = useLocalSearchParams<{ step?: string }>();
+  const [step, setStep] = useState<'email' | 'otp' | 'reset'>(
+    stepParam === 'reset' ? 'reset' : stepParam === 'otp' ? 'otp' : 'email'
+  );
   const [email, setEmail] = useState('');
-  const [otp, setOtp] = useState('');
+  const [otp, setOtp] = useState(stepParam === 'reset' ? '123456' : '');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showNew, setShowNew] = useState(false);
