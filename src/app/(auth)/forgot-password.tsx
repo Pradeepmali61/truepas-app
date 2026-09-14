@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Alert, Pressable, View } from 'react-native';
 
 import { toApiError } from '@/api/errors';
-import { FormField, OtpInput, ScreenHeader } from '@/components/composite';
+import { FormField, Alert as InlineAlert, OtpInput, ScreenHeader } from '@/components/composite';
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
 import { Button, Input, Link, Typography } from '@/components/ui';
 import { useForgotPassword, useResetPassword, useVerifyOtp } from '@/features/auth/mutations';
@@ -75,7 +75,7 @@ export default function ForgotPasswordScreen() {
 
   return (
     <ScreenContainer scroll background={false}>
-      <ScreenHeader title="Reset password" onBack={router.back} />
+      <ScreenHeader title={step === 'reset' ? 'Choose a new password' : 'Reset password'} onBack={router.back} />
       <View style={{ padding: theme.spacing[4], paddingTop: theme.spacing[6], gap: theme.spacing[4] }}>
         {step === 'email' && (
           <>
@@ -122,17 +122,14 @@ export default function ForgotPasswordScreen() {
 
         {step === 'reset' && (
           <>
-            <View style={{ gap: theme.spacing[1] }}>
-              <Typography variant="h2">Set new password</Typography>
-              <Typography variant="body" color="secondary">
-                Enter your new password below.
-              </Typography>
-            </View>
-            <FormField label="New password" error={error || undefined}>
+            <FormField label="Reset code" required helperText="6-digit code emailed to you.">
+              <OtpInput value={otp} disabled />
+            </FormField>
+            <FormField label="New password" required error={error || undefined}>
               <Input
                 value={newPassword}
                 onChangeText={setNewPassword}
-                placeholder="••••••••"
+                placeholder="New password"
                 secureTextEntry={!showNew}
                 autoCapitalize="none"
                 autoCorrect={false}
@@ -146,11 +143,11 @@ export default function ForgotPasswordScreen() {
                 }
               />
             </FormField>
-            <FormField label="Confirm password">
+            <FormField label="Confirm new password" required>
               <Input
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
-                placeholder="••••••••"
+                placeholder="Repeat password"
                 secureTextEntry={!showConfirm}
                 autoCapitalize="none"
                 autoCorrect={false}
@@ -164,6 +161,9 @@ export default function ForgotPasswordScreen() {
                 }
               />
             </FormField>
+            <InlineAlert variant="warning" title="Sessions revoked">
+              You'll be signed out of every device after the reset.
+            </InlineAlert>
             <Button label="Reset password" size="lg" loading={resetPassword.isPending} onPress={handleReset} />
           </>
         )}
