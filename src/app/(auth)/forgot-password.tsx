@@ -50,6 +50,14 @@ export default function ForgotPasswordScreen() {
     }
   };
 
+  const handleResend = () => {
+    // Resend issues a NEW code and expires the previous one — clear the
+    // stale digits so the user enters the fresh code.
+    setOtp('');
+    setError('');
+    void handleSendOtp();
+  };
+
   const handleReset = async () => {
     if (!newPassword || !confirmPassword) { setError('All fields are required'); return; }
     if (newPassword.length < 8) { setError('Password must be at least 8 characters'); return; }
@@ -105,7 +113,7 @@ export default function ForgotPasswordScreen() {
             </FormField>
             <Button label="Verify" size="lg" loading={verifyOtp.isPending} onPress={() => void handleVerifyOtp()} />
             <View style={{ alignItems: 'center' }}>
-              <Link onPress={handleSendOtp} accessibilityLabel="Resend code">
+              <Link onPress={handleResend} accessibilityLabel="Resend code">
                 {forgotPassword.isPending ? 'Sending…' : 'Resend code'}
               </Link>
             </View>
