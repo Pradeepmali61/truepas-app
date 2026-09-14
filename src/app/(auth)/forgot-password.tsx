@@ -7,21 +7,18 @@ import { toApiError } from '@/api/errors';
 import { FormField, Alert as InlineAlert, OtpInput, ScreenHeader } from '@/components/composite';
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
 import { Button, Input, Link, Typography } from '@/components/ui';
-import { useForgotPassword, useResetPassword, useVerifyOtp } from '@/features/auth/mutations';
+import { useForgotPassword, useResetPassword } from '@/features/auth/mutations';
 import { useThemeTokens } from '@/theme';
 import { iconSize } from '@/theme/tokens';
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
   const theme = useThemeTokens();
-  // `?step=reset` lets the dev screen jump straight to the reset form (seeds a
-  // placeholder code so the OtpInput renders filled like the reference).
+  // `?step=reset` lets the dev screen jump straight to the reset form.
   const { step: stepParam } = useLocalSearchParams<{ step?: string }>();
-  const [step, setStep] = useState<'email' | 'otp' | 'reset'>(
-    stepParam === 'reset' ? 'reset' : stepParam === 'otp' ? 'otp' : 'email'
-  );
+  const [step, setStep] = useState<'email' | 'reset'>(stepParam === 'reset' ? 'reset' : 'email');
   const [email, setEmail] = useState('');
-  const [otp, setOtp] = useState(stepParam === 'reset' ? '123456' : '');
+  const [otp, setOtp] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showNew, setShowNew] = useState(false);
@@ -29,7 +26,6 @@ export default function ForgotPasswordScreen() {
   const [error, setError] = useState('');
 
   const forgotPassword = useForgotPassword();
-  const verifyOtp = useVerifyOtp();
   const resetPassword = useResetPassword();
 
   const handleSendOtp = async () => {
@@ -37,21 +33,9 @@ export default function ForgotPasswordScreen() {
     setError('');
     try {
       await forgotPassword.mutateAsync({ email });
-      setStep('otp');
-    } catch (err: any) {
-      setError(toApiError(err).message || 'Could not send code. Please try again.');
-    }
-  };
-
-  const handleVerifyOtp = async (value?: string) => {
-    const code = typeof value === 'string' ? value : otp;
-    if (code.length !== 6) { setError('Enter 6-digit OTP'); return; }
-    setError('');
-    try {
-      await verifyOtp.mutateAsync({ otp: code, email, purpose: 'password_reset' });
       setStep('reset');
     } catch (err: any) {
-      setError(toApiError(err).message || 'Invalid OTP. Please try again.');
+      setError(toApiError(err).message || 'Could not send code. Please try again.');
     }
   };
 
@@ -64,6 +48,7 @@ export default function ForgotPasswordScreen() {
   };
 
   const handleReset = async () => {
+    if (otp.length !== 6) { setError('Enter the 6-digit code from your email'); return; }
     if (!newPassword || !confirmPassword) { setError('All fields are required'); return; }
     if (newPassword.length < 8) { setError('Password must be at least 8 characters'); return; }
     if (newPassword !== confirmPassword) { setError('Passwords do not match'); return; }
@@ -105,32 +90,17 @@ export default function ForgotPasswordScreen() {
           </>
         )}
 
-        {step === 'otp' && (
+        {step === 'reset' && (
           <>
-            <View style={{ gap: theme.spacing[1] }}>
-              <Typography variant="h2">Check your email</Typography>
-              <Typography variant="body" color="secondary">
-                We sent a 6-digit code to {email}. Enter it below.
-              </Typography>
-            </View>
-            <FormField label="Code" error={error || undefined}>
-              <OtpInput value={otp} onChange={setOtp} onComplete={handleVerifyOtp} />
+            <FormField label="Reset code" required error={error || undefined} helperText={error ? undefined : "6-digit code emailed to you."}>
+              <OtpInput value={otp} onChange={setOtp} />
             </FormField>
-            <Button label="Verify" size="lg" loading={verifyOtp.isPending} onPress={() => void handleVerifyOtp()} />
             <View style={{ alignItems: 'center' }}>
               <Link onPress={handleResend} accessibilityLabel="Resend code">
                 {forgotPassword.isPending ? 'Sending…' : 'Resend code'}
               </Link>
             </View>
-          </>
-        )}
-
-        {step === 'reset' && (
-          <>
-            <FormField label="Reset code" required helperText="6-digit code emailed to you.">
-              <OtpInput value={otp} disabled />
-            </FormField>
-            <FormField label="New password" required error={error || undefined}>
+            <FormField label="New password" required>
               <Input
                 value={newPassword}
                 onChangeText={setNewPassword}
