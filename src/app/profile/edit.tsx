@@ -1,122 +1,112 @@
 import { useRouter } from 'expo-router';
-import { Pressable, ScrollView, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Lock } from 'lucide-react-native';
+import { useState } from 'react';
+import { ScrollView, View } from 'react-native';
 
-import { Icon } from '@/components/ui';
-import { Colors } from '@/constants/theme';
+import { toApiError } from '@/api/errors';
+import { DatePicker, FormField, ScreenHeader } from '@/components/composite';
+import { ScreenContainer } from '@/components/layout/ScreenContainer';
+import { Button, Input } from '@/components/ui';
+import { useUpdateProfile } from '@/features/auth/mutations';
+import { useToast } from '@/hooks/useToast';
 import { useAppSelector } from '@/store';
+import { useThemeTokens } from '@/theme';
+import { iconSize } from '@/theme/tokens';
 
-function InfoField({ icon, label, value }: { icon: string; label: string; value: string }) {
-  return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10 }}>
-      <View style={{
-        width: 40, height: 40, borderRadius: 12,
-        backgroundColor: '#F0FAFF',
-        alignItems: 'center', justifyContent: 'center',
-      }}>
-        <Icon name={icon as never} size={20} color={Colors.primary} />
-      </View>
-      <View style={{ flex: 1 }}>
-        <Text style={{ fontSize: 12, fontWeight: '400', color: Colors.textMuted }}>{label}</Text>
-        <Text style={{ fontSize: 15, fontWeight: '600', color: Colors.ink, marginTop: 2 }}>{value}</Text>
-      </View>
-    </View>
-  );
-}
-
-function HalfField({ icon, label, value }: { icon: string; label: string; value: string }) {
-  return (
-    <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10 }}>
-      <View style={{
-        width: 40, height: 40, borderRadius: 12,
-        backgroundColor: '#F0FAFF',
-        alignItems: 'center', justifyContent: 'center',
-      }}>
-        <Icon name={icon as never} size={20} color={Colors.primary} />
-      </View>
-      <View>
-        <Text style={{ fontSize: 12, fontWeight: '400', color: Colors.textMuted }}>{label}</Text>
-        <Text style={{ fontSize: 15, fontWeight: '600', color: Colors.ink, marginTop: 2 }}>{value}</Text>
-      </View>
-    </View>
-  );
-}
-
-/** Edit profile — Personal Info with address section. */
+/**
+ * Edit profile — PUT /user/me only accepts { fullName, dateOfBirth, address }.
+ * Email & phone are server-locked (409 until re-verification), so they render
+ * read-only with a lock affordance.
+ */
 export default function EditProfileScreen() {
   const router = useRouter();
+  const theme = useThemeTokens();
+  const toast = useToast();
   const user = useAppSelector((state) => state.auth.user);
+  const updateProfile = useUpdateProfile();
 
-  const initials = (user?.fullName ?? 'U')
-    .split(' ')
-    .map((part) => part[0])
-    .join('');
+  const [fullName, setFullName] = useState(user?.fullName ?? '');
+  const [dateOfBirth, setDateOfBirth] = useState(user?.dateOfBirth ?? '');
+  const [address, setAddress] = useState('');
+  const [error, setError] = useState('');
+
+  const handleSave = async () => {
+    if (!fullName.trim()) { setError('Full name is required'); return; }
+    setError('');
+    try {
+      await updateProfile.mutateAsync({
+        fullName: fullName.trim(),
+        dateOfBirth: dateOfBirth || undefined,
+        address: address.trim() || undefined,
+      });
+      toast.show('success', 'Profile updated');
+      router.back();
+    } catch (err: any) {
+      setError(toApiError(err).message || 'Could not save changes. Please try again.');
+    }
+  };
 
   return (
-    <SafeAreaView className="flex-1 bg-white" edges={['top', 'bottom']}>
-      {/* Header */}
-      <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, height: 56 }}>
-        <Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel="Go back" style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
-          <Icon name="back" size={22} color={Colors.ink} />
-        </Pressable>
-        <Text style={{ flex: 1, textAlign: 'center', fontSize: 18, fontWeight: '700', color: Colors.ink, marginRight: 44 }}>
-          Personal Info
-        </Text>
-      </View>
+    <ScreenContainer scroll={false} background={false}>
+      <ScreenHeader title="Edit profile" onBack={router.back} />
+      <ScrollView
+        contentContainerStyle={{ padding: theme.spacing[4], paddingTop: theme.spacing[6], gap: theme.spacing[4] }}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}>
+        <FormField label="Full name" error={error || undefined}>
+          <Input
+            value={fullName}
+            onChangeText={setFullName}
+            placeholder="Ada Example"
+            autoCapitalize="words"
+          />
+        </FormField>
 
-      <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
-        {/* Avatar */}
-        <View style={{ alignItems: 'center', paddingTop: 16, paddingBottom: 8 }}>
-          <View>
-            <View style={{ width: 88, height: 88, borderRadius: 44, backgroundColor: '#E0F2FE', alignItems: 'center', justifyContent: 'center' }}>
-              <Text style={{ fontSize: 32, fontWeight: '700', color: Colors.primary }}>{initials}</Text>
-            </View>
-            <View style={{
-              position: 'absolute', bottom: 0, right: 0,
-              width: 28, height: 28, borderRadius: 14,
-              backgroundColor: Colors.primary,
-              alignItems: 'center', justifyContent: 'center',
-              borderWidth: 2, borderColor: '#FFFFFF',
-            }}>
-              <Icon name="camera" size={14} color="#FFFFFF" />
-            </View>
-          </View>
-          <Text style={{ marginTop: 12, fontSize: 20, fontWeight: '700', color: Colors.ink }}>{user?.fullName ?? 'User'}</Text>
-          <View style={{ marginTop: 6, flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#ECFDF5', paddingHorizontal: 12, paddingVertical: 5, borderRadius: 8 }}>
-            <Icon name="checkCircle" size={14} color="#059669" />
-            <Text style={{ fontSize: 13, fontWeight: '600', color: '#059669' }}>Verified Account</Text>
-          </View>
-        </View>
+        <FormField label="Date of birth">
+          <DatePicker
+            value={dateOfBirth}
+            onValueChange={setDateOfBirth}
+            placeholder="Jan 2, 1990"
+            accessibilityLabel="Date of birth"
+          />
+        </FormField>
 
-        {/* Basic Information */}
-        <View style={{ marginHorizontal: 16, marginTop: 16, backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 8, elevation: 2 }}>
-          <Text style={{ fontSize: 14, fontWeight: '700', color: Colors.ink, marginBottom: 4 }}>Basic Information</Text>
-          <InfoField icon="user" label="First Name" value={user?.fullName?.split(' ')[0] ?? '—'} />
-          <InfoField icon="user" label="Last Name" value={user?.fullName?.split(' ').slice(1).join(' ') || '—'} />
-          <InfoField icon="phone" label="Mobile Number" value={user?.phone ?? '—'} />
-          <InfoField icon="email" label="Email" value={user?.email ?? '—'} />
-          <InfoField icon="cake" label="Date of Birth" value="04/12/1994" />
-        </View>
+        <FormField label="Address" helperText="Optional — used for venue pre-fill.">
+          <Input
+            value={address}
+            onChangeText={setAddress}
+            placeholder="1 Example Street, Orlando, FL"
+            autoCapitalize="words"
+          />
+        </FormField>
 
-        {/* Address */}
-        <View style={{ marginHorizontal: 16, marginTop: 16, backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 8, elevation: 2 }}>
-          <Text style={{ fontSize: 14, fontWeight: '700', color: Colors.ink, marginBottom: 4 }}>Address</Text>
-          <InfoField icon="location" label="Address" value="Mumbai - Pune Expressway" />
-          <View style={{ flexDirection: 'row', gap: 12 }}>
-            <HalfField icon="identity" label="City" value="Navi Mumbai" />
-            <HalfField icon="identity" label="State" value="MH" />
-          </View>
-          <InfoField icon="documents" label="Country" value="IN" />
-          <InfoField icon="document" label="ZIP Code" value="400074" />
-        </View>
+        <FormField label="Email" description="Locked — contact support to change." disabled>
+          <Input
+            value={user?.email ?? ''}
+            editable={false}
+            iconRight={<Lock size={iconSize.sm} color={theme.colors.textMuted} />}
+          />
+        </FormField>
 
-        {/* Support note */}
-        <View style={{ marginHorizontal: 16, marginTop: 16, padding: 12, backgroundColor: '#F8FBFF', borderRadius: 12 }}>
-          <Text style={{ fontSize: 13, color: Colors.textMuted, textAlign: 'center' }}>
-            To update any information, please contact our support team
-          </Text>
-        </View>
+        <FormField label="Phone" description="Locked — contact support to change." disabled>
+          <Input
+            value={user?.phone ?? ''}
+            editable={false}
+            iconRight={<Lock size={iconSize.sm} color={theme.colors.textMuted} />}
+          />
+        </FormField>
       </ScrollView>
-    </SafeAreaView>
+
+      <View
+        style={{
+          padding: theme.spacing[4],
+          paddingBottom: theme.spacing[4],
+          borderTopWidth: theme.sizes.fieldBorderWidth,
+          borderTopColor: theme.colors.borderSubtle,
+          backgroundColor: theme.colors.surface,
+        }}>
+        <Button label="Save changes" size="lg" loading={updateProfile.isPending} onPress={handleSave} />
+      </View>
+    </ScreenContainer>
   );
 }
