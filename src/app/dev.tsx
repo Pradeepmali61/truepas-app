@@ -54,6 +54,7 @@ const GROUPS: { title: string; screens: ScreenEntry[] }[] = [
       { label: 'Profile hub', route: '/profile', preset: 'auth-face' },
       { label: 'Edit profile', route: '/profile/edit', preset: 'auth-face' },
       { label: 'Security settings', route: '/security', preset: 'auth-face' },
+      { label: 'Confirm PIN gate', route: '/security/confirm-pin?next=/security', preset: 'auth-face' },
       { label: 'Change PIN', route: '/security/change-pin', preset: 'auth-face' },
     ],
   },

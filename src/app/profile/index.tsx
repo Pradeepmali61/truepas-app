@@ -148,6 +148,10 @@ export default function ProfileScreen() {
     ? new Date(user.biometricConsentAt).toLocaleDateString()
     : null;
 
+  // Sensitive actions go through the re-auth PIN gate first.
+  const gate = (next: string) => () =>
+    router.push({ pathname: '/security/confirm-pin', params: { next } } as never);
+
   return (
     <ScreenContainer scroll background={false}>
       <ScreenHeader
@@ -247,11 +251,11 @@ export default function ProfileScreen() {
 
         {/* Account actions card */}
         <Card noPadding>
-          <ActionRow label="Change password" onPress={() => router.push('/security/change-password')} />
+          <ActionRow label="Change password" onPress={gate('/security/change-password')} />
           <Divider style={{ marginHorizontal: theme.spacing[4] }} />
-          <ActionRow label="Change PIN" onPress={() => router.push('/security/change-pin')} />
+          <ActionRow label="Change PIN" onPress={gate('/security/change-pin')} />
           <Divider style={{ marginHorizontal: theme.spacing[4] }} />
-          <ActionRow label="Delete account" destructive onPress={() => router.push('/account/delete')} />
+          <ActionRow label="Delete account" destructive onPress={gate('/account/delete')} />
         </Card>
 
         {/* Log out — only entry point in the app, so it stays reachable */}
