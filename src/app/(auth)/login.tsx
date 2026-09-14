@@ -125,7 +125,13 @@ export default function LoginScreen() {
         </View>
 
         <View style={{ gap: theme.spacing[3], marginTop: theme.spacing[2] }}>
-          <Button fullWidth size="lg" loading={submitting} onPress={onSubmit}>
+          <Button
+            fullWidth
+            size="lg"
+            loading={submitting}
+            onPress={onSubmit}
+            style={{ backgroundColor: theme.colors.actionPrimary, width: '100%' }}
+          >
             Sign in
           </Button>
 
