@@ -33,7 +33,8 @@ export default function ConfirmPinScreen() {
     setHasError(false);
     try {
       await verifyPin.mutateAsync(code);
-      router.replace((next as never) ?? '/');
+      // Forward the verified PIN — change-pin needs it as `currentPin`.
+      router.replace(next ? ({ pathname: next, params: { currentPin: code } } as never) : ('/' as never));
     } catch {
       setAttemptsLeft((a) => Math.max(0, a - 1));
       setHasError(true);

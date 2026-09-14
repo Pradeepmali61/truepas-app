@@ -18,8 +18,8 @@ export default function SecurityScreen() {
       <TopBar title="Security" />
 
       <SectionTitle>Login &amp; Access</SectionTitle>
-      <ListItem title="Change Password" showChevron onPress={() => router.push('/security/change-password')} />
-      <ListItem title="Change PIN" showChevron onPress={() => router.push('/security/change-pin')} />
+      <ListItem title="Change Password" showChevron onPress={() => router.push({ pathname: '/security/confirm-pin', params: { next: '/security/change-password' } } as never)} />
+      <ListItem title="Change PIN" showChevron onPress={() => router.push({ pathname: '/security/confirm-pin', params: { next: '/security/change-pin' } } as never)} />
       <ListItem title="Update Face" showChevron onPress={() => router.push('/face-update/pin')} />
 
       <SectionTitle>Biometric &amp; Verification</SectionTitle>
