@@ -1,47 +1,110 @@
-import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { ActivityIndicator, Image, Platform, Pressable, Text, View } from 'react-native';
+import {
+    Camera,
+    ChevronRight,
+    CircleCheck,
+    Fingerprint,
+    Mail,
+    PenLine,
+    Phone
+} from 'lucide-react-native';
+import { type ReactNode } from 'react';
+import { ActivityIndicator, Platform, Pressable, View } from 'react-native';
 
+import { Card, ScreenHeader } from '@/components/composite';
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
-import { Card, Icon, ListItem, SectionTitle } from '@/components/ui';
-import { Colors } from '@/constants/theme';
+import { Avatar, Divider, Typography } from '@/components/ui';
 import { useLogout } from '@/features/auth/mutations';
 import { sessionEnded } from '@/features/auth/slice';
-import { useDocuments } from '@/features/documents/hooks';
-import { useFamily } from '@/features/family/hooks';
 import { useProfilePicture, useUploadProfilePicture } from '@/features/profile/hooks';
 import { useToast } from '@/hooks/useToast';
 import { secureStorage } from '@/services/secureStorage';
 import { useAppDispatch, useAppSelector } from '@/store';
+import { useThemeTokens } from '@/theme';
+import { iconSize } from '@/theme/tokens';
 import { useQueryClient } from '@tanstack/react-query';
+
+/** Icon-in-tile + value/label row used for the contact card. */
+function InfoRow({ icon, value, label }: { icon: ReactNode; value: string; label: string }) {
+  const theme = useThemeTokens();
+  return (
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: theme.spacing[3],
+        paddingHorizontal: theme.spacing[4],
+        paddingVertical: theme.spacing[3],
+      }}>
+      <View
+        style={{
+          width: 40,
+          height: 40,
+          borderRadius: theme.radii.md,
+          backgroundColor: theme.colors.actionSecondary,
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}>
+        {icon}
+      </View>
+      <View style={{ flex: 1, gap: 1 }}>
+        <Typography variant="body">{value}</Typography>
+        <Typography variant="body-sm" color="secondary">{label}</Typography>
+      </View>
+    </View>
+  );
+}
+
+/** Tappable label + chevron row used for the actions card. */
+function ActionRow({
+  label,
+  onPress,
+  destructive,
+}: {
+  label: string;
+  onPress: () => void;
+  destructive?: boolean;
+}) {
+  const theme = useThemeTokens();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      onPress={onPress}
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: theme.spacing[3],
+        paddingHorizontal: theme.spacing[4],
+        paddingVertical: theme.spacing[3],
+        minHeight: 52,
+      }}>
+      <View style={{ flex: 1 }}>
+        <Typography variant="body" color={destructive ? 'error' : 'primary'}>
+          {label}
+        </Typography>
+      </View>
+      <ChevronRight size={iconSize.md} color={theme.colors.textMuted} />
+    </Pressable>
+  );
+}
 
 export default function ProfileScreen() {
   const router = useRouter();
   const dispatch = useAppDispatch();
   const queryClient = useQueryClient();
+  const theme = useThemeTokens();
   const user = useAppSelector((state) => state.auth.user);
-  const { data: documents } = useDocuments();
-  const { data: family } = useFamily();
   const { url: profilePictureUrl } = useProfilePicture();
   const { mutateAsync: uploadProfilePicture, isPending: isUploading } = useUploadProfilePicture();
   const toast = useToast();
   const logout = useLogout();
-
-  const initials =
-    user?.fullName
-      .split(' ')
-      .map((part) => part[0])
-      .join('') ?? 'U';
-
-  const docCount = documents?.length ?? 0;
-  const familyCount = family?.length ?? 0;
 
   const handlePickProfilePicture = async () => {
     try {
       // Lazy-require: keeps expo-image-picker's native module out of the
       // startup import chain so older dev clients don't crash on launch.
       const ImagePicker = require('expo-image-picker');
-      // Android uses the system photo picker — no storage permission needed.
       if (Platform.OS === 'ios') {
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (status !== 'granted') {
@@ -67,50 +130,58 @@ export default function ProfileScreen() {
   };
 
   const handleLogout = async () => {
-    // Best-effort logout API call — clear local state even on error
     try {
       const refreshToken = await secureStorage.getRefreshToken();
       if (refreshToken) {
         await logout.mutateAsync({ refreshToken });
       }
     } catch {
-      // Ignore — we clear local state regardless
+      // Best-effort — clear local state regardless
     }
-    // Clear all React Query caches containing customer data
     queryClient.clear();
     dispatch(sessionEnded());
-    // The entry gate only redirects when the index route renders — navigate
-    // explicitly so the user lands on the login screen immediately.
     router.dismissTo('/(auth)/login' as never);
     toast.show('success', 'Logged out successfully');
   };
 
+  const consentDate = user?.biometricConsentAt
+    ? new Date(user.biometricConsentAt).toLocaleDateString()
+    : null;
+
   return (
-    <ScreenContainer>
-      <View className="items-center px-5 pb-3 pt-6">
+    <ScreenContainer scroll background={false}>
+      <ScreenHeader
+        title="Profile"
+        actions={
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Edit profile"
+            onPress={() => router.push('/profile/edit')}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing[1], padding: theme.spacing[2] }}
+            hitSlop={8}>
+            <PenLine size={iconSize.sm} color={theme.colors.actionPrimary} />
+            <Typography variant="body" style={{ color: theme.colors.actionPrimary, fontWeight: theme.fontWeight.medium }}>
+              Edit
+            </Typography>
+          </Pressable>
+        }
+      />
+
+      {/* Hero */}
+      <View style={{ alignItems: 'center', paddingVertical: theme.spacing[5], gap: theme.spacing[2] }}>
         <View>
-          {profilePictureUrl ? (
-            <Image
-              source={{ uri: profilePictureUrl }}
-              style={{ width: 72, height: 72, borderRadius: 24 }}
-              resizeMode="cover"
-            />
-          ) : (
-            <LinearGradient
-              colors={['#08B6FC', '#84dbfe']}
-              style={{ width: 72, height: 72, borderRadius: 24, alignItems: 'center', justifyContent: 'center' }}>
-              <Text style={{ fontSize: 24, fontWeight: '700', color: '#FFFFFF' }}>
-                {initials}
-              </Text>
-            </LinearGradient>
-          )}
+          <Avatar
+            uri={profilePictureUrl ?? undefined}
+            name={user?.fullName}
+            size="xl"
+            style={{ width: 84, height: 84 }}
+          />
           {isUploading && (
             <View
               style={{
                 position: 'absolute',
-                width: 72,
-                height: 72,
-                borderRadius: 24,
+                inset: 0,
+                borderRadius: theme.radii.full,
                 backgroundColor: 'rgba(0,0,0,0.45)',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -125,60 +196,68 @@ export default function ProfileScreen() {
             disabled={isUploading}
             style={{
               position: 'absolute',
-              bottom: -4,
-              right: -4,
-              width: 26,
-              height: 26,
-              borderRadius: 13,
-              backgroundColor: Colors.primary,
+              bottom: -2,
+              right: -2,
+              width: 28,
+              height: 28,
+              borderRadius: 14,
+              backgroundColor: theme.colors.actionPrimary,
               alignItems: 'center',
               justifyContent: 'center',
               borderWidth: 2,
-              borderColor: '#FFFFFF',
+              borderColor: theme.colors.surface,
             }}>
-            <Icon name="camera" size={13} color="#FFFFFF" />
+            <Camera size={14} color={theme.colors.onActionPrimary} />
           </Pressable>
         </View>
-        <Text accessibilityRole="header" className="mt-[10px] text-[18px] font-bold text-primary">
+        <Typography variant="h3" center>
           {user?.fullName ?? 'User'}
-        </Text>
-        <Text className="text-[14px] text-muted">{user?.email ?? ''}</Text>
-        <View className="mt-2 flex-row items-center gap-1 rounded-full bg-success-bg px-3 py-1">
-          <Icon name="checkCircle" size={14} color="#059669" />
-          <Text className="text-[12px] font-semibold text-success">Verified Identity</Text>
-        </View>
+        </Typography>
+        {user?.faceEnrolled && (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing[1.5] }}>
+            <CircleCheck size={iconSize.sm} color={theme.colors.success} />
+            <Typography variant="body-sm" color="success">
+              Face ID enrolled
+            </Typography>
+          </View>
+        )}
       </View>
 
-      <SectionTitle>Account</SectionTitle>
-      <Card>
-        <ListItem icon="edit" title="Personal Information" showChevron onPress={() => router.push('/profile/edit')} />
-        <View className="my-1 h-px bg-divider" />
-        <ListItem icon="documents" title="Documents" showChevron onPress={() => router.push('/(tabs)/documents')} />
-        <View className="my-1 h-px bg-divider" />
-        <ListItem icon="family" title="Family Members" showChevron onPress={() => router.push('/(tabs)/family')} />
-      </Card>
+      {/* Contact / consent card */}
+      <View style={{ paddingHorizontal: theme.spacing[4], gap: theme.spacing[4] }}>
+        <Card noPadding>
+          <InfoRow
+            icon={<Mail size={iconSize.sm} color={theme.colors.textSecondary} />}
+            value={user?.email ?? '—'}
+            label="Email"
+          />
+          <Divider style={{ marginLeft: 40 + theme.spacing[3] + theme.spacing[4] }} />
+          <InfoRow
+            icon={<Phone size={iconSize.sm} color={theme.colors.textSecondary} />}
+            value={user?.phone ?? '—'}
+            label="Mobile"
+          />
+          <Divider style={{ marginLeft: 40 + theme.spacing[3] + theme.spacing[4] }} />
+          <InfoRow
+            icon={<Fingerprint size={iconSize.sm} color={theme.colors.textSecondary} />}
+            value="Biometric consent"
+            label={consentDate ? `Granted ${consentDate}` : 'Not granted'}
+          />
+        </Card>
 
-      <SectionTitle>Security</SectionTitle>
-      <Card>
-        <ListItem icon="lock" title="PIN & Security" showChevron onPress={() => router.push('/security')} />
-        <View className="my-1 h-px bg-divider" />
-        <ListItem icon="face" title="Update Face" showChevron onPress={() => router.push('/face-update/pin')} />
-      </Card>
+        {/* Account actions card */}
+        <Card noPadding>
+          <ActionRow label="Change password" onPress={() => router.push('/security/change-password')} />
+          <Divider style={{ marginHorizontal: theme.spacing[4] }} />
+          <ActionRow label="Change PIN" onPress={() => router.push('/security/change-pin')} />
+          <Divider style={{ marginHorizontal: theme.spacing[4] }} />
+          <ActionRow label="Delete account" destructive onPress={() => router.push('/account/delete')} />
+        </Card>
 
-      <SectionTitle>More</SectionTitle>
-      <Card>
-        <ListItem icon="settings" title="Settings" showChevron onPress={() => router.push('/settings')} />
-      </Card>
-
-      <View className="px-5 py-4">
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Log out"
-          onPress={handleLogout}
-          className="flex-row items-center justify-center gap-2 rounded-btn border border-danger-bg bg-white py-[14px] active:opacity-80">
-          <Icon name="logout" size={18} color="#dc2626" />
-          <Text className="text-[16px] font-bold text-danger">Log Out</Text>
-        </Pressable>
+        {/* Log out — only entry point in the app, so it stays reachable */}
+        <Card noPadding>
+          <ActionRow label="Log out" destructive onPress={handleLogout} />
+        </Card>
       </View>
     </ScreenContainer>
   );
