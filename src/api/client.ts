@@ -84,11 +84,24 @@ function createClient(baseURL: string): AxiosInstance {
     headers: { 'Content-Type': 'application/json' },
   });
 
+  // Public auth endpoints must never carry the user's access token — a stale
+  // Bearer token here makes the backend reject the request before it even
+  // checks credentials (login → 401 "invalid credentials", verify-otp → 400).
+  const PUBLIC_AUTH_PATHS = [
+    '/auth/login',
+    '/auth/register',
+    '/auth/verify-otp',
+    '/auth/forgot-password',
+    '/auth/reset-password',
+    '/auth/refresh',
+  ];
+
   // Attach Bearer token to every request (unless overridden per-request)
   instance.interceptors.request.use((config: InternalAxiosRequestConfig) => {
+    const isPublicAuth = PUBLIC_AUTH_PATHS.some((p) => config.url?.endsWith(p));
     // Don't override if a per-request Authorization header was already set
     // (e.g., registrationToken for account-details)
-    if (accessToken && !config.headers.Authorization) {
+    if (accessToken && !config.headers.Authorization && !isPublicAuth) {
       config.headers.Authorization = `Bearer ${accessToken}`;
     }
     return config;
