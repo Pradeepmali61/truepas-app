@@ -3,6 +3,7 @@ import { Eye, EyeOff, Lock, Mail } from 'lucide-react-native';
 import { useState } from 'react';
 import { Alert, Pressable, View } from 'react-native';
 
+import { toApiError } from '@/api/errors';
 import { FormField, OtpInput, ScreenHeader } from '@/components/composite';
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
 import { Button, Input, Link, Typography } from '@/components/ui';
@@ -33,7 +34,7 @@ export default function ForgotPasswordScreen() {
       await forgotPassword.mutateAsync({ email });
       setStep('otp');
     } catch (err: any) {
-      setError(err?.message ?? 'Could not send code. Please try again.');
+      setError(toApiError(err).message || 'Could not send code. Please try again.');
     }
   };
 
@@ -45,7 +46,7 @@ export default function ForgotPasswordScreen() {
       await verifyOtp.mutateAsync({ otp: code, email, purpose: 'password_reset' });
       setStep('reset');
     } catch (err: any) {
-      setError(err?.message ?? 'Invalid OTP. Please try again.');
+      setError(toApiError(err).message || 'Invalid OTP. Please try again.');
     }
   };
 
@@ -60,7 +61,7 @@ export default function ForgotPasswordScreen() {
         { text: 'OK', onPress: () => router.replace('/(auth)/login') },
       ]);
     } catch (err: any) {
-      setError(err?.message ?? 'Could not reset password. Please try again.');
+      setError(toApiError(err).message || 'Could not reset password. Please try again.');
     }
   };
 

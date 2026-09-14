@@ -131,7 +131,9 @@ export const realApi = {
     }
     // For email verification during registration, send the registration token as Bearer
     // so the backend can link this to the ongoing registration session.
-    const registrationToken = getRegistrationToken();
+    // password_reset has no registration session — a stale in-memory token would
+    // make the backend treat this as a registration verify and return 400.
+    const registrationToken = payload.purpose === 'password_reset' ? null : getRegistrationToken();
     const config = registrationToken
       ? { headers: { Authorization: `Bearer ${registrationToken}` } }
       : undefined;
