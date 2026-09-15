@@ -2,7 +2,7 @@
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import * as Haptics from 'expo-haptics';
 import { Redirect, Tabs } from 'expo-router';
-import { FileText, History, IdCard, Users } from 'lucide-react-native';
+import { FileText, History, Home, Users } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
 import { Animated, LayoutChangeEvent, Pressable, View, type ColorValue } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -55,7 +55,7 @@ function TabItem({ isFocused, options, label, onPress }: { isFocused: boolean; o
         flex: 1,
         alignItems: 'center',
         justifyContent: 'center',
-        paddingTop: theme.spacing[2],
+        paddingTop: theme.spacing[3],
         paddingBottom: theme.spacing[0.5],
       }}>
       <Animated.View style={{ transform: [{ scale: scaleAnim }, { translateY: translateYAnim }] }}>
@@ -115,7 +115,7 @@ function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
         style={[
           {
             position: 'absolute',
-            top: theme.spacing[2],
+            top: 0,
             width: INDICATOR_WIDTH,
             height: INDICATOR_HEIGHT,
             borderRadius: INDICATOR_HEIGHT / 2,
@@ -152,7 +152,7 @@ export default function TabsLayout() {
     return <Redirect href="/(onboarding)/consent" />;
   }
 
-  const tabIcon = (IconCmp: typeof IdCard) =>
+  const tabIcon = (IconCmp: typeof Home) =>
     ({ color, size }: { color: ColorValue; size: number }) => <IconCmp size={size} color={color as string} />;
 
   return (
@@ -163,7 +163,7 @@ export default function TabsLayout() {
         name="index"
         options={{
           title: 'Home',
-          tabBarIcon: tabIcon(IdCard),
+          tabBarIcon: tabIcon(Home),
         }}
       />
       <Tabs.Screen

@@ -146,9 +146,18 @@ export default function RegisterScreen() {
         <View style={[styles.footer, { paddingBottom: insets.bottom + theme.spacing[3] }]}>
           <Typography variant="caption" color="muted" style={styles.legal}>
             By continuing you agree to the{' '}
-            <Link onPress={() => router.push('/legal/terms' as never)}>Terms of Service</Link>
+            <Link
+              onPress={() => router.push('/legal/terms' as never)}
+              style={{ fontSize: theme.fontSize.xs }}>
+              Terms of Service
+            </Link>
             {' '}and acknowledge the{' '}
-            <Link onPress={() => router.push('/legal/privacy-policy' as never)}>Privacy Policy</Link>.
+            <Link
+              onPress={() => router.push('/legal/privacy-policy' as never)}
+              style={{ fontSize: theme.fontSize.xs }}>
+              Privacy Policy
+            </Link>
+            .
           </Typography>
           <CoreButton
             variant="primary"

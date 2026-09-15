@@ -87,7 +87,6 @@ export function AppChrome() {
                 onMenuPress={() => setDrawer(true)}
                 left={<ScanFace size={iconSize.lg} color={theme.colors.actionPrimary} />}
                 title="Truepas"
-                subtitle="Koramangala"
                 actions={
                     <>
                         <NotificationCenter

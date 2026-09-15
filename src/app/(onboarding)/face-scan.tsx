@@ -5,20 +5,24 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { Alert, ScreenHeader } from '@/components/composite';
 import { CoreButton, Progress, RowIcon, Typography } from '@/components/ui';
-import { LivenessCamera } from '@/features/liveness/LivenessCamera';
+import { CameraUnavailable, loadLivenessCamera } from '@/features/liveness/cameraModule';
 import { useThemeTokens } from '@/theme';
 import { iconSize } from '@/theme/tokens';
 
 /** Face scan — mandatory liveness + face enrollment gate (no skip, PRD v2.0).
- *  Uses server-provided challenge sequence via the LivenessCamera component. */
+ *  Uses server-provided challenge sequence via the LivenessCamera component,
+ *  lazy-required so builds without NitroModules show a fallback. */
+const LivenessCamera = loadLivenessCamera();
+
 export default function FaceScanScreen() {
   const router = useRouter();
+  if (!LivenessCamera) return <CameraUnavailable />;
 
   return (
     <LivenessCamera
       mode="enroll"
       onSuccess={() => router.replace('/(onboarding)/face-enrolled')}
-      onError={(msg) => {
+      onError={(msg: string) => {
         // `retry` sends the error screen's Retry button back to THIS flow —
         // without it the shared error screen routed registration retries into
         // the face-update (mode="update") flow.

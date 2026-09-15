@@ -147,7 +147,10 @@ export default function LoginScreen() {
 
           <Typography variant="body-sm" color="muted" center>
             New to Truepas?{' '}
-            <Link onPress={() => router.push('/(auth)/register')} accessibilityLabel="Create account">
+            <Link
+              onPress={() => router.push('/(auth)/register')}
+              accessibilityLabel="Create account"
+              style={{ fontSize: theme.fontSize.sm }}>
               Create account
             </Link>
           </Typography>

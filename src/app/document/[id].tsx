@@ -1,16 +1,17 @@
+import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Baby, BookUser, Car, Contact, FileText, Globe, Landmark } from 'lucide-react-native';
-import { useEffect, useState, type ComponentType } from 'react';
-import { Image, ScrollView, View } from 'react-native';
+import { Baby, BookUser, Camera, Car, Contact, FileText, Globe, Landmark, ScanFace } from 'lucide-react-native';
+import { useEffect, useRef, useState, type ComponentType } from 'react';
+import { Animated, Image, ScrollView, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { api } from '@/api';
-import { Accordion, Alert, Card, CardContent, ErrorState, Modal, ScreenHeader } from '@/components/composite';
-import { Badge, CoreButton, Divider, RowIcon, Skeleton, Typography, type BadgeVariant } from '@/components/ui';
+import { Alert, ErrorState, Modal, ScreenHeader } from '@/components/composite';
+import { CoreButton, RowIcon, Skeleton, Typography, type BadgeVariant } from '@/components/ui';
 import { useDocument, useRemoveDocument } from '@/features/documents/hooks';
 import { useToast } from '@/hooks/useToast';
 import { getDocumentImageUri } from '@/services/documentImageStore';
-import { useThemeTokens } from '@/theme';
+import { makeStyles, useThemeTokens, type Theme } from '@/theme';
 import { iconSize } from '@/theme/tokens';
 import type { IdentityDocument, IssuedDoc } from '@/types/domain';
 
@@ -29,35 +30,12 @@ const DOC_ICONS: Record<string, ComponentType<{ size?: number; color?: string }>
   birthCertificate: Baby,
 };
 
-function docIcon(doc: CombinedDoc, color: string) {
-  const type = isIdentityDocument(doc) ? doc.type : doc.icon;
-  const IconCmp = DOC_ICONS[type] ?? FileText;
-  return <RowIcon tone="primary" icon={<IconCmp size={iconSize.lg} color={color} />} />;
-}
-
 function formatDate(dateStr: string | null | undefined): string {
   if (!dateStr) return '—';
   const d = new Date(dateStr);
   return Number.isNaN(d.getTime())
     ? dateStr
     : d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-}
-
-function KV({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
-  const theme = useThemeTokens();
-  return (
-    <View style={{ flex: 1, gap: 2, minWidth: 0 }}>
-      <Typography variant="caption" color="muted" style={{ textTransform: 'uppercase', letterSpacing: 0.5 }}>
-        {label}
-      </Typography>
-      <Typography
-        variant="body"
-        numberOfLines={2}
-        style={mono ? { fontFamily: theme.fontFamily.mono.semibold } : undefined}>
-        {value}
-      </Typography>
-    </View>
-  );
 }
 
 const STATUS: Record<string, { variant: BadgeVariant; label: string }> = {
@@ -69,12 +47,38 @@ const STATUS: Record<string, { variant: BadgeVariant; label: string }> = {
   Expired: { variant: 'neutral', label: 'Expired' },
 };
 
-/** Document detail — GET /cb/documents/{id} (or issued doc). Native card +
- *  extracted-data accordion; document numbers render masked only. */
+function DetailItem({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
+  const theme = useThemeTokens();
+  return (
+    <View style={{ width: '50%', marginBottom: theme.spacing[3], minWidth: 0 }}>
+      <Typography
+        variant="caption"
+        color="muted"
+        style={{ fontWeight: theme.fontWeight.bold, letterSpacing: theme.letterSpacing.caps, marginBottom: theme.spacing[0.5] }}>
+        {label}
+      </Typography>
+      <Typography
+        variant="body-sm"
+        numberOfLines={2}
+        style={{
+          fontWeight: theme.fontWeight.bold,
+          lineHeight: theme.lineHeight.snug,
+          ...(mono ? { fontFamily: theme.fontFamily.mono.semibold } : null),
+        }}>
+        {value}
+      </Typography>
+    </View>
+  );
+}
+
+/** Document detail — GET /cb/documents/{id} (or issued doc). Flip-card design:
+ *  front face = portrait + extracted details, back face = captured scan.
+ *  Same interaction as the post-verify screen (ref: facepe verify.tsx). */
 export default function DocumentDetailScreen() {
   const theme = useThemeTokens();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const styles = useStyles();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data: identityDoc, isPending, isError, refetch } = useDocument(id);
   const removeDocument = useRemoveDocument();
@@ -82,15 +86,30 @@ export default function DocumentDetailScreen() {
   const [issuedDoc, setIssuedDoc] = useState<IssuedDoc | null>(null);
   const [issuedLoaded, setIssuedLoaded] = useState(false);
   const [frontImageUri, setFrontImageUri] = useState<string | null>(null);
+  const [selfieImageUri, setSelfieImageUri] = useState<string | null>(null);
   const [confirmRemove, setConfirmRemove] = useState(false);
+  const [isFlipped, setIsFlipped] = useState(false);
+  const flipAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (!id) return;
     api.getIssuedDocuments()
       .then((docs) => setIssuedDoc(docs.find((d) => d.id === id) ?? null))
       .finally(() => setIssuedLoaded(true));
+    // Captured images were persisted locally (keyed by docId) at scan time
     getDocumentImageUri(id, 'front').then(setFrontImageUri).catch(() => setFrontImageUri(null));
+    getDocumentImageUri(id, 'selfie').then(setSelfieImageUri).catch(() => setSelfieImageUri(null));
   }, [id]);
+
+  const toggleFlip = () => {
+    Animated.spring(flipAnim, {
+      toValue: isFlipped ? 0 : 1,
+      useNativeDriver: true,
+      friction: 8,
+      tension: 10,
+    }).start();
+    setIsFlipped(!isFlipped);
+  };
 
   const handleRemove = () => {
     if (!id) return;
@@ -118,9 +137,8 @@ export default function DocumentDetailScreen() {
       <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: theme.colors.background }}>
         <ScreenHeader title="Document" onBack={() => router.back()} />
         <View style={{ padding: theme.spacing[4], gap: theme.spacing[4] }}>
-          <Skeleton height={88} radius={theme.radii.xl} />
-          <Skeleton height={160} radius={theme.radii.xl} />
-          <Skeleton height={56} radius={theme.radii.xl} />
+          <Skeleton height={260} radius={theme.radii['2xl']} />
+          <Skeleton height={40} radius={theme.radii.full} />
         </View>
       </SafeAreaView>
     );
@@ -145,57 +163,9 @@ export default function DocumentDetailScreen() {
   const failed = doc.status === 'failed';
   const isIdentity = isIdentityDocument(doc);
   const isLicense = type.toLowerCase().includes('license');
-  const portraitUri = isIdentity ? doc.portraitImageUrl ?? frontImageUri : null;
+  const portraitUri = (isIdentity ? doc.portraitImageUrl : null) ?? selfieImageUri;
   const scanUri = (isIdentity ? doc.documentImageUrl : null) ?? frontImageUri;
-
-  const extractedFields: { label: string; value: string; mono?: boolean }[] = isIdentity
-    ? [
-        { label: 'Extracted name', value: doc.extractedName || '—', mono: true },
-        { label: 'Date of birth', value: doc.extractedDob ? formatDate(doc.extractedDob) : '—', mono: true },
-        { label: 'Nationality', value: doc.nationality || '—' },
-        { label: 'Issuing state', value: doc.issuingState || '—' },
-        {
-          label: 'Match score',
-          value: doc.matchScore != null ? `${Math.round(doc.matchScore * 100)}%` : '—',
-          mono: true,
-        },
-      ]
-    : [];
-
-  const accordionItems = [
-    ...(extractedFields.length > 0
-      ? [
-          {
-            value: 'extracted',
-            title: 'Extracted data',
-            content: (
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', rowGap: theme.spacing[4] }}>
-                {extractedFields.map((f) => (
-                  <View key={f.label} style={{ width: '50%', paddingRight: theme.spacing[3] }}>
-                    <KV label={f.label} value={f.value} mono={f.mono} />
-                  </View>
-                ))}
-              </View>
-            ),
-          },
-        ]
-      : []),
-    ...(scanUri
-      ? [
-          {
-            value: 'scan',
-            title: 'Document scan',
-            content: (
-              <Image
-                source={{ uri: scanUri }}
-                style={{ width: '100%', aspectRatio: 4 / 3, borderRadius: theme.radii.md }}
-                resizeMode="contain"
-              />
-            ),
-          },
-        ]
-      : []),
-  ];
+  const IconCmp = DOC_ICONS[type] ?? FileText;
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: theme.colors.background }}>
@@ -205,7 +175,7 @@ export default function DocumentDetailScreen() {
         contentContainerStyle={{
           padding: theme.spacing[4],
           gap: theme.spacing[4],
-          paddingBottom: theme.spacing[8] + insets.bottom + (isIdentity ? theme.sizes.heightLg : 0),
+          paddingBottom: theme.spacing[8] + insets.bottom,
         }}
         showsVerticalScrollIndicator={false}>
         {failed && (
@@ -214,65 +184,148 @@ export default function DocumentDetailScreen() {
           </Alert>
         )}
 
-        <Card>
-          <CardContent>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing[3] }}>
-              {portraitUri ? (
-                <Image
-                  source={{ uri: portraitUri }}
-                  style={{ width: 56, height: 56, borderRadius: theme.radii.md }}
-                  resizeMode="cover"
+        {/* Flip card — front: info / back: captured scan */}
+        <View style={styles.cardWrapper}>
+          {/* Front face */}
+          <Animated.View
+            style={[
+              styles.docInfoCard,
+              {
+                transform: [
+                  { perspective: 1000 },
+                  { rotateY: flipAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '180deg'] }) },
+                ],
+                backfaceVisibility: 'hidden',
+                zIndex: isFlipped ? 0 : 1,
+              },
+            ]}>
+            <LinearGradient
+              colors={['#08B6FC', '#034965']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.docCardHeader}>
+              <Typography variant="body-sm" style={styles.cardTitle}>
+                {title}
+              </Typography>
+              <View style={styles.idCardStatusBadge}>
+                <View
+                  style={[
+                    styles.idCardStatusDot,
+                    { backgroundColor: failed ? theme.colors.error : theme.colors.success },
+                  ]}
                 />
-              ) : (
-                docIcon(doc, theme.colors.actionPrimary)
-              )}
-              <View style={{ flex: 1, gap: 2, minWidth: 0 }}>
-                <Typography variant="h4" numberOfLines={1}>{title}</Typography>
-                <Typography variant="body-sm" color="secondary" numberOfLines={1}>
-                  {isIdentity ? (doc.extractedName || 'Identity document') : doc.issuer}
+                <Typography variant="caption" style={styles.idCardStatusText}>
+                  {status.label.toUpperCase()}
                 </Typography>
               </View>
-              <Badge variant={status.variant}>{status.label}</Badge>
+            </LinearGradient>
+
+            <View style={styles.docMainInfo}>
+              <View style={styles.docAvatarContainer}>
+                {portraitUri ? (
+                  <Image source={{ uri: portraitUri }} style={styles.docAvatar} resizeMode="cover" />
+                ) : (
+                  <View style={styles.docAvatarPlaceholder}>
+                    <ScanFace size={iconSize.lg} color={theme.colors.textMuted} />
+                  </View>
+                )}
+              </View>
+
+              <View style={styles.docDetailsGrid}>
+                {isIdentity ? (
+                  <>
+                    <DetailItem label="Full name" value={doc.extractedName || '—'} />
+                    <DetailItem label="Document no" value={doc.number || '—'} mono />
+                    <DetailItem label="Date of birth" value={formatDate(doc.extractedDob)} />
+                    <DetailItem label="Expires" value={formatDate(doc.expiresAt)} />
+                    <DetailItem
+                      label={isLicense ? 'State' : 'Nationality'}
+                      value={(isLicense ? doc.issuingState : doc.nationality) || '—'}
+                    />
+                    <DetailItem
+                      label="Match score"
+                      value={doc.matchScore != null ? `${Math.round(doc.matchScore * 100)}%` : '—'}
+                      mono
+                    />
+                  </>
+                ) : (
+                  <>
+                    <DetailItem label="Number" value={doc.number || '—'} mono />
+                    <DetailItem label="Issued by" value={doc.issuer} />
+                    <DetailItem label="Issued on" value={formatDate(doc.issuedAt)} />
+                    <DetailItem label="Type" value={doc.name} />
+                  </>
+                )}
+              </View>
             </View>
-          </CardContent>
-        </Card>
+          </Animated.View>
 
-        <Card>
-          <CardContent style={{ gap: theme.spacing[3] }}>
-            {isIdentity ? (
-              <>
-                <View style={{ flexDirection: 'row', gap: theme.spacing[3] }}>
-                  <KV label="Type" value={doc.label} />
-                  <KV label="Number" value={doc.number || '—'} mono />
+          {/* Back face — captured document scan */}
+          <Animated.View
+            style={[
+              styles.docInfoCard,
+              styles.docCardBackFace,
+              {
+                transform: [
+                  { perspective: 1000 },
+                  { rotateY: flipAnim.interpolate({ inputRange: [0, 1], outputRange: ['180deg', '360deg'] }) },
+                ],
+                backfaceVisibility: 'hidden',
+                zIndex: isFlipped ? 1 : 0,
+              },
+            ]}>
+            <LinearGradient
+              colors={['#08B6FC', '#034965']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.docCardHeader}>
+              <Typography variant="body-sm" style={styles.cardTitle}>
+                Document Scan
+              </Typography>
+            </LinearGradient>
+            <View style={styles.docImageContainer}>
+              {scanUri ? (
+                <Image source={{ uri: scanUri }} style={styles.docFullImage} resizeMode="contain" />
+              ) : (
+                <View style={styles.docAvatarPlaceholder}>
+                  <IconCmp size={iconSize.xl} color={theme.colors.textMuted} />
+                  <Typography variant="body-sm" color="muted" style={{ marginTop: theme.spacing[2] }}>
+                    Original scan not available
+                  </Typography>
                 </View>
-                <Divider />
-                <View style={{ flexDirection: 'row', gap: theme.spacing[3] }}>
-                  <KV label="Status" value={status.label} />
-                  <KV label="Added" value={formatDate(doc.addedAt)} />
-                </View>
-                <Divider />
-                <View style={{ flexDirection: 'row', gap: theme.spacing[3] }}>
-                  <KV label="Expires" value={formatDate(doc.expiresAt)} />
-                  <KV label={isLicense ? 'State' : 'Nationality'} value={(isLicense ? doc.issuingState : doc.nationality) || '—'} />
-                </View>
-              </>
-            ) : (
-              <>
-                <View style={{ flexDirection: 'row', gap: theme.spacing[3] }}>
-                  <KV label="Number" value={doc.number} mono />
-                  <KV label="Issued by" value={doc.issuer} />
-                </View>
-                <Divider />
-                <View style={{ flexDirection: 'row', gap: theme.spacing[3] }}>
-                  <KV label="Issued on" value={formatDate(doc.issuedAt)} />
-                  <KV label="Type" value={doc.name} />
-                </View>
-              </>
-            )}
-          </CardContent>
-        </Card>
+              )}
+            </View>
+          </Animated.View>
+        </View>
 
-        {accordionItems.length > 0 && <Accordion items={accordionItems} multiple />}
+        {/* Flip action */}
+        <View style={{ alignItems: 'center' }}>
+          <CoreButton
+            size="sm"
+            onPress={toggleFlip}
+            accessibilityLabel={isFlipped ? 'View document info' : 'View document scan'}
+            iconLeft={
+              isFlipped ? (
+                <FileText size={iconSize.sm} color={theme.colors.onActionPrimary} />
+              ) : (
+                <Camera size={iconSize.sm} color={theme.colors.onActionPrimary} />
+              )
+            }>
+            {isFlipped ? 'View Info' : 'View Scan'}
+          </CoreButton>
+        </View>
+
+        {isIdentity && (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing[2] }}>
+            <RowIcon
+              tone="neutral"
+              icon={<FileText size={iconSize.sm} color={theme.colors.textSecondary} />}
+            />
+            <Typography variant="body-sm" color="secondary" style={{ flex: 1 }}>
+              Added {formatDate(doc.addedAt)}
+            </Typography>
+          </View>
+        )}
       </ScrollView>
 
       {isIdentity && (
@@ -322,3 +375,103 @@ export default function DocumentDetailScreen() {
     </SafeAreaView>
   );
 }
+
+const useStyles = makeStyles((t: Theme) => ({
+  cardWrapper: {
+    width: '100%',
+    height: 300,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  docInfoCard: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    backgroundColor: t.colors.surfaceRaised,
+    borderRadius: t.radii['2xl'],
+    overflow: 'hidden',
+    ...t.shadows.xl,
+  },
+  docCardBackFace: {
+    backgroundColor: t.colors.surfaceSunken,
+  },
+  docCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: t.spacing[5],
+    paddingVertical: t.spacing[4],
+  },
+  cardTitle: {
+    fontWeight: t.fontWeight.bold,
+    color: '#FFFFFF',
+    textTransform: 'uppercase',
+    letterSpacing: t.letterSpacing.caps,
+    flex: 1,
+  },
+  idCardStatusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: t.spacing[3],
+    paddingVertical: t.spacing[1],
+    borderRadius: t.radii.md,
+    borderWidth: t.sizes.fieldBorderWidth,
+    borderColor: 'rgba(255,255,255,0.4)',
+    minWidth: 80,
+    flexShrink: 0,
+    marginLeft: t.spacing[2],
+  },
+  idCardStatusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: t.radii.full,
+    marginRight: t.spacing[2],
+  },
+  idCardStatusText: {
+    fontWeight: t.fontWeight.bold,
+    color: '#FFFFFF',
+    letterSpacing: t.letterSpacing.caps,
+  },
+  docMainInfo: {
+    padding: t.spacing[5],
+    flexDirection: 'row',
+  },
+  docAvatarContainer: {
+    width: 96,
+    height: 96,
+    borderRadius: t.radii.lg,
+    overflow: 'hidden',
+    backgroundColor: t.colors.surfaceSunken,
+    marginRight: t.spacing[4],
+    borderWidth: t.sizes.fieldBorderWidth,
+    borderColor: t.colors.borderSubtle,
+  },
+  docAvatar: {
+    width: '100%',
+    height: '100%',
+    borderRadius: t.radii.lg,
+  },
+  docAvatarPlaceholder: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  docImageContainer: {
+    flex: 1,
+    padding: t.spacing[3],
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  docFullImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: t.radii.sm,
+  },
+  docDetailsGrid: {
+    flex: 1,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+}));
