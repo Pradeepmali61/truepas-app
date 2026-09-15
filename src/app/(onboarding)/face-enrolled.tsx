@@ -1,17 +1,20 @@
-import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { StyleSheet, Text, View } from 'react-native';
+import { CircleCheck, ScanFace } from 'lucide-react-native';
+import { View } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { ScreenContainer, Spacer } from '@/components/layout/ScreenContainer';
-import { TopBar } from '@/components/layout/TopBar';
-import { Button, Icon, Pill } from '@/components/ui';
+import { Card, CardContent } from '@/components/composite';
+import { Badge, CoreButton, FadeUp, PopIn, RowIcon, Typography } from '@/components/ui';
 import { faceEnrollmentCompleted } from '@/features/auth/slice';
 import { useAppDispatch } from '@/store';
+import { useThemeTokens } from '@/theme';
+import { iconSize } from '@/theme/tokens';
 
-/** Face enrolled success — face enrollment API call already completed
- *  by LivenessCamera. This screen dispatches Redux state and leads to
- *  document verification (no skip, PRD v2.0). */
+/** Face enrolled success (POST /cb/face/enroll) — the enroll call already
+ *  completed in LivenessCamera; this confirms and leads into the app. */
 export default function FaceEnrolledScreen() {
+  const theme = useThemeTokens();
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const dispatch = useAppDispatch();
 
@@ -21,31 +24,47 @@ export default function FaceEnrolledScreen() {
   };
 
   return (
-    <ScreenContainer scroll={false}>
-      <LinearGradient
-        colors={['#ffffff', '#93c5fd']}
-        style={StyleSheet.absoluteFill}
-      />
-      <TopBar title="" />
-      <View className="flex-1 items-center justify-center p-5">
-        <View className="h-[90px] w-[90px] items-center justify-center rounded-full bg-surface">
-          <Icon name="checkCircle" size={40} />
+    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: theme.colors.background }}>
+      <View style={{ flex: 1, padding: theme.spacing[4], gap: theme.spacing[4] }}>
+        <View style={{ alignItems: 'center', gap: theme.spacing[2], marginTop: theme.spacing[8] }}>
+          <PopIn>
+            <RowIcon tone="success" icon={<ScanFace size={iconSize.xl} color={theme.colors.onSuccessSubtle} />} />
+          </PopIn>
+          <Typography variant="h2" center>
+            You&apos;re all set
+          </Typography>
+          <Typography variant="body" color="secondary" center>
+            Your face is enrolled. Check in at venues with a glance — no documents needed.
+          </Typography>
         </View>
-        <Text accessibilityRole="header" className="mb-1 mt-5 text-[20px] font-bold text-primary">
-          Face Enrolled!
-        </Text>
-        <Text className="mb-[10px] text-[14px] text-muted">
-          Now let&apos;s verify your identity document
-        </Text>
-        <Pill label="Step 1 of 2 Complete" variant="active" />
+        <FadeUp delay={140}>
+          <Card>
+            <CardContent>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing[3] }}>
+                <RowIcon tone="success" icon={<CircleCheck size={iconSize.md} color={theme.colors.onSuccessSubtle} />} />
+                <View style={{ flex: 1, gap: 2, minWidth: 0 }}>
+                  <Typography variant="body">Face ID</Typography>
+                  <Typography variant="body-sm" color="secondary">Enrolled</Typography>
+                </View>
+                <Badge variant="success">Active</Badge>
+              </View>
+            </CardContent>
+          </Card>
+        </FadeUp>
       </View>
-      <Spacer />
-      <View className="px-6 pb-6">
-        <Button
-          label="Continue to Document Verification"
-          onPress={handleContinue}
-        />
+      <View
+        style={{
+          padding: theme.spacing[4],
+          paddingTop: theme.spacing[3],
+          paddingBottom: theme.spacing[4] + insets.bottom,
+          borderTopWidth: theme.sizes.fieldBorderWidth,
+          borderTopColor: theme.colors.borderSubtle,
+          backgroundColor: theme.colors.surface,
+        }}>
+        <CoreButton fullWidth size="lg" accessibilityLabel="Continue to Truepas" onPress={handleContinue}>
+          Continue to Truepas
+        </CoreButton>
       </View>
-    </ScreenContainer>
+    </SafeAreaView>
   );
 }

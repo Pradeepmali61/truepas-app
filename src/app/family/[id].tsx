@@ -1,86 +1,204 @@
-import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { Alert, Image, Modal, Platform, Pressable, ScrollView, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Baby, Camera, CircleCheck, EllipsisVertical, FileText, ScanFace, Trash2, UserRoundPen, Users } from 'lucide-react-native';
+import { useState, type ReactNode } from 'react';
+import { Alert as RNAlert, ScrollView, View } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AppBackground } from '@/components/layout/AppBackground';
-import { Icon, Skeleton } from '@/components/ui';
-import { Colors } from '@/constants/theme';
+import { ActionSheet, Alert, Card, CardContent, ErrorState, ScreenHeader } from '@/components/composite';
+import {
+    Avatar,
+    Badge,
+    CoreButton,
+    Divider,
+    IconButton,
+    PopIn,
+    RowIcon,
+    Skeleton,
+    Typography,
+    type BadgeVariant,
+    type RowIconTone,
+} from '@/components/ui';
 import { useDocuments } from '@/features/documents/hooks';
 import { useFamilyMember, useRemoveFamilyMember } from '@/features/family/hooks';
-import { useToast } from '@/hooks/useToast';
-import { getMemberProfileImage, saveMemberProfileImage } from '@/services/profileImageStore';
+import { useThemeTokens } from '@/theme';
+import { iconSize } from '@/theme/tokens';
+import type { FamilyMember } from '@/types/domain';
 
-function InfoField({ icon, label, value }: { icon: string; label: string; value: string }) {
+const VERIFICATION: Record<string, { variant: BadgeVariant; label: string }> = {
+  verified: { variant: 'success', label: 'Verified' },
+  pending_document: { variant: 'warning', label: 'Needs document' },
+  pending_face: { variant: 'warning', label: 'Needs face' },
+  failed: { variant: 'error', label: 'Failed' },
+};
+
+function verificationBadge(verification: string) {
+  const meta = VERIFICATION[verification] ?? { variant: 'neutral' as const, label: verification };
+  return <Badge variant={meta.variant}>{meta.label}</Badge>;
+}
+
+function StepRow({
+  icon,
+  tone = 'neutral',
+  title,
+  subtitle,
+  trailing,
+}: {
+  icon: ReactNode;
+  tone?: RowIconTone;
+  title: string;
+  subtitle: string;
+  trailing?: ReactNode;
+}) {
+  const theme = useThemeTokens();
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10 }}>
-      <View style={{
-        width: 40, height: 40, borderRadius: 12,
-        backgroundColor: '#F0FAFF',
-        alignItems: 'center', justifyContent: 'center',
-      }}>
-        <Icon name={icon as never} size={20} color={Colors.primary} />
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing[3] }}>
+      <RowIcon tone={tone} icon={icon} />
+      <View style={{ flex: 1, gap: 2, minWidth: 0 }}>
+        <Typography variant="body">{title}</Typography>
+        <Typography variant="body-sm" color="muted">{subtitle}</Typography>
       </View>
-      <View style={{ flex: 1 }}>
-        <Text style={{ fontSize: 12, fontWeight: '400', color: Colors.textMuted }}>{label}</Text>
-        <Text style={{ fontSize: 15, fontWeight: '600', color: Colors.ink, marginTop: 2 }}>{value}</Text>
-      </View>
+      {trailing}
     </View>
   );
 }
 
-/** Family member detail — matching Personal Info screen style. */
+/** Family member detail — GET /cb/family/{personId}. Steps card reflects the
+ *  member's verification state; capture mode comes from faceCaptureMode
+ *  ('photo' under 5, 'liveness' 5+) and allowedCameras (back under 10). */
 export default function FamilyMemberScreen() {
+  const theme = useThemeTokens();
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { data: member, isPending } = useFamilyMember(id);
+  const { data: member, isPending, isError, refetch } = useFamilyMember(id);
+  const { data: memberDocs } = useDocuments(id);
   const removeMember = useRemoveFamilyMember();
   const [menuOpen, setMenuOpen] = useState(false);
-  const toast = useToast();
-  // The member's locally persisted profile picture (backend S3 pending).
-  const [memberPic, setMemberPic] = useState<string | null>(null);
-  // The member's already scanned documents (GET /documents?personId=<id>)
-  const { data: memberDocs, isPending: docsPending } = useDocuments(id);
 
-  useEffect(() => {
-    if (id) {
-      getMemberProfileImage(id).then(setMemberPic).catch(() => setMemberPic(null));
-    }
-  }, [id]);
+  if (isPending) {
+    return (
+      <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: theme.colors.background }}>
+        <ScreenHeader title="Family member" onBack={() => router.back()} />
+        <View style={{ padding: theme.spacing[4], gap: theme.spacing[4] }}>
+          <View style={{ alignItems: 'center', gap: theme.spacing[2] }}>
+            <Skeleton width={64} height={64} radius={theme.radii.full} />
+            <Skeleton variant="text" width={120} height={16} />
+          </View>
+          <Skeleton height={180} radius={theme.radii.xl} />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
-  const handlePickProfilePicture = async () => {
-    try {
-      // Lazy-require: keeps expo-image-picker's native module out of the
-      // startup import chain so older dev clients don't crash on launch.
-      const ImagePicker = require('expo-image-picker');
-      if (Platform.OS === 'ios') {
-        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (status !== 'granted') {
-          toast.show('error', 'Photo access is needed to set a profile picture.');
-          return;
+  if (isError || !member) {
+    return (
+      <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: theme.colors.background }}>
+        <ScreenHeader title="Family member" onBack={() => router.back()} />
+        <ErrorState
+          title="Couldn't load member"
+          description="This member may have been removed, or your connection dropped."
+          onRetry={refetch}
+        />
+      </SafeAreaView>
+    );
+  }
+
+  const m: FamilyMember = member;
+  const first = m.name.split(' ')[0];
+  const isPhoto = (m.faceCaptureMode ?? (m.ageBand === '0-4' ? 'photo' : 'liveness')) === 'photo';
+  const anyCamera = m.allowedCameras?.includes('back') ?? false;
+  const verifiedDoc = memberDocs?.find((d) => d.status === 'verified');
+  const docDone = verifiedDoc != null;
+  const faceDone = m.faceEnrolled;
+  const docNext = !docDone;
+  const faceNext = docDone && !faceDone;
+
+  const cameraBadge = isPhoto ? (
+    <Badge variant="info" icon={<Baby size={iconSize.xs} color={theme.colors.onInfoSubtle} />}>
+      Photo enrollment
+    </Badge>
+  ) : (
+    <Badge variant="info" icon={<Camera size={iconSize.xs} color={theme.colors.onInfoSubtle} />}>
+      {anyCamera ? 'Any camera' : 'Front camera'}
+    </Badge>
+  );
+
+  const docRow = (
+    <StepRow
+      tone={docDone ? 'success' : 'warning'}
+      icon={<FileText size={iconSize.md} color={docDone ? theme.colors.onSuccessSubtle : theme.colors.onWarningSubtle} />}
+      title={isPhoto ? 'Document' : '1 · Verify a document'}
+      subtitle={docDone ? `${verifiedDoc?.label ?? 'Document'} verified.` : 'Birth certificate or passport.'}
+      trailing={docDone ? <Badge variant="success">Done</Badge> : <Badge variant="warning">Next</Badge>}
+    />
+  );
+
+  const faceRow = isPhoto ? (
+    <StepRow
+      tone={faceDone ? 'success' : faceNext ? 'warning' : 'neutral'}
+      icon={
+        <Camera
+          size={iconSize.md}
+          color={faceDone ? theme.colors.onSuccessSubtle : faceNext ? theme.colors.onWarningSubtle : theme.colors.textSecondary}
+        />
+      }
+      title="Photo captured"
+      subtitle="No liveness needed under 5 — one clear photo enrolls the face."
+      trailing={
+        faceDone ? <Badge variant="success">Done</Badge> : faceNext ? <Badge variant="warning">Next</Badge> : undefined
+      }
+    />
+  ) : (
+    <>
+      <StepRow
+        tone={faceDone ? 'success' : faceNext ? 'warning' : 'neutral'}
+        icon={
+          <ScanFace
+            size={iconSize.md}
+            color={faceDone ? theme.colors.onSuccessSubtle : faceNext ? theme.colors.onWarningSubtle : theme.colors.textSecondary}
+          />
         }
+        title="2 · Liveness check"
+        subtitle={anyCamera ? 'Front or back camera, challenge prompts.' : 'Front camera, challenge prompts.'}
+        trailing={
+          faceDone ? <Badge variant="success">Done</Badge> : faceNext ? <Badge variant="warning">Next</Badge> : undefined
+        }
+      />
+      <Divider />
+      <StepRow
+        icon={<CircleCheck size={iconSize.md} color={faceDone ? theme.colors.onSuccessSubtle : theme.colors.textSecondary} />}
+        tone={faceDone ? 'success' : 'neutral'}
+        title="3 · Face enrollment"
+        subtitle="Automatic after liveness passes."
+        trailing={faceDone ? <Badge variant="success">Done</Badge> : undefined}
+      />
+    </>
+  );
+
+  const cta = docNext
+    ? {
+        label: `Add ${first}'s document`,
+        onPress: () =>
+          router.push({
+            pathname: '/document/select-type',
+            params: { family: '1', personId: id, memberName: m.name, band: m.ageBand },
+          } as never),
       }
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'],
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.8,
-      });
-      if (!result.canceled && result.assets[0]?.uri) {
-        const uri = await saveMemberProfileImage(id, result.assets[0].uri);
-        setMemberPic(uri);
-        toast.show('success', 'Profile picture updated');
-      }
-    } catch {
-      toast.show('error', 'Failed to update profile picture. Please try again.');
-    }
-  };
+    : faceNext
+      ? {
+          label: isPhoto ? `Capture ${first}'s photo` : 'Start liveness check',
+          onPress: () =>
+            router.push({
+              pathname: isPhoto ? '/family/add/photo-capture' : '/family/add/face-capture',
+              params: { personId: id, name: first, age: String(m.age) },
+            } as never),
+        }
+      : null;
 
   const handleRemove = () => {
-    Alert.alert(
+    RNAlert.alert(
       'Remove family member?',
-      `${member?.name ?? 'This member'} will no longer be available in your family.`,
+      `${m.name} will no longer be available in your family. Their face and documents are deleted too.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -89,343 +207,112 @@ export default function FamilyMemberScreen() {
           onPress: async () => {
             try {
               await removeMember.mutateAsync(id);
-            } catch {
-              // proceed even if mock fails
+            } finally {
+              router.back();
             }
-            router.back();
           },
         },
       ],
     );
   };
 
-  if (isPending) {
-    return (
-      <SafeAreaView className="flex-1 bg-white" edges={['top', 'bottom']}>
-        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 240 }}>
-          <LinearGradient
-            colors={['#39c5fd', '#9ce2fe', '#f5fcff']}
-            style={{ flex: 1 }}
-          />
-        </View>
-        <AppBackground />
-        <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, height: 56 }}>
-          <Pressable onPress={() => router.back()} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
-            <Icon name="back" size={22} color={Colors.ink} />
-          </Pressable>
-          <Text style={{ flex: 1, textAlign: 'center', fontSize: 18, fontWeight: '700', color: Colors.ink, marginRight: 44 }}>
-            Family Member
-          </Text>
-        </View>
-        <View style={{ gap: 12, paddingHorizontal: 20, paddingTop: 20 }}>
-          <Skeleton height={100} radius={16} />
-          <Skeleton height={180} radius={16} />
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  if (!member) {
-    return (
-      <SafeAreaView className="flex-1 bg-white" edges={['top', 'bottom']}>
-        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 240 }}>
-          <LinearGradient
-            colors={['#39c5fd', '#9ce2fe', '#f5fcff']}
-            style={{ flex: 1 }}
-          />
-        </View>
-        <AppBackground />
-        <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, height: 56 }}>
-          <Pressable onPress={() => router.back()} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
-            <Icon name="back" size={22} color={Colors.ink} />
-          </Pressable>
-          <Text style={{ flex: 1, textAlign: 'center', fontSize: 18, fontWeight: '700', color: Colors.ink, marginRight: 44 }}>
-            Family Member
-          </Text>
-        </View>
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-          <Text style={{ fontSize: 14, color: Colors.textMuted }}>Family member not found.</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  const initials = member.name
-    .split(' ')
-    .map((part) => part[0])
-    .join('');
-  const faceEnrolled = member.ageBand !== '0-4';
-
-  // Open the document scan flow scoped to this family member.
-  const openMemberDocuments = () => {
-    router.push({
-      pathname: '/document/select-type',
-      params: { family: '1', personId: id, memberName: member.name, band: member.ageBand },
-    });
-  };
-
   return (
-    <SafeAreaView className="flex-1 bg-white" edges={['top', 'bottom']}>
-      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 240 }}>
-        <LinearGradient
-          colors={['#39c5fd', '#9ce2fe', '#f5fcff']}
-          style={{ flex: 1 }}
-        />
-      </View>
-      <AppBackground />
-      {/* Header */}
-      <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, height: 56 }}>
-        <Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel="Go back" style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
-          <Icon name="back" size={22} color={Colors.ink} />
-        </Pressable>
-        <Text style={{ flex: 1, textAlign: 'center', fontSize: 18, fontWeight: '700', color: Colors.ink }}>
-          {member.name}
-        </Text>
-        <Pressable
-          onPress={() => setMenuOpen(true)}
-          accessibilityRole="button"
-          accessibilityLabel="More options"
-          style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
-          <Icon name="settings" size={22} color={Colors.ink} />
-        </Pressable>
-      </View>
-
-      {/* Options menu */}
-      <Modal
-        visible={menuOpen}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setMenuOpen(false)}>
-        <Pressable
-          onPress={() => setMenuOpen(false)}
-          style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.3)' }}>
-          <View style={{
-            position: 'absolute',
-            top: 64,
-            right: 16,
-            backgroundColor: '#FFFFFF',
-            borderRadius: 12,
-            paddingVertical: 4,
-            minWidth: 180,
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.15,
-            shadowRadius: 12,
-            elevation: 8,
-          }}>
-            <Pressable
-              onPress={() => {
-                setMenuOpen(false);
-                router.push({ pathname: '/face-update/pin', params: { personId: id } } as never);
-              }}
-              style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
-              <Text style={{ fontSize: 15, fontWeight: '500', color: Colors.ink }}>Update face</Text>
-            </Pressable>
-            <View style={{ height: 1, backgroundColor: '#F1F5F9' }} />
-            <Pressable
-              onPress={() => { setMenuOpen(false); handleRemove(); }}
-              style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
-              <Text style={{ fontSize: 15, fontWeight: '500', color: '#EF4444' }}>Remove member</Text>
-            </Pressable>
-          </View>
-        </Pressable>
-      </Modal>
-
-      <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
-        {/* Avatar */}
-        <View style={{ alignItems: 'center', paddingTop: 16, paddingBottom: 8 }}>
-          <View>
-            {memberPic ? (
-              <Image
-                source={{ uri: memberPic }}
-                style={{ width: 88, height: 88, borderRadius: 44 }}
-                resizeMode="cover"
-              />
-            ) : (
-              <LinearGradient
-                colors={['#08B6FC', '#84dbfe']}
-                style={{ alignItems: 'center', justifyContent: 'center', width: 88, height: 88, borderRadius: 44 }}>
-                <Text style={{ fontSize: 32, fontWeight: '700', color: '#FFFFFF' }}>
-                  {initials}
-                </Text>
-              </LinearGradient>
-            )}
-            <Pressable
-              onPress={handlePickProfilePicture}
-              accessibilityRole="button"
-              accessibilityLabel="Change profile picture"
-              style={{
-                position: 'absolute',
-                bottom: 0,
-                right: 0,
-                width: 28,
-                height: 28,
-                borderRadius: 14,
-                backgroundColor: Colors.primary,
-                alignItems: 'center',
-                justifyContent: 'center',
-                borderWidth: 2,
-                borderColor: '#FFFFFF',
-              }}>
-              <Icon name="camera" size={14} color="#FFFFFF" />
-            </Pressable>
-          </View>
-          <Text style={{ marginTop: 12, fontSize: 20, fontWeight: '700', color: Colors.ink }}>{member.name}</Text>
-          <Text style={{ marginTop: 2, fontSize: 14, fontWeight: '400', color: Colors.textMuted }}>
-            {member.relationship} · Age {member.age}
-          </Text>
-          <View style={{ marginTop: 6, flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#ECFDF5', paddingHorizontal: 12, paddingVertical: 5, borderRadius: 8 }}>
-            <Icon name="checkCircle" size={14} color="#059669" />
-            <Text style={{ fontSize: 13, fontWeight: '600', color: '#059669' }}>
-              {faceEnrolled ? 'Fully Verified' : 'Document Only'}
-            </Text>
+    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: theme.colors.background }}>
+      <ScreenHeader
+        title={m.name}
+        subtitle={`${m.relationship} · age ${m.age}`}
+        onBack={() => router.back()}
+        actions={
+          <IconButton
+            accessibilityLabel="Member options"
+            icon={<EllipsisVertical size={iconSize.md} color={theme.colors.textPrimary} />}
+            onPress={() => setMenuOpen(true)}
+          />
+        }
+      />
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ padding: theme.spacing[4], gap: theme.spacing[4], paddingBottom: cta ? theme.sizes.heightLg + theme.spacing[8] : theme.spacing[6] }}
+        showsVerticalScrollIndicator={false}>
+        <View style={{ alignItems: 'center', gap: theme.spacing[2] }}>
+          <PopIn>
+            <Avatar name={m.name} size="xl" />
+          </PopIn>
+          <View style={{ flexDirection: 'row', gap: theme.spacing[2], flexWrap: 'wrap', justifyContent: 'center' }}>
+            {verificationBadge(m.verification)}
+            {cameraBadge}
           </View>
         </View>
-
-        {/* Verification */}
-        <View style={{ marginHorizontal: 16, marginTop: 16, backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 8, elevation: 2 }}>
-          <Text style={{ fontSize: 14, fontWeight: '700', color: Colors.ink, marginBottom: 4 }}>Verification</Text>
-          <InfoField
-            icon="scanFace"
-            label="Face Enrollment"
-            value={member.ageBand === '0-4' ? 'Not Applicable' : faceEnrolled ? 'Complete' : 'Pending'}
-          />
-          <View style={{ height: 1, backgroundColor: '#F1F5F9', marginHorizontal: -16 }} />
-          <InfoField
-            icon="documents"
-            label="Documents"
-            value={`${memberDocs?.filter((d) => d.status === 'verified').length ?? 0} verified`}
-          />
-        </View>
-
-        {/* Independent account offer — adults (18+) can have their own
-            Truepas account; ask the guardian right on the member's page. */}
-        {member.ageBand === '18+' && (
-          <View style={{ marginHorizontal: 16, marginTop: 16, backgroundColor: '#F0FAFF', borderRadius: 16, padding: 16, borderWidth: 1, borderColor: '#B8E7FC' }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-              <View style={{
-                width: 40, height: 40, borderRadius: 12,
-                backgroundColor: '#FFFFFF',
-                alignItems: 'center', justifyContent: 'center',
-              }}>
-                <Icon name="user" size={20} color={Colors.primary} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 15, fontWeight: '700', color: Colors.ink }}>Independent Truepas Account</Text>
-                <Text style={{ fontSize: 13, color: Colors.textMuted, marginTop: 2 }}>
-                  Would you like to create an independent Truepas account for {member.name.split(' ')[0]}?
-                </Text>
-              </View>
-            </View>
-            <Pressable
-              onPress={() => router.push('/(auth)/register' as never)}
-              accessibilityRole="button"
-              accessibilityLabel={`Create independent account for ${member.name}`}
-              style={{
-                marginTop: 12,
-                height: 44,
-                borderRadius: 12,
-                backgroundColor: Colors.primary,
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}>
-              <Text style={{ fontSize: 15, fontWeight: '600', color: '#FFFFFF' }}>Create Account</Text>
-            </Pressable>
-          </View>
+        <Card>
+          <CardContent style={{ gap: theme.spacing[3] }}>
+            {docRow}
+            <Divider />
+            {faceRow}
+          </CardContent>
+        </Card>
+        {m.verification === 'verified' && (
+          <Alert variant="success" title="Ready for check-in">
+            {first} can be added to venue check-ins with you.
+          </Alert>
         )}
-
-        {/* Documents — the member's already scanned documents */}
-        <View style={{ marginHorizontal: 16, marginTop: 16, backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 8, elevation: 2 }}>
-          <Text style={{ fontSize: 14, fontWeight: '700', color: Colors.ink, marginBottom: 4 }}>Documents</Text>
-          {docsPending ? (
-            <View style={{ paddingVertical: 16, alignItems: 'center' }}>
-              <Skeleton height={48} radius={12} />
-            </View>
-          ) : (memberDocs?.length ?? 0) === 0 ? (
-            <Text style={{ fontSize: 13, color: Colors.textMuted, paddingVertical: 12 }}>
-              No documents scanned yet. Use "Add document" below to scan one.
-            </Text>
-          ) : (
-            memberDocs!.map((doc, index) => (
-              <Pressable
-                key={doc.id}
-                onPress={() => router.push({ pathname: '/document/[id]', params: { id: doc.id } })}
-                accessibilityRole="button"
-                accessibilityLabel={`Open ${doc.label}`}
-                style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10 }}>
-                <View style={{
-                  width: 48, height: 48, borderRadius: 12,
-                  backgroundColor: '#F0FAFF',
-                  alignItems: 'center', justifyContent: 'center',
-                }}>
-                  <Icon name={doc.type as never} size={24} color={Colors.primary} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 15, fontWeight: '600', color: Colors.ink }}>{doc.label}</Text>
-                  <Text style={{ fontSize: 13, fontWeight: '400', color: Colors.textMuted, marginTop: 2 }}>
-                    {doc.status === 'verified' ? 'Verified' : 'Failed'}
-                    {doc.expiresAt ? ` · Expires ${new Date(doc.expiresAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}` : ''}
-                  </Text>
-                </View>
-                {doc.status === 'verified' ? (
-                  <View style={{
-                    flexDirection: 'row', alignItems: 'center', gap: 4,
-                    backgroundColor: '#ECFDF5', paddingHorizontal: 10, height: 28, borderRadius: 8,
-                  }}>
-                    <Icon name="check" size={12} color="#059669" />
-                    <Text style={{ fontSize: 13, fontWeight: '600', color: '#059669' }}>Verified</Text>
-                  </View>
-                ) : (
-                  <Icon name="chevron" size={18} color={Colors.textMuted} />
-                )}
-                {index < (memberDocs?.length ?? 0) - 1 && (
-                  <View style={{ position: 'absolute', left: 60, right: 0, bottom: 0, height: 1, backgroundColor: '#F1F5F9' }} />
-                )}
-              </Pressable>
-            ))
-          )}
-        </View>
-
-        {/* Add document */}
-        <Pressable
-          onPress={openMemberDocuments}
-          accessibilityRole="button"
-          accessibilityLabel="Add document"
-          style={{
-            marginTop: 16,
-            marginHorizontal: 16,
-            height: 48,
-            borderRadius: 14,
-            backgroundColor: '#F0FAFF',
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 8,
-          }}>
-          <Icon name="plus" size={18} color={Colors.primary} />
-          <Text style={{ fontSize: 15, fontWeight: '600', color: Colors.primary }}>Add document</Text>
-        </Pressable>
-
-        {/* Remove member */}
-        <Pressable
-          onPress={handleRemove}
-          accessibilityRole="button"
-          accessibilityLabel="Remove family member"
-          style={{
-            marginTop: 12,
-            marginHorizontal: 16,
-            marginBottom: 12,
-            height: 48,
-            borderRadius: 14,
-            backgroundColor: 'transparent',
-            borderWidth: 1,
-            borderColor: '#FECACA',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}>
-          <Text style={{ fontSize: 15, fontWeight: '600', color: '#EF4444' }}>Remove member</Text>
-        </Pressable>
+        {m.turning18Soon && (
+          <Alert variant="info" title="Eligible for independent account">
+            {first} is turning 18 soon and can create their own Truepas account.
+          </Alert>
+        )}
       </ScrollView>
+      {cta && (
+        <View
+          style={{
+            padding: theme.spacing[4],
+            paddingTop: theme.spacing[3],
+            paddingBottom: theme.spacing[4] + insets.bottom,
+            borderTopWidth: theme.sizes.fieldBorderWidth,
+            borderTopColor: theme.colors.borderSubtle,
+            backgroundColor: theme.colors.surface,
+          }}>
+          <CoreButton fullWidth size="lg" accessibilityLabel={cta.label} onPress={cta.onPress}>
+            {cta.label}
+          </CoreButton>
+        </View>
+      )}
+      <ActionSheet
+        visible={menuOpen}
+        onClose={() => setMenuOpen(false)}
+        title={m.name}
+        items={[
+          {
+            key: 'activity',
+            label: 'View activity',
+            icon: <Users size={iconSize.sm} color={theme.colors.textPrimary} />,
+            onSelect: () =>
+              router.push({ pathname: '/family/[id]/activity', params: { id, name: m.name } } as never),
+          },
+          ...(faceDone
+            ? [
+                {
+                  key: 'update-face',
+                  label: isPhoto ? 'Retake photo' : 'Update face',
+                  icon: <UserRoundPen size={iconSize.sm} color={theme.colors.textPrimary} />,
+                  onSelect: () =>
+                    isPhoto
+                      ? router.push({
+                          pathname: '/family/add/photo-capture',
+                          params: { personId: id, name: first, age: String(m.age) },
+                        } as never)
+                      : router.push({ pathname: '/face-update/pin', params: { personId: id } } as never),
+                },
+              ]
+            : []),
+          {
+            key: 'remove',
+            label: 'Remove member',
+            icon: <Trash2 size={iconSize.sm} color={theme.colors.error} />,
+            destructive: true,
+            onSelect: handleRemove,
+          },
+        ]}
+      />
     </SafeAreaView>
   );
 }

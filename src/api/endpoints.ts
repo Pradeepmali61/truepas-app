@@ -97,14 +97,26 @@ export const realApi = {
     return data;
   },
   getNotifications: async (params?: { limit?: number; offset?: number; unreadOnly?: boolean }): Promise<Notification[]> => {
-    const { data } = await apiClient.get<Notification[]>('/notifications', {
+    const { data } = await apiClient.get<unknown[]>('/notifications', {
       params: {
         limit: params?.limit ?? 50,
         offset: params?.offset ?? 0,
         unread_only: params?.unreadOnly ?? false,
       },
     });
-    return data;
+    // Contract schema is snake_case ({ message, is_read, created_at,
+    // notification_type }) — normalize to the app's Notification shape.
+    return (Array.isArray(data) ? data : []).map((raw) => {
+      const n = raw as Record<string, unknown>;
+      return {
+        id: String(n.id ?? ''),
+        title: String(n.title ?? ''),
+        body: String(n.message ?? n.body ?? ''),
+        read: Boolean(n.is_read ?? n.read ?? false),
+        createdAt: String(n.created_at ?? n.createdAt ?? ''),
+        type: (n.notification_type ?? n.type) as string | undefined,
+      };
+    });
   },
 
   // ── Auth ─────────────────────────────────────────────────────────────

@@ -1,302 +1,192 @@
-import { LinearGradient } from 'expo-linear-gradient';
-import { useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
-import { Image, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { CircleCheck, Hotel, MapPin, Ticket } from 'lucide-react-native';
+import type { ReactNode } from 'react';
+import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { AppBackground } from '@/components/layout/AppBackground';
-import { ScreenHeader } from '@/components/layout/ScreenHeader';
-import { Icon, Skeleton } from '@/components/ui';
-import { Colors, Elevation, Gradients } from '@/constants/theme';
+import { Card, CardContent, CardHeader, CardTitle, ErrorState, ScreenHeader } from '@/components/composite';
+import {
+    Badge,
+    Divider,
+    RowIcon,
+    Skeleton,
+    Typography,
+    type BadgeVariant,
+} from '@/components/ui';
+import { useFamily } from '@/features/family/hooks';
 import { useBooking } from '@/features/history/hooks';
+import { useAppSelector } from '@/store';
+import { useThemeTokens } from '@/theme';
+import { iconSize } from '@/theme/tokens';
 
-const BOOKING_IMAGES: Record<string, any> = {
-  'hayat hotel': require('../../../assets/images/hayat-hotel1.png'),
-  'theme park': require('../../../assets/images/theme-park2.png'),
-  'disney cruise': require('../../../assets/images/cruise-2,.png'),
+const STATUS: Record<string, { variant: BadgeVariant; label: string }> = {
+  completed: { variant: 'success', label: 'Completed' },
+  upcoming: { variant: 'info', label: 'Upcoming' },
+  cancelled: { variant: 'neutral', label: 'Cancelled' },
+  failed: { variant: 'error', label: 'Failed' },
 };
 
-/** Check-in detail — completed booking summary. */
-export default function BookingDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
-  const { data: booking, isPending } = useBooking(id);
-  const resolvedBooking = booking;
-  const [docsExpanded, setDocsExpanded] = useState(false);
-  const [membersExpanded, setMembersExpanded] = useState(false);
+function KV({ label, value, mono = true }: { label: string; value: string; mono?: boolean }) {
+  const theme = useThemeTokens();
+  return (
+    <View style={{ flex: 1, gap: 2, minWidth: 0 }}>
+      <Typography variant="caption" color="muted" style={{ textTransform: 'uppercase', letterSpacing: 0.5 }}>
+        {label}
+      </Typography>
+      <Typography
+        variant="body"
+        numberOfLines={1}
+        style={mono ? { fontFamily: theme.fontFamily.mono.semibold } : undefined}>
+        {value}
+      </Typography>
+    </View>
+  );
+}
 
-  const verifiedDocs = [
-    { icon: 'idCard' as const, label: 'Driving License' },
-    { icon: 'passport' as const, label: 'Passport' },
-  ];
+function Row({ leading, title, subtitle, trailing }: { leading: ReactNode; title: string; subtitle?: string; trailing?: ReactNode }) {
+  const theme = useThemeTokens();
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing[3] }}>
+      {leading}
+      <View style={{ flex: 1, gap: 2, minWidth: 0 }}>
+        <Typography variant="body" numberOfLines={1}>{title}</Typography>
+        {subtitle ? (
+          <Typography variant="body-sm" color="muted" numberOfLines={1}>{subtitle}</Typography>
+        ) : null}
+      </View>
+      {trailing}
+    </View>
+  );
+}
+
+function formatDate(value: string): string {
+  const d = new Date(value);
+  return Number.isNaN(d.getTime())
+    ? value
+    : d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
+function formatDateTime(value: string): string {
+  const d = new Date(value);
+  return Number.isNaN(d.getTime())
+    ? value
+    : d.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+}
+
+/** Booking detail — GET /cb/bookings/{bookingId}. checkedInMembers are person
+ *  IDs; names resolve via family/user data. */
+export default function BookingDetailScreen() {
+  const theme = useThemeTokens();
+  const router = useRouter();
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const { data: booking, isPending, isError, refetch } = useBooking(id);
+  const { data: family } = useFamily();
+  const user = useAppSelector((s) => s.auth.user);
+
+  if (isPending) {
+    return (
+      <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: theme.colors.background }}>
+        <ScreenHeader title="Check-in" onBack={() => router.back()} />
+        <View style={{ padding: theme.spacing[4], gap: theme.spacing[4] }}>
+          <Skeleton height={72} radius={theme.radii.xl} />
+          <Skeleton height={140} radius={theme.radii.xl} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (isError || !booking) {
+    return (
+      <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: theme.colors.background }}>
+        <ScreenHeader title="Check-in" onBack={() => router.back()} />
+        <ErrorState
+          title="Couldn't load booking"
+          description="This booking may have been removed, or your connection dropped."
+          onRetry={refetch}
+        />
+      </SafeAreaView>
+    );
+  }
+
+  const status = STATUS[booking.status] ?? { variant: 'neutral' as const, label: booking.status };
+  const isHotel = booking.type === 'hotel';
+  const memberIds = booking.checkedInMembers ?? [];
+
+  const resolveName = (personId: string): string => {
+    if (user && personId === user.id) return user.fullName;
+    return family?.find((m) => m.id === personId)?.name ?? 'Family member';
+  };
 
   return (
-    <SafeAreaView className="flex-1" edges={['top']} style={{ backgroundColor: '#F8FBFF' }}>
-      <AppBackground />
-      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 240 }}>
-        {Platform.OS === 'web' ? (
-          <View style={[StyleSheet.absoluteFill, { backgroundImage: 'linear-gradient(180deg, #39c5fd, #9ce2fe, #f5fcff)' } as any]} />
-        ) : (
-          <LinearGradient
-            colors={['#39c5fd', '#9ce2fe', '#f5fcff']}
-            style={{ flex: 1 }}
+    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: theme.colors.background }}>
+      <ScreenHeader title={booking.venue} onBack={() => router.back()} />
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ padding: theme.spacing[4], gap: theme.spacing[4], paddingBottom: theme.spacing[8] }}
+        showsVerticalScrollIndicator={false}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing[3] }}>
+          <RowIcon
+            tone={isHotel ? 'primary' : 'info'}
+            icon={
+              isHotel ? (
+                <Hotel size={iconSize.lg} color={theme.colors.actionPrimary} />
+              ) : (
+                <Ticket size={iconSize.lg} color={theme.colors.onInfoSubtle} />
+              )
+            }
           />
+          <View style={{ flex: 1, gap: 2, minWidth: 0 }}>
+            <Typography variant="h4" numberOfLines={1}>{booking.venue}</Typography>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing[1] }}>
+              <MapPin size={iconSize.xs} color={theme.colors.textMuted} />
+              <Typography variant="body-sm" color="secondary" numberOfLines={1}>
+                {booking.location}
+              </Typography>
+            </View>
+          </View>
+          <Badge variant={status.variant}>{status.label}</Badge>
+        </View>
+
+        <Card>
+          <CardContent style={{ gap: theme.spacing[3] }}>
+            <View style={{ flexDirection: 'row', gap: theme.spacing[3] }}>
+              <KV label="Check-in" value={formatDate(booking.checkIn)} />
+              <KV label="Check-out" value={formatDate(booking.checkOut)} />
+            </View>
+            <Divider />
+            <View style={{ flexDirection: 'row', gap: theme.spacing[3] }}>
+              <KV label="Guests" value={String(booking.guests)} />
+              <KV label="Total" value={`$${booking.amount.toFixed(2)}`} />
+            </View>
+          </CardContent>
+        </Card>
+
+        {memberIds.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Checked-in members</CardTitle>
+            </CardHeader>
+            <CardContent style={{ gap: theme.spacing[3] }}>
+              {memberIds.map((personId, i) => (
+                <View key={personId}>
+                  {i > 0 && <Divider style={{ marginBottom: theme.spacing[3] }} />}
+                  <Row
+                    leading={
+                      <RowIcon
+                        tone="success"
+                        icon={<CircleCheck size={iconSize.md} color={theme.colors.onSuccessSubtle} />}
+                      />
+                    }
+                    title={resolveName(personId)}
+                    subtitle={`Face check-in · ${formatDateTime(booking.checkIn)}`}
+                    trailing={<Badge variant="success">Checked in</Badge>}
+                  />
+                </View>
+              ))}
+            </CardContent>
+          </Card>
         )}
-      </View>
-      <ScreenHeader title="Check-in details" light />
-
-      {isPending ? (
-        <View className="gap-4 px-6 pt-4">
-          <Skeleton height={180} radius={20} />
-          <Skeleton height={120} radius={20} />
-        </View>
-      ) : !resolvedBooking ? (
-        <View className="flex-1 items-center justify-center px-6">
-          <Text className="text-[14px] text-muted">Booking not found.</Text>
-        </View>
-      ) : (
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32 }}>
-          {/* Check-in summary card */}
-          <View style={{
-            backgroundColor: '#FFFFFF',
-            borderRadius: 24,
-            overflow: 'hidden',
-            marginTop: 16,
-            borderWidth: 1,
-            borderColor: '#F1F5F9',
-            elevation: 2,
-            shadowColor: '#000',
-            shadowOpacity: 0.08,
-            shadowRadius: 16,
-            shadowOffset: { width: 0, height: 4 },
-          }}>
-            {/* Hotel image */}
-            {resolvedBooking.image && BOOKING_IMAGES[resolvedBooking.image] ? (
-              <View style={{ width: '100%', aspectRatio: 2.2 }}>
-                <Image
-                  source={BOOKING_IMAGES[resolvedBooking.image]}
-                  style={{ width: '100%', height: '100%' }}
-                  resizeMode="cover"
-                />
-              </View>
-            ) : (
-              <LinearGradient
-                colors={Gradients.historyThumb}
-                style={{
-                  width: '100%',
-                  aspectRatio: 2.2,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}>
-                <Icon name="hotel" size={48} color={Colors.primary} />
-              </LinearGradient>
-            )}
-
-            {/* Summary content */}
-            <View style={{ padding: 20 }}>
-              <Text style={{ fontSize: 21, fontWeight: '700', color: Colors.ink, marginBottom: 12 }}>
-                {resolvedBooking.venue} <Text style={{ fontWeight: '500', color: '#9CA3AF' }}>— Front Desk</Text>
-              </Text>
-
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                <Icon name="location" size={18} color="#6B7280" />
-                <Text style={{ fontSize: 15, fontWeight: '500', color: '#374151' }}>{resolvedBooking.location}</Text>
-              </View>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <Icon name="calendar" size={18} color="#6B7280" />
-                <Text style={{ fontSize: 15, fontWeight: '500', color: '#374151' }}>
-                  {resolvedBooking.checkIn} → {resolvedBooking.checkOut}
-                </Text>
-              </View>
-            </View>
-          </View>
-
-          {/* Verification details card */}
-          <View style={{
-            backgroundColor: '#FFFFFF',
-            borderRadius: 24,
-            paddingHorizontal: 20,
-            paddingVertical: 4,
-            marginTop: 24,
-            ...Elevation.small,
-          }}>
-            {/* Status header — completed vs upcoming */}
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 20, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' }}>
-              <View style={{
-                width: 40, height: 40, borderRadius: 20,
-                backgroundColor: resolvedBooking.status === 'upcoming' ? '#FFFBEB' : '#ECFDF5',
-                alignItems: 'center', justifyContent: 'center',
-              }}>
-                <Icon name={resolvedBooking.status === 'upcoming' ? 'documents' : 'check'} size={22} color={resolvedBooking.status === 'upcoming' ? '#D97706' : '#059669'} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 17, fontWeight: '700', color: Colors.ink }}>
-                  {resolvedBooking.status === 'upcoming' ? 'Check-in scheduled' : 'Check-in completed'}
-                </Text>
-                <Text style={{ fontSize: 13, fontWeight: '400', color: '#9CA3AF', marginTop: 2 }}>
-                  {resolvedBooking.status === 'upcoming'
-                    ? 'Verify your identity to check in at this venue'
-                    : 'All required details are verified'}
-                </Text>
-              </View>
-            </View>
-
-            <Text style={{
-              fontSize: 12,
-              fontWeight: '600',
-              color: '#9CA3AF',
-              textTransform: 'uppercase',
-              letterSpacing: 1,
-              paddingTop: 20,
-              paddingBottom: 8,
-            }}>
-              Verification details
-            </Text>
-
-            <View style={{
-              paddingVertical: 16,
-              borderBottomWidth: 1,
-              borderBottomColor: '#F1F5F9',
-            }}>
-              <Pressable
-                onPress={() => setDocsExpanded(!docsExpanded)}
-                style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
-              >
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 16, fontWeight: '500', color: '#374151' }}>
-                    {resolvedBooking.status === 'upcoming' ? 'Documents required' : 'Documents verified'}
-                  </Text>
-                  <Text style={{ fontSize: 13, fontWeight: '400', color: '#9CA3AF', marginTop: 2 }}>
-                    {resolvedBooking.status === 'upcoming'
-                      ? `0 of ${verifiedDocs.length} documents verified`
-                      : `${verifiedDocs.length} of ${verifiedDocs.length} documents verified`}
-                  </Text>
-                </View>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <View style={{ flexDirection: 'row', marginRight: 4 }}>
-                    {verifiedDocs.slice(0, docsExpanded ? 0 : 2).map((doc, idx) => (
-                      <View key={idx} style={{
-                        width: 40, height: 40, borderRadius: 20,
-                        backgroundColor: resolvedBooking.status === 'upcoming' ? '#FFFBEB' : '#ECFDF5',
-                        alignItems: 'center', justifyContent: 'center',
-                        borderWidth: 2, borderColor: resolvedBooking.status === 'upcoming' ? '#D97706' : '#059669',
-                        marginLeft: idx === 0 ? 0 : -12,
-                      }}>
-                        <Icon name={doc.icon} size={20} color={resolvedBooking.status === 'upcoming' ? '#D97706' : '#059669'} />
-                      </View>
-                    ))}
-                  </View>
-                  <View style={{
-                    width: 24, height: 24, borderRadius: 12,
-                    backgroundColor: resolvedBooking.status === 'upcoming' ? '#FFFBEB' : '#ECFDF5',
-                    alignItems: 'center', justifyContent: 'center',
-                  }}>
-                    <Icon name={resolvedBooking.status === 'upcoming' ? 'clock' : 'check'} size={14} color={resolvedBooking.status === 'upcoming' ? '#D97706' : '#059669'} />
-                  </View>
-                </View>
-              </Pressable>
-              {docsExpanded && (
-                <View style={{ marginTop: 12, flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                  {verifiedDocs.map((doc, idx) => (
-                    <View key={idx} style={{
-                      flexDirection: 'row', alignItems: 'center', gap: 8,
-                      backgroundColor: '#F8FBFF', borderRadius: 24,
-                      paddingHorizontal: 10, paddingVertical: 6,
-                      borderWidth: 1, borderColor: '#F1F5F9',
-                    }}>
-                      <View style={{
-                        width: 32, height: 32, borderRadius: 16,
-                        backgroundColor: '#ECFDF5',
-                        alignItems: 'center', justifyContent: 'center',
-                        borderWidth: 1.5, borderColor: '#059669',
-                      }}>
-                        <Icon name={doc.icon} size={18} color="#059669" />
-                      </View>
-                      <Text style={{ fontSize: 14, fontWeight: '500', color: '#374151', paddingRight: 4 }}>{doc.label}</Text>
-                      <View style={{
-                        width: 18, height: 18, borderRadius: 9,
-                        backgroundColor: '#ECFDF5',
-                        alignItems: 'center', justifyContent: 'center',
-                      }}>
-                        <Icon name="check" size={11} color="#059669" />
-                      </View>
-                    </View>
-                  ))}
-                </View>
-              )}
-            </View>
-
-            {/* Checked-in family members */}
-            <View style={{ paddingVertical: 16 }}>
-              <Pressable
-                onPress={() => setMembersExpanded(!membersExpanded)}
-                style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
-              >
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 16, fontWeight: '500', color: '#374151' }}>Family members checked in</Text>
-                  <Text style={{ fontSize: 13, fontWeight: '400', color: '#9CA3AF', marginTop: 2 }}>
-                    {(resolvedBooking.checkedInMembers ?? []).length} members
-                  </Text>
-                </View>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <View style={{ flexDirection: 'row', marginRight: 4 }}>
-                    {(resolvedBooking.checkedInMembers ?? []).slice(0, membersExpanded ? 0 : 4).map((member, idx) => (
-                      <View key={idx} style={{
-                        width: 40, height: 40, borderRadius: 20,
-                        backgroundColor: '#08B6FC',
-                        alignItems: 'center', justifyContent: 'center',
-                        borderWidth: 3, borderColor: '#FFFFFF',
-                        marginLeft: idx === 0 ? 0 : -12,
-                      }}>
-                        <Text style={{ fontSize: 13, fontWeight: '700', color: '#FFFFFF' }}>
-                          {member.split(' ').map((n) => n[0]).join('').slice(0, 2)}
-                        </Text>
-                      </View>
-                    ))}
-                  </View>
-                  <View style={{
-                    width: 24, height: 24, borderRadius: 12,
-                    backgroundColor: '#ECFDF5',
-                    alignItems: 'center', justifyContent: 'center',
-                  }}>
-                    <Icon name="check" size={14} color="#059669" />
-                  </View>
-                </View>
-              </Pressable>
-              {membersExpanded && (
-                <View style={{ marginTop: 12, flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                  {(resolvedBooking.checkedInMembers ?? []).map((member, idx) => (
-                    <View key={idx} style={{
-                      flexDirection: 'row', alignItems: 'center', gap: 8,
-                      backgroundColor: '#F8FBFF', borderRadius: 24,
-                      paddingHorizontal: 10, paddingVertical: 6,
-                      borderWidth: 1, borderColor: '#F1F5F9',
-                    }}>
-                      <View style={{
-                        width: 32, height: 32, borderRadius: 16,
-                        backgroundColor: '#08B6FC',
-                        alignItems: 'center', justifyContent: 'center',
-                      }}>
-                        <Text style={{ fontSize: 11, fontWeight: '700', color: '#FFFFFF' }}>
-                          {member.split(' ').map((n) => n[0]).join('').slice(0, 2)}
-                        </Text>
-                      </View>
-                      <Text style={{ fontSize: 14, fontWeight: '500', color: '#374151', paddingRight: 4 }}>{member}</Text>
-                    </View>
-                  ))}
-                </View>
-              )}
-            </View>
-          </View>
-
-          {/* Bottom CTA */}
-          <Pressable
-            onPress={() => {}}
-            style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 16, marginTop: 8 }}>
-            <Text style={{ fontSize: 15, fontWeight: '600', color: '#08B6FC' }}>View boarding details</Text>
-            <Icon name="chevron" size={18} color="#08B6FC" />
-          </Pressable>
-        </ScrollView>
-      )}
+      </ScrollView>
     </SafeAreaView>
   );
 }

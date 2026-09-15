@@ -9,7 +9,7 @@ import { ScreenContainer } from '@/components/layout/ScreenContainer';
 import { Button, Icon } from '@/components/ui';
 import { Colors } from '@/constants/theme';
 import { useAddDocument } from '@/features/documents/hooks';
-import { useAddFamilyMember } from '@/features/family/hooks';
+import { ageFromDob, useAddFamilyMember } from '@/features/family/hooks';
 import { clearDocumentImages, saveDocumentImages } from '@/services/documentImageStore';
 import { clearScanResult, getScanResult } from '@/services/scanStore';
 import type { DocumentType } from '@/types/domain';
@@ -32,7 +32,8 @@ const DOC_LABELS: Record<DocumentType, string> = {
  *  - no personId (new member): creates the family member, then:
  *    - 5-17: routes to face-capture (liveness + face enrollment), which
  *      then routes to the member detail page on completion.
- *    - 0-4:  routes directly to the member detail page. */
+ *    - 0-4:  routes to photo-capture (photo enrollment, no liveness), which
+ *      then routes to the member detail page on completion. */
 export default function FamilyProcessingScreen() {
   const router = useRouter();
   const { type, personId, name, dob, relationship, band } = useLocalSearchParams<{
@@ -149,8 +150,12 @@ export default function FamilyProcessingScreen() {
           params: { name: name.split(' ')[0], personId: member.id },
         });
       } else {
-        // 0-4: no face needed — go straight to member detail page
-        router.replace({ pathname: '/family/[id]', params: { id: member.id } });
+        // 0-4: can't run liveness — photo enrollment captures one photo
+        // (selfieBase64 + personId), then routes to the member detail page.
+        router.replace({
+          pathname: '/family/add/photo-capture',
+          params: { name: name.split(' ')[0], age: String(ageFromDob(dob)), personId: member.id },
+        });
       }
     } catch (err: any) {
       clearScanResult();

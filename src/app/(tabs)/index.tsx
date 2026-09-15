@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { FileText, ScanFace, ShieldCheck, User } from 'lucide-react-native';
+import { Bell, FileText, ScanFace, ShieldCheck, User } from 'lucide-react-native';
 import type { ReactNode } from 'react';
 import { RefreshControl, ScrollView, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -12,12 +12,14 @@ import {
     Divider,
     EmptyState,
     ErrorState,
+    IconButton,
     LoadingState,
     Typography,
-    type BadgeVariant,
+    type BadgeVariant
 } from '@/components/ui';
 import { useIdentitySummary } from '@/features/identity/hooks';
 import { makeStyles, useThemeTokens, type Theme } from '@/theme';
+import { iconSize } from '@/theme/tokens';
 import type { ActivityItem, VerificationStatus } from '@/types/domain';
 
 /** Height of the custom bottom tab bar (see (tabs)/_layout.tsx). */
@@ -100,10 +102,17 @@ export default function HomeScreen() {
                     <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={t.colors.actionPrimary} />
                 }>
                 <View style={styles.header}>
-                    <Typography variant="h3">Your identity</Typography>
-                    <Typography variant="body-sm" color="secondary">
-                        Verification status
-                    </Typography>
+                    <View style={styles.flex}>
+                        <Typography variant="h3">Your identity</Typography>
+                        <Typography variant="body-sm" color="secondary">
+                            Verification status
+                        </Typography>
+                    </View>
+                    <IconButton
+                        accessibilityLabel="Notifications"
+                        icon={<Bell size={iconSize.md} color={t.colors.textPrimary} />}
+                        onPress={() => router.push('/notification' as never)}
+                    />
                 </View>
 
                 {isPending ? (
@@ -200,7 +209,13 @@ const useStyles = makeStyles((t) => ({
     screen: { flex: 1, backgroundColor: t.colors.background },
     flex: { flex: 1 },
     scroll: { paddingHorizontal: t.spacing[5], paddingTop: t.spacing[2] },
-    header: { marginTop: t.spacing[2], marginBottom: t.spacing[4], gap: t.spacing[0.5] },
+    header: {
+        marginTop: t.spacing[2],
+        marginBottom: t.spacing[4],
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: t.spacing[2],
+    },
     card: { marginBottom: t.spacing[4] },
     cardPad: { padding: t.spacing[4] },
     statusRow: { flexDirection: 'row', alignItems: 'center', gap: t.spacing[3] },

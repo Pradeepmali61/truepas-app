@@ -1,7 +1,7 @@
 ﻿import { useRouter } from 'expo-router';
-import { Camera as CameraIcon, Eye, ScanFace, X } from 'lucide-react-native';
+import { Camera as CameraIcon, CircleCheck, Eye, ScanFace, TriangleAlert, X } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Linking, Pressable, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
     Camera,
@@ -18,7 +18,7 @@ import { runOnJS } from 'react-native-worklets';
 
 import { toApiError } from '@/api/errors';
 import { Alert, Card, CardContent, ScreenHeader } from '@/components/composite';
-import { Blink, CoreButton, IconButton, Pulse, RowIcon, ScanLine, Typography } from '@/components/ui';
+import { Badge, Blink, CoreButton, IconButton, PopIn, Pulse, RowIcon, ScanLine, Typography } from '@/components/ui';
 import { Colors } from '@/constants/theme';
 import { useEnrollFace, useUpdateFace } from '@/features/auth/mutations';
 import { faceEnrollmentCompleted } from '@/features/auth/slice';
@@ -82,6 +82,34 @@ function StepRow({ leading, title, subtitle }: { leading: ReactNode; title: stri
   );
 }
 
+/** Contract field row — caps label over value (IDs/scores use mono). */
+function KV({ label, value, mono }: { label: string; value: ReactNode; mono?: boolean }) {
+  const theme = useThemeTokens();
+  return (
+    <View style={{ gap: 2 }}>
+      <Text
+        style={{
+          fontSize: theme.fontSize.xs,
+          color: theme.colors.textMuted,
+          textTransform: 'uppercase',
+          letterSpacing: theme.letterSpacing.caps,
+        }}>
+        {label}
+      </Text>
+      <Text
+        numberOfLines={2}
+        style={{
+          fontSize: theme.fontSize.base,
+          fontWeight: theme.fontWeight.medium,
+          color: theme.colors.textPrimary,
+          ...(mono ? { fontFamily: theme.fontFamily.mono.medium } : null),
+        }}>
+        {value}
+      </Text>
+    </View>
+  );
+}
+
 /** Step progress dots — completed + current steps are filled. */
 function StepDots({ total, current }: { total: number; current: number }) {
   const theme = useThemeTokens();
@@ -124,6 +152,7 @@ export function LivenessCamera({ mode, personId, onSuccess }: LivenessCameraProp
   // Challenge is created on mount; the intro screen renders until the user
   // taps "Start verification" — then the camera mounts and detection begins.
   const [started, setStarted] = useState(false);
+  const [enrolling, setEnrolling] = useState(false);
   // Camera preview is stopped briefly before navigating away â€” unmounting an
   // ACTIVE Camera on the new architecture (Fabric) can dispatch a
   // topCameraReady event after the JS view is gone, which crashes the app.
@@ -374,15 +403,31 @@ export function LivenessCamera({ mode, personId, onSuccess }: LivenessCameraProp
         return;
       }
 
-      // Enroll or update face with session credentials
-      // Per guide Â§5.2: send only livenessSessionId + sessionToken + personId
+      // Passed — the dedicated "Liveness verified" screen offers the enroll
+      // button; enrollment runs on tap via enrollFaceNow (result is a
+      // one-time credential consumed by face enrollment).
+    } catch (err: any) {
+      console.error('[Liveness] captureAndFinalize ERROR:', err?.message, err?.response?.data ? JSON.stringify(err.response.data) : '', err?.stack);
+      failWithCooldown(err, 'Face enrollment failed');
+    } finally {
+      setCapturing(false);
+    }
+  }, [capturing, liveness, failWithCooldown, photoOutput]);
+
+  // Enroll/update the face with the liveness session credentials.
+  // Per guide §5.2: send only livenessSessionId + sessionToken + personId.
+  // If enrollment fails the liveness result is already consumed — start a
+  // NEW challenge (reset → idle → auto-creates a fresh session).
+  const enrollFaceNow = useCallback(async () => {
+    if (enrolling || liveness.phase !== 'passed' || !liveness.result) return;
+    setEnrolling(true);
+    console.log('[Liveness] Enrolling face, mode:', mode, 'personId:', personId);
+    try {
       const facePayload = {
-        livenessSessionId: result.session_id,
+        livenessSessionId: liveness.result.session_id,
         sessionToken: liveness.sessionToken ?? '',
         personId,
       };
-      console.log('[Liveness] Enrolling face, mode:', mode, 'personId:', personId);
-
       if (mode === 'enroll') {
         await enrollFace.mutateAsync(facePayload);
         if (!personId) {
@@ -391,16 +436,15 @@ export function LivenessCamera({ mode, personId, onSuccess }: LivenessCameraProp
       } else {
         await updateFace.mutateAsync(facePayload);
       }
-
       console.log('[Liveness] Face enrollment SUCCESS');
       await settleCameraThen(onSuccess);
     } catch (err: any) {
-      console.error('[Liveness] captureAndFinalize ERROR:', err?.message, err?.response?.data ? JSON.stringify(err.response.data) : '', err?.stack);
-      failWithCooldown(err, 'Face enrollment failed');
+      console.error('[Liveness] Face enrollment failed:', err?.message);
+      liveness.reset();
     } finally {
-      setCapturing(false);
+      setEnrolling(false);
     }
-  }, [capturing, liveness, mode, personId, enrollFace, updateFace, dispatch, onSuccess, failWithCooldown, photoOutput]);
+  }, [enrolling, liveness, mode, personId, enrollFace, updateFace, dispatch, onSuccess, settleCameraThen]);
 
   // Auto-finalize when phase becomes 'finalizing'
   useEffect(() => {
@@ -465,19 +509,46 @@ export function LivenessCamera({ mode, personId, onSuccess }: LivenessCameraProp
   // 429 isn't hammered (each immediate retry burns more rate-limit quota).
   if (liveness.phase === 'failed') {
     return (
-      <SafeAreaView className="flex-1 items-center justify-center bg-[#F8FBFF]" edges={['top', 'bottom']}>
-        <Text className="mb-4 text-center text-[16px] text-[#111827] px-6">{liveness.error ?? 'Liveness check failed'}</Text>
-        <Pressable
-          onPress={() => liveness.reset()}
-          disabled={cooldownLeft > 0}
-          accessibilityRole="button"
-          accessibilityLabel="Try liveness check again"
-          accessibilityState={{ disabled: cooldownLeft > 0 }}
-          className={`rounded-btn bg-primary px-6 py-3 ${cooldownLeft > 0 ? 'opacity-50' : 'active:opacity-80'}`}>
-          <Text className="text-[14px] font-bold text-white">
-            {cooldownLeft > 0 ? `Try Again in ${cooldownLeft}s` : 'Try Again'}
-          </Text>
-        </Pressable>
+      <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: theme.colors.background }}>
+        <ScreenHeader title="Face verification" />
+        <View style={{ flex: 1, padding: theme.spacing[4], gap: theme.spacing[4] }}>
+          <View style={{ alignItems: 'center', gap: theme.spacing[2], marginTop: theme.spacing[6] }}>
+            <PopIn from={0.5}>
+              <RowIcon tone="error" icon={<TriangleAlert size={iconSize.xl} color={theme.colors.onErrorSubtle} />} />
+            </PopIn>
+            <Typography variant="h3">We couldn&apos;t verify liveness</Typography>
+            <Badge variant="error">Failed</Badge>
+          </View>
+          <Alert variant="warning" title="Try again in better light">
+            {liveness.error ?? 'Move to a brighter spot and keep your face inside the ring for the whole step.'}
+          </Alert>
+        </View>
+        <View
+          style={{
+            padding: theme.spacing[4],
+            paddingTop: theme.spacing[3],
+            paddingBottom: theme.spacing[4] + insets.bottom,
+            borderTopWidth: theme.sizes.fieldBorderWidth,
+            borderTopColor: theme.colors.borderSubtle,
+            backgroundColor: theme.colors.surface,
+            gap: theme.spacing[2],
+          }}>
+          <CoreButton
+            fullWidth
+            size="lg"
+            disabled={cooldownLeft > 0}
+            accessibilityLabel="Restart liveness verification"
+            onPress={() => liveness.reset()}>
+            {cooldownLeft > 0 ? `Restart in ${cooldownLeft}s` : 'Restart verification'}
+          </CoreButton>
+          <CoreButton
+            fullWidth
+            variant="ghost"
+            accessibilityLabel="Get help"
+            onPress={() => Linking.openURL('mailto:support@truepas.com')}>
+            Get help
+          </CoreButton>
+        </View>
       </SafeAreaView>
     );
   }
@@ -574,6 +645,64 @@ export function LivenessCamera({ mode, personId, onSuccess }: LivenessCameraProp
           </View>
           <CoreButton loading disabled fullWidth>
             Verifying
+          </CoreButton>
+        </View>
+        <View style={{ position: 'absolute', top: -2000, left: -2000, width: 400, height: 533 }}>
+          <Camera
+            ref={cameraRef}
+            style={{ flex: 1 }}
+            device={device}
+            isActive={cameraActive}
+            outputs={[photoOutput, faceDetectorOutput]}
+            mirrorMode="auto"
+          />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // Passed — one-time liveness result; user confirms face enrollment.
+  // Camera stays mounted off-screen so settleCameraThen can stop it cleanly.
+  if (liveness.phase === 'passed' && liveness.result) {
+    const result = liveness.result;
+    return (
+      <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: theme.colors.background }}>
+        <ScreenHeader title="Face verification" />
+        <View style={{ flex: 1, padding: theme.spacing[4], gap: theme.spacing[4] }}>
+          <View style={{ alignItems: 'center', gap: theme.spacing[2], marginTop: theme.spacing[6] }}>
+            <PopIn>
+              <RowIcon tone="success" icon={<CircleCheck size={iconSize.xl} color={theme.colors.onSuccessSubtle} />} />
+            </PopIn>
+            <Typography variant="h3">Liveness verified</Typography>
+            <Badge variant="success">Passed</Badge>
+          </View>
+          <Card>
+            <CardContent style={{ gap: 10 }}>
+              <KV label="Session" value={result.session_id} mono />
+              <KV label="Anti-spoof score" value={String(result.antispoof_score)} mono />
+              <KV label="Next step" value={mode === 'enroll' ? 'Face enrollment' : 'Face update'} />
+            </CardContent>
+          </Card>
+          <Alert variant="info" title="One-time result">
+            This liveness result is consumed by face enrollment — if enrollment fails you&apos;ll start a new challenge.
+          </Alert>
+        </View>
+        <View
+          style={{
+            padding: theme.spacing[4],
+            paddingTop: theme.spacing[3],
+            paddingBottom: theme.spacing[4] + insets.bottom,
+            borderTopWidth: theme.sizes.fieldBorderWidth,
+            borderTopColor: theme.colors.borderSubtle,
+            backgroundColor: theme.colors.surface,
+          }}>
+          <CoreButton
+            fullWidth
+            size="lg"
+            loading={enrolling}
+            accessibilityLabel={mode === 'enroll' ? 'Enroll my face' : 'Update my face'}
+            onPress={enrollFaceNow}>
+            {mode === 'enroll' ? 'Enroll my face' : 'Update my face'}
           </CoreButton>
         </View>
         <View style={{ position: 'absolute', top: -2000, left: -2000, width: 400, height: 533 }}>

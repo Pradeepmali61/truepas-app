@@ -66,6 +66,10 @@ export interface FamilyMember {
   verification: string;
   turning18Soon: boolean;
   faceEnrolled: boolean;
+  /** 'photo' under 5, 'liveness' 5+ — absent on older payloads. */
+  faceCaptureMode?: 'photo' | 'liveness';
+  /** Capture cameras allowed; 'back' is added for members under 10. */
+  allowedCameras?: ('front' | 'back')[];
 }
 
 export interface Booking {
@@ -274,8 +278,10 @@ export interface LivenessFinalizeResponse {
 }
 
 export interface FaceEnrollRequest {
-  livenessSessionId: string;
-  sessionToken: string;
+  livenessSessionId?: string;
+  sessionToken?: string;
+  /** Under-5 members can't run liveness — send the captured photo instead. */
+  selfieBase64?: string;
   personId?: string;
 }
 

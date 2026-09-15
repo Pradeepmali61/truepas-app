@@ -1,20 +1,26 @@
 [
   {
     "id": "f1",
-    "name": "Max Kim",
-    "relationship": "Son",
-    "age": 17,
+    "name": "Maya Example",
+    "relationship": "Child",
+    "age": 10,
     "ageBand": "5-17",
-    "verification": "Face + Doc Verified",
-    "turning18Soon": true
+    "verification": "pending_document",
+    "turning18Soon": false,
+    "faceCaptureMode": "liveness",
+    "allowedCameras": ["front"],
+    "faceEnrolled": false
   },
   {
     "id": "f2",
-    "name": "Lily Kim",
-    "relationship": "Daughter",
+    "name": "Noah Example",
+    "relationship": "Child",
     "age": 3,
     "ageBand": "0-4",
-    "verification": "Doc Verified",
-    "turning18Soon": false
+    "verification": "verified",
+    "turning18Soon": false,
+    "faceCaptureMode": "photo",
+    "allowedCameras": ["front", "back"],
+    "faceEnrolled": true
   }
 ]

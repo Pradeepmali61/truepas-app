@@ -1,274 +1,153 @@
-import * as Haptics from 'expo-haptics';
-import { Image } from 'expo-image';
-import { LinearGradient } from 'expo-linear-gradient';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { memo, useEffect, useMemo, useState } from 'react';
-import { FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
+import { CalendarDays, Hotel, Ticket } from 'lucide-react-native';
+import { memo } from 'react';
+import { FlatList, RefreshControl, Alert as RNAlert, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { BottomSheet, ErrorState, Icon, Skeleton } from '@/components/ui';
-import { Colors, Elevation } from '@/constants/theme';
+import { Card, EmptyState, ErrorState, ScreenHeader } from '@/components/composite';
+import {
+    Badge,
+    CoreButton,
+    FadeUp,
+    RowIcon,
+    Skeleton,
+    Typography,
+    type BadgeVariant,
+} from '@/components/ui';
 import { useBookings } from '@/features/history/hooks';
+import { useThemeTokens } from '@/theme';
+import { iconSize } from '@/theme/tokens';
 import type { Booking } from '@/types/domain';
-import { fontScale, scale } from '@/utils/responsive';
 
-type BookingTab = 'upcoming' | 'past';
-type SortOption = 'recent' | 'oldest';
+/** Height of the custom bottom tab bar (see (tabs)/_layout.tsx). */
+const TAB_BAR_HEIGHT = 64;
 
-const BOOKING_IMAGES: Record<string, ReturnType<typeof require>> = {
-  'hayat hotel': require('../../../assets/images/hotel-simple1.png'),
-  'theme park': require('../../../assets/images/themepark-simple1.png'),
-  'disney cruise': require('../../../assets/images/cruise-simple1.png'),
+const STATUS: Record<string, { variant: BadgeVariant; label: string }> = {
+  completed: { variant: 'success', label: 'Completed' },
+  upcoming: { variant: 'info', label: 'Upcoming' },
+  cancelled: { variant: 'neutral', label: 'Cancelled' },
+  failed: { variant: 'error', label: 'Failed' },
 };
 
+function formatDate(value: string): string {
+  const d = new Date(value);
+  return Number.isNaN(d.getTime())
+    ? value
+    : d.toLocaleDateString(undefined, { year: 'numeric', month: 'numeric', day: 'numeric' });
+}
+
 const BookingCard = memo(function BookingCard({ item, onPress }: { item: Booking; onPress: () => void }) {
-  const imageSource = BOOKING_IMAGES[item.image];
-  const isCompleted = item.status === 'completed';
+  const theme = useThemeTokens();
+  const status = STATUS[item.status] ?? { variant: 'neutral' as const, label: item.status };
+  const isHotel = item.type === 'hotel';
   return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={`${item.venue}, ${item.location}, ${item.type}`}
-      style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: scale(14),
-        backgroundColor: '#FFFFFF',
-        borderRadius: 16,
-        paddingHorizontal: scale(16),
-        paddingVertical: scale(14),
-        marginBottom: scale(10),
-        ...Elevation.small,
-      }}>
-      {imageSource ? (
-        <View style={{ width: scale(64, 56, 72), height: scale(64, 56, 72), borderRadius: scale(18, 16), overflow: 'hidden' }}>
-          <Image source={imageSource} style={{ width: '100%', height: '100%' }} contentFit={item.image === 'disney cruise' ? 'contain' : 'cover'} transition={200} cachePolicy="memory-disk" />
+    <Card onPress={onPress} style={{ marginBottom: theme.spacing[4] }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing[3] }}>
+        <RowIcon
+          tone={isHotel ? 'primary' : 'info'}
+          icon={
+            isHotel ? (
+              <Hotel size={iconSize.md} color={theme.colors.actionPrimary} />
+            ) : (
+              <Ticket size={iconSize.md} color={theme.colors.onInfoSubtle} />
+            )
+          }
+        />
+        <View style={{ flex: 1, gap: 2, minWidth: 0 }}>
+          <Typography variant="body" numberOfLines={1}>{item.venue}</Typography>
+          <Typography variant="body-sm" color="muted" numberOfLines={1}>
+            {item.location} · {formatDate(item.checkIn)} → {formatDate(item.checkOut)}
+          </Typography>
         </View>
-      ) : (
-        <View style={{ width: scale(64, 56, 72), height: scale(64, 56, 72), borderRadius: scale(18, 16), backgroundColor: '#E2E8F0', alignItems: 'center', justifyContent: 'center' }}>
-          <Icon name="hotel" size={scale(28, 24)} color={Colors.ink} />
+        <View style={{ alignItems: 'flex-end', gap: theme.spacing[1] }}>
+          <Badge variant={status.variant}>{status.label}</Badge>
+          <Typography variant="body-sm" style={{ fontFamily: theme.fontFamily.mono.semibold }}>
+            ${item.amount.toFixed(2)}
+          </Typography>
         </View>
-      )}
-      <View style={{ flex: 1, minWidth: 0 }}>
-        <Text allowFontScaling={false} style={{ fontSize: fontScale(16), fontWeight: '700', color: '#111827' }} numberOfLines={1}>
-          {item.venue}
-        </Text>
-        <Text allowFontScaling={false} style={{ fontSize: fontScale(12), fontWeight: '400', color: '#6B7280', marginTop: 2 }} numberOfLines={1}>
-          {item.location} · {item.checkIn}–{item.checkOut}
-        </Text>
       </View>
-      <View style={{ alignItems: 'flex-end', gap: 6 }}>
-        <View style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: 3,
-          backgroundColor: isCompleted ? '#ECFDF5' : '#FEF2F2',
-          borderRadius: 8,
-          paddingHorizontal: scale(7, 6),
-          paddingVertical: scale(3, 2),
-        }}>
-          <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: isCompleted ? '#059669' : '#EF4444' }} />
-          <Text allowFontScaling={false} style={{ fontSize: fontScale(10), fontWeight: '700', color: isCompleted ? '#059669' : '#EF4444' }}>{isCompleted ? 'Completed' : 'Failed'}</Text>
-        </View>
-        <Icon name="chevron" size={scale(16, 14)} color={Colors.textFaint} />
-      </View>
-    </Pressable>
+    </Card>
   );
 });
 
 function BookingSkeleton() {
+  const theme = useThemeTokens();
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: '#FFFFFF', borderRadius: 16, paddingHorizontal: 16, paddingVertical: 14, marginBottom: 10, ...Elevation.small }}>
-      <Skeleton width={64} height={64} radius={18} />
-      <View style={{ flex: 1, gap: 6 }}>
-        <Skeleton width={160} height={16} radius={6} />
-        <Skeleton width={180} height={12} radius={4} />
+    <Card style={{ marginBottom: theme.spacing[4] }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing[3] }}>
+        <Skeleton width={40} height={40} radius={theme.radii.md} />
+        <View style={{ flex: 1, gap: 6 }}>
+          <Skeleton variant="text" width={140} height={16} />
+          <Skeleton variant="text" width={200} height={12} />
+        </View>
+        <Skeleton width={70} height={24} radius={theme.radii.full} />
       </View>
-    </View>
+    </Card>
   );
 }
 
+/** History tab — GET /cb/bookings. The check-in event producer isn't connected
+ *  yet so an empty list is a valid production state, not an error. */
 export default function HistoryScreen() {
+  const theme = useThemeTokens();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  // When navigated to with an explicit ?tab= (e.g. Home trip cards), open that
-  // category — the tab screen stays mounted, so plain useState would otherwise
-  // keep showing whatever category was last selected.
-  const { tab: tabParam } = useLocalSearchParams<{ tab?: string }>();
   const { data: bookings, isPending, isError, isRefetching, refetch } = useBookings();
-  const [tab, setTab] = useState<BookingTab>('past');
-  const [sortOption, setSortOption] = useState<SortOption>('recent');
-  const [showSortSheet, setShowSortSheet] = useState(false);
-  const [showFilterSheet, setShowFilterSheet] = useState(false);
-  const [filterStatus, setFilterStatus] = useState<'all' | 'completed' | 'failed'>('all');
-
-  useEffect(() => {
-    if (tabParam === 'upcoming' || tabParam === 'past') {
-      setTab(tabParam);
-    }
-  }, [tabParam]);
-
-  const visible = useMemo(() => {
-    let list = bookings ?? [];
-    if (tab === 'past') {
-      list = list.filter((b) => b.status === 'completed' || b.status === 'failed');
-    } else {
-      list = list.filter((b) => b.status === 'upcoming');
-    }
-    if (filterStatus !== 'all') {
-      list = list.filter((b) => b.status === filterStatus);
-    }
-    if (sortOption === 'oldest') {
-      list = [...list].reverse();
-    }
-    return list;
-  }, [bookings, tab, sortOption, filterStatus]);
-
-  const isEmpty = !isPending && !isError && (bookings?.length ?? 0) === 0;
-
-  const handleTabChange = (t: BookingTab) => {
-    if (t !== tab) {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      setTab(t);
-    }
-  };
 
   return (
-    <SafeAreaView className="flex-1" edges={['top']} style={{ backgroundColor: '#F8FBFF' }}>
-      <Image source={require('../../../assets/images/background2.png')} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100%', opacity: 0.12 }} contentFit="cover" pointerEvents="none" />
-      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 200 }}>
-        <LinearGradient
-          colors={['#39c5fd', '#9ce2fe', '#f5fcff']}
-          style={{ flex: 1 }}
+    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: theme.colors.background }}>
+      <ScreenHeader title="History" subtitle="Your check-ins" />
+      {isPending ? (
+        <View style={{ padding: theme.spacing[4] }}>
+          {[1, 2].map((i) => <BookingSkeleton key={i} />)}
+        </View>
+      ) : isError ? (
+        <ErrorState
+          title="Couldn't load bookings"
+          description="Please check your connection and try again."
+          onRetry={refetch}
         />
-      </View>
-      <View className="flex-1">
-      <View style={{ paddingHorizontal: 32, paddingTop: 12, paddingBottom: 24 }}>
-        <Text accessibilityRole="header" style={{ fontSize: 28, fontWeight: '700', color: '#000000' }}>
-          My Bookings
-        </Text>
-      </View>
-
-      {(() => {
-        // Tabs always render — the Upcoming tab always shows the dummy trip,
-        // and the Past tab shows its own empty message when there's nothing.
-        return (
-          <>
-          <View style={{ flexDirection: 'row', paddingHorizontal: 32, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: '#E5E7EB' }}>
-            {(['upcoming', 'past'] as const).map((t) => (
-              <Pressable
-                key={t}
-                accessibilityRole="tab"
-                accessibilityState={{ selected: tab === t }}
-                onPress={() => handleTabChange(t)}
-                style={{
-                  flex: 1,
-                  alignItems: 'center',
-                  borderBottomWidth: 3,
-                  borderBottomColor: tab === t ? Colors.primary : 'transparent',
-                  paddingVertical: 10,
-                  marginBottom: -1,
-                }}>
-                <Text style={{ fontSize: 14, fontWeight: tab === t ? '600' : '500', color: tab === t ? Colors.primary : '#6B7280' }}>
-                  {t === 'upcoming' ? 'Upcoming' : 'Past'}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 32, paddingVertical: 12 }}>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Sort options"
-              onPress={() => setShowSortSheet(true)}
-              style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-              <Text style={{ fontSize: 14, fontWeight: '600', color: Colors.primary }}>
-                {sortOption === 'recent' ? 'Recent' : 'Oldest'} ▾
-              </Text>
-            </Pressable>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Filter options"
-              onPress={() => setShowFilterSheet(true)}
-              style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-              <Text style={{ fontSize: 14, fontWeight: '600', color: Colors.primary }}>Filter</Text>
-            </Pressable>
-          </View>
-
-          {isPending ? (
-            <View style={{ paddingHorizontal: 32, paddingTop: 8 }}>
-              {[1, 2].map((i) => <BookingSkeleton key={i} />)}
-            </View>
-          ) : isError ? (
-            <ErrorState
-              title="Couldn't load bookings"
-              message="Please check your connection and try again."
-              onRetry={refetch}
-            />
-          ) : (
-            <FlatList
-              data={visible}
-              keyExtractor={(item) => item.id}
-              style={{ flex: 1 }}
-              contentContainerStyle={{ paddingHorizontal: 32, paddingBottom: 100 }}
-              showsVerticalScrollIndicator={false}
-              ListEmptyComponent={
-                <Text style={{ paddingTop: 40, textAlign: 'center', fontSize: 14, color: Colors.textMuted }}>
-                  No {tab} bookings.
-                </Text>
-              }
-              renderItem={({ item }) => (
-                <BookingCard item={item} onPress={() => router.push(`/booking/${item.id}`)} />
-              )}
-              refreshControl={
-                <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={Colors.primary} />
-              }
-            />
+      ) : (
+        <FlatList
+          data={bookings ?? []}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={{
+            padding: theme.spacing[4],
+            paddingBottom: TAB_BAR_HEIGHT + insets.bottom + theme.spacing[4],
+            flexGrow: 1,
+          }}
+          showsVerticalScrollIndicator={false}
+          renderItem={({ item, index }) => (
+            <FadeUp delay={index * 110}>
+              <BookingCard item={item} onPress={() => router.push(`/booking/${item.id}` as never)} />
+            </FadeUp>
           )}
-          </>
-        );
-      })()}
-
-      {/* bottomInset = floating tab bar height (64 + bottom inset) — without it
-          the sheet's lower options hide behind the tab bar */}
-      <BottomSheet visible={showSortSheet} onClose={() => setShowSortSheet(false)} title="Sort by" bottomInset={64 + insets.bottom}>
-        {(['recent', 'oldest'] as const).map((opt) => (
-          <Pressable
-            key={opt}
-            accessibilityRole="radio"
-            accessibilityState={{ selected: sortOption === opt }}
-            onPress={() => {
-              setSortOption(opt);
-              setShowSortSheet(false);
-            }}
-            className="flex-row items-center justify-between px-5 py-4">
-            <Text className={`text-[15px] ${sortOption === opt ? 'font-bold text-primary' : 'text-ink'}`}>
-              {opt === 'recent' ? 'Newest first' : 'Oldest first'}
-            </Text>
-            {sortOption === opt ? <Icon name="check" size={20} color={Colors.primary} /> : null}
-          </Pressable>
-        ))}
-      </BottomSheet>
-
-      <BottomSheet visible={showFilterSheet} onClose={() => setShowFilterSheet(false)} title="Filter" bottomInset={64 + insets.bottom}>
-        {(['all', 'completed', 'failed'] as const).map((opt) => (
-          <Pressable
-            key={opt}
-            accessibilityRole="radio"
-            accessibilityState={{ selected: filterStatus === opt }}
-            onPress={() => {
-              setFilterStatus(opt);
-              setShowFilterSheet(false);
-            }}
-            className="flex-row items-center justify-between px-5 py-4">
-            <Text className={`text-[15px] ${filterStatus === opt ? 'font-bold text-primary' : 'text-ink'}`}>
-              {opt === 'all' ? 'All bookings' : opt === 'completed' ? 'Completed' : 'Failed'}
-            </Text>
-            {filterStatus === opt ? <Icon name="check" size={20} color={Colors.primary} /> : null}
-          </Pressable>
-        ))}
-      </BottomSheet>
-      </View>
+          ListEmptyComponent={
+            <EmptyState
+              title="No bookings yet"
+              description="When you check in at a venue with Truepas, it shows up here."
+              icon={<CalendarDays size={iconSize.lg} color={theme.colors.textMuted} />}
+              action={
+                <CoreButton
+                  variant="outline"
+                  size="sm"
+                  accessibilityLabel="How check-in works"
+                  onPress={() =>
+                    RNAlert.alert(
+                      'How check-in works',
+                      'At a participating venue, open Truepas and glance at the kiosk — your enrolled face proves your identity, no documents needed.',
+                    )
+                  }>
+                  How check-in works
+                </CoreButton>
+              }
+            />
+          }
+          refreshControl={
+            <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={theme.colors.actionPrimary} />
+          }
+        />
+      )}
     </SafeAreaView>
   );
 }

@@ -86,6 +86,7 @@ const GROUPS: { title: string; screens: ScreenEntry[] }[] = [
       { label: 'Add family — document (5-17)', route: '/family/add/document?name=Max+Kim&band=5-17', preset: 'auth-face' },
       { label: 'Add family — document (0-4)', route: '/family/add/document?name=Lily+Kim&band=0-4', preset: 'auth-face' },
       { label: 'Add family — face capture', route: '/family/add/face-capture?name=Max', preset: 'auth-face' },
+      { label: 'Add family — photo capture (0-4)', route: '/family/add/photo-capture?name=Noah&age=3&personId=f1', preset: 'auth-face' },
       { label: '18+ rejected', route: '/family/add/rejected?name=John&age=20', preset: 'auth-face' },
       { label: 'Family member detail', route: '/family/f1', preset: 'auth-face' },
     ],
@@ -119,6 +120,7 @@ const GROUPS: { title: string; screens: ScreenEntry[] }[] = [
     title: 'NOTIFICATION',
     screens: [
       { label: 'Age-18 transition', route: '/notification/age-18', preset: 'auth-face' },
+      { label: 'Notifications inbox', route: '/notification', preset: 'auth-face' },
     ],
   },
   {

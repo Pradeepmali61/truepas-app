@@ -13,12 +13,20 @@ export function useFamily() {
   return useQuery({ queryKey: familyKeys.all, queryFn: api.getFamily });
 }
 
-export function useFamilyMember(id: string) {
-  return useQuery({ queryKey: familyKeys.detail(id), queryFn: () => api.getFamilyMember(id) });
+export function useFamilyMember(id?: string) {
+  return useQuery({
+    queryKey: familyKeys.detail(id ?? ''),
+    queryFn: () => api.getFamilyMember(id!),
+    enabled: !!id,
+  });
 }
 
-export function useFamilyActivity(id: string) {
-  return useQuery({ queryKey: familyKeys.activity(id), queryFn: () => api.getFamilyActivity(id) });
+export function useFamilyActivity(id?: string) {
+  return useQuery({
+    queryKey: familyKeys.activity(id ?? ''),
+    queryFn: () => api.getFamilyActivity(id!),
+    enabled: !!id,
+  });
 }
 
 export function useAddFamilyMember() {
@@ -49,9 +57,12 @@ export function ageBandFromAge(age: number): FamilyAgeBand {
 }
 
 export function ageFromDob(dob: string): number {
-  const match = dob.match(/^(\d{2})\s*\/\s*(\d{2})\s*\/\s*(\d{4})$/);
-  if (!match) return NaN;
-  const [, month, day, year] = match;
+  // Backend accepts MM/DD/YYYY or YYYY-MM-DD — parse both.
+  const mdy = dob.match(/^(\d{2})\s*\/\s*(\d{2})\s*\/\s*(\d{4})$/);
+  const iso = dob.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!mdy && !iso) return NaN;
+  const [, a, b, c] = (mdy ?? iso)!;
+  const [month, day, year] = mdy ? [a, b, c] : [b, c, a];
   const birth = new Date(Number(year), Number(month) - 1, Number(day));
   const now = new Date();
   let age = now.getFullYear() - birth.getFullYear();
