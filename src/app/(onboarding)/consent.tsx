@@ -1,7 +1,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Alert, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { AppBackground } from '@/components/layout/AppBackground';
 import { ScreenContainer, Spacer } from '@/components/layout/ScreenContainer';
@@ -9,6 +9,7 @@ import { TopBar } from '@/components/layout/TopBar';
 import { Button, CheckboxRow, Icon, ListItem, ProgressTrack } from '@/components/ui';
 import { useBiometricConsent } from '@/features/auth/mutations';
 import { biometricConsentGiven } from '@/features/auth/slice';
+import { useToast } from '@/hooks/useToast';
 import { useAppDispatch } from '@/store';
 
 /** Biometric consent — explicit consent before face capture (PRD requirement).
@@ -18,6 +19,7 @@ export default function ConsentScreen() {
   const dispatch = useAppDispatch();
   const [checked, setChecked] = useState(false);
   const biometricConsent = useBiometricConsent();
+  const toast = useToast();
 
   const agree = async () => {
     try {
@@ -25,7 +27,7 @@ export default function ConsentScreen() {
       dispatch(biometricConsentGiven());
       router.push('/(onboarding)/face-scan');
     } catch (err: any) {
-      Alert.alert('Error', err?.message ?? 'Could not record consent. Please try again.');
+      toast.show('error', err?.message ?? 'Could not record consent. Please try again.');
     }
   };
 

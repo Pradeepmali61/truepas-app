@@ -1,13 +1,14 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Baby, BookUser, Car, Contact, FileText, Globe, Landmark } from 'lucide-react-native';
 import { useEffect, useState, type ComponentType } from 'react';
-import { Image, Alert as RNAlert, ScrollView, View } from 'react-native';
+import { Image, ScrollView, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { api } from '@/api';
 import { Accordion, Alert, Card, CardContent, ErrorState, Modal, ScreenHeader } from '@/components/composite';
 import { Badge, CoreButton, Divider, RowIcon, Skeleton, Typography, type BadgeVariant } from '@/components/ui';
 import { useDocument, useRemoveDocument } from '@/features/documents/hooks';
+import { useToast } from '@/hooks/useToast';
 import { getDocumentImageUri } from '@/services/documentImageStore';
 import { useThemeTokens } from '@/theme';
 import { iconSize } from '@/theme/tokens';
@@ -77,6 +78,7 @@ export default function DocumentDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data: identityDoc, isPending, isError, refetch } = useDocument(id);
   const removeDocument = useRemoveDocument();
+  const toast = useToast();
   const [issuedDoc, setIssuedDoc] = useState<IssuedDoc | null>(null);
   const [issuedLoaded, setIssuedLoaded] = useState(false);
   const [frontImageUri, setFrontImageUri] = useState<string | null>(null);
@@ -100,8 +102,8 @@ export default function DocumentDetailScreen() {
     removeDocument.mutate(id, {
       onSuccess: () => router.back(),
       onError: (err: any) => {
-        RNAlert.alert(
-          'Remove Failed',
+        toast.show(
+          'error',
           err?.response?.data?.message ?? err?.message ?? 'Could not remove the document. Please try again.',
         );
       },

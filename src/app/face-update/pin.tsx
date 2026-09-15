@@ -1,12 +1,13 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import { toApiError } from '@/api/errors';
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
 import { ScreenHeader } from '@/components/layout/ScreenHeader';
 import { Icon, PinDots, PinPad } from '@/components/ui';
 import { useVerifyPin } from '@/features/auth/mutations';
+import { useToast } from '@/hooks/useToast';
 
 const PIN_LENGTH = 4;
 
@@ -18,6 +19,7 @@ export default function FaceUpdatePinScreen() {
   const { personId } = useLocalSearchParams<{ personId?: string }>();
   const [pin, setPin] = useState('');
   const verifyPin = useVerifyPin();
+  const toast = useToast();
 
   const handleDigit = (digit: string) => {
     const next = (pin + digit).slice(0, PIN_LENGTH);
@@ -33,9 +35,8 @@ export default function FaceUpdatePinScreen() {
         } catch (err: any) {
           // toApiError maps raw axios messages ("Request failed with status
           // code 400") to user-presentable copy.
-          Alert.alert('Incorrect PIN', toApiError(err).message ?? 'Please try again.', [
-            { text: 'OK', onPress: () => setPin('') },
-          ]);
+          toast.show('error', toApiError(err).message ?? 'Incorrect PIN. Please try again.');
+          setPin('');
         }
       }, 250);
     }

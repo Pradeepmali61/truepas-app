@@ -460,6 +460,19 @@ export function LivenessCamera({ mode, personId, onSuccess }: LivenessCameraProp
   // Brief "step done" flash when the step index advances
   const [stepDone, setStepDone] = useState(false);
   const prevStepRef = useRef(0);
+
+  // Session countdown — expires_in_seconds is a snapshot at challenge
+  // creation; tick it down locally so the expiring-session warning is real.
+  const [sessionLeft, setSessionLeft] = useState<number | null>(null);
+  const sessionId = liveness.challenge?.session_id;
+  useEffect(() => {
+    const total = liveness.challenge?.expires_in_seconds;
+    if (total == null) return;
+    setSessionLeft(total);
+    const t = setInterval(() => setSessionLeft((s) => (s == null ? s : Math.max(0, s - 1))), 1000);
+    return () => clearInterval(t);
+  }, [sessionId, liveness.challenge?.expires_in_seconds]);
+
   useEffect(() => {
     if (liveness.phase === 'challenging' && liveness.currentStepIndex > prevStepRef.current) {
       setStepDone(true);
@@ -621,10 +634,11 @@ export function LivenessCamera({ mode, personId, onSuccess }: LivenessCameraProp
     : stepDone
       ? 'Done!'
       : liveness.instruction || actionUi?.title || 'Follow the instruction';
-  const expiresIn = liveness.challenge?.expires_in_seconds;
+  const expiresIn = sessionLeft ?? liveness.challenge?.expires_in_seconds;
   const sessionLabel = expiresIn != null
     ? `Session expires in ${Math.floor(expiresIn / 60)}:${String(expiresIn % 60).padStart(2, '0')}`
     : 'Liveness session';
+  const sessionExpiring = sessionLeft != null && sessionLeft > 0 && sessionLeft <= 60;
 
   // Finalize — high-res frame upload + anti-spoof checks. The Camera stays
   // mounted off-screen: photoOutput.capturePhotoToFile still needs it.
@@ -785,6 +799,11 @@ export function LivenessCamera({ mode, personId, onSuccess }: LivenessCameraProp
           </View>
         </View>
         <StepDots total={steps.length} current={liveness.currentStepIndex} />
+        {sessionExpiring ? (
+          <Alert variant="warning" title="Session expiring">
+            Expires in {sessionLeft} seconds.
+          </Alert>
+        ) : null}
         <Typography variant="caption" color="muted" center>
           {sessionLabel} · front camera
         </Typography>

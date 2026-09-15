@@ -1,13 +1,14 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Eye, EyeOff, Lock, Mail } from 'lucide-react-native';
 import { useState } from 'react';
-import { Alert, Pressable, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 import { toApiError } from '@/api/errors';
 import { FormField, Alert as InlineAlert, OtpInput, ScreenHeader } from '@/components/composite';
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
 import { Button, Input, Link, Typography } from '@/components/ui';
 import { useForgotPassword, useResetPassword } from '@/features/auth/mutations';
+import { useToast } from '@/hooks/useToast';
 import { useThemeTokens } from '@/theme';
 import { iconSize } from '@/theme/tokens';
 
@@ -27,6 +28,7 @@ export default function ForgotPasswordScreen() {
 
   const forgotPassword = useForgotPassword();
   const resetPassword = useResetPassword();
+  const toast = useToast();
 
   const handleSendOtp = async () => {
     if (!email) { setError('Enter your email'); return; }
@@ -55,9 +57,8 @@ export default function ForgotPasswordScreen() {
     setError('');
     try {
       await resetPassword.mutateAsync({ email, otp, newPassword });
-      Alert.alert('Success', 'Your password has been reset successfully.', [
-        { text: 'OK', onPress: () => router.replace('/(auth)/login') },
-      ]);
+      toast.show('success', 'Your password has been reset successfully.');
+      router.replace('/(auth)/login');
     } catch (err: any) {
       setError(toApiError(err).message || 'Could not reset password. Please try again.');
     }

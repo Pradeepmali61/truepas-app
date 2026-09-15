@@ -1,16 +1,25 @@
 import {
-  createContext,
-  useContext,
-  useMemo,
-  useRef,
-  useState,
-  type ReactNode,
+    createContext,
+    useContext,
+    useMemo,
+    useRef,
+    useState,
+    type ReactNode,
 } from "react";
 import { StyleSheet, useColorScheme, type ImageStyle, type TextStyle, type ViewStyle } from "react-native";
 import { BRAND_PRESETS, type BrandPreset, type BrandRamp } from "./palette";
 import { buildTheme, type Theme } from "./themes";
 
 export type ColorScheme = "light" | "dark" | "system";
+
+export type RadiusPreset = "sharp" | "default" | "round";
+
+/** Radius scale multipliers applied as token overrides. */
+const RADIUS_TOKENS: Record<RadiusPreset, DeepPartial<Theme>> = {
+  sharp: { radii: { sm: 2, md: 3, lg: 4, xl: 6, "2xl": 8 } },
+  default: {},
+  round: { radii: { sm: 6, md: 10, lg: 14, xl: 18, "2xl": 24 } },
+};
 
 /**
  * Deep-partial overrides — merge into the resolved theme.
@@ -41,6 +50,8 @@ interface ThemeContextValue {
   setScheme: (s: ColorScheme) => void;
   brand: BrandPreset;
   setBrand: (b: BrandPreset) => void;
+  radius: RadiusPreset;
+  setRadius: (r: RadiusPreset) => void;
   theme: Theme;
 }
 
@@ -66,6 +77,7 @@ export function ThemeProvider({
 }: ThemeProviderProps) {
   const [scheme, setScheme] = useState<ColorScheme>(schemeProp);
   const [brand, setBrand] = useState<BrandPreset>(brandProp);
+  const [radius, setRadius] = useState<RadiusPreset>("default");
   const system = useColorScheme();
 
   const resolvedScheme: "light" | "dark" =
@@ -73,12 +85,12 @@ export function ThemeProvider({
 
   const theme = useMemo(() => {
     const ramp = brandRamp ?? BRAND_PRESETS[brand];
-    return deepMerge(buildTheme(resolvedScheme, ramp), tokens);
-  }, [resolvedScheme, brand, brandRamp, tokens]);
+    return deepMerge(deepMerge(buildTheme(resolvedScheme, ramp), RADIUS_TOKENS[radius]), tokens);
+  }, [resolvedScheme, brand, brandRamp, tokens, radius]);
 
   const value = useMemo<ThemeContextValue>(
-    () => ({ scheme, resolvedScheme, setScheme, brand, setBrand, theme }),
-    [scheme, resolvedScheme, brand, theme],
+    () => ({ scheme, resolvedScheme, setScheme, brand, setBrand, radius, setRadius, theme }),
+    [scheme, resolvedScheme, brand, theme, radius],
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;

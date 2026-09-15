@@ -2,7 +2,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { Eye, EyeOff, Lock } from 'lucide-react-native';
 import { useState } from 'react';
-import { Alert, Pressable, ScrollView, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 
 import { toApiError } from '@/api/errors';
 import { FormField, Alert as InlineAlert, ScreenHeader } from '@/components/composite';
@@ -10,6 +10,7 @@ import { ScreenContainer } from '@/components/layout/ScreenContainer';
 import { Button, Input } from '@/components/ui';
 import { useChangePassword } from '@/features/auth/mutations';
 import { sessionEnded } from '@/features/auth/slice';
+import { useToast } from '@/hooks/useToast';
 import { useAppDispatch } from '@/store';
 import { useThemeTokens } from '@/theme';
 import { iconSize } from '@/theme/tokens';
@@ -32,6 +33,7 @@ export default function ChangePasswordScreen() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [error, setError] = useState('');
   const changePassword = useChangePassword();
+  const toast = useToast();
 
   const eye = (visible: boolean, toggle: () => void) => (
     <Pressable
@@ -65,9 +67,8 @@ export default function ChangePasswordScreen() {
       // token — clear local state and send the user back to login.
       queryClient.clear();
       dispatch(sessionEnded());
-      Alert.alert('Success', 'Your password has been updated. Please log in again.', [
-        { text: 'OK', onPress: () => router.replace('/(auth)/login') },
-      ]);
+      toast.show('success', 'Your password has been updated. Please log in again.');
+      router.replace('/(auth)/login');
     } catch (err: any) {
       setError(toApiError(err).message || 'Could not update password. Please try again.');
     }

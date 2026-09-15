@@ -1,9 +1,9 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'expo-router';
-import { Lock, Mail } from 'lucide-react-native';
+import { Eye, EyeOff, Lock, Mail } from 'lucide-react-native';
 import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 import { api } from '@/api';
 import { toApiError } from '@/api/errors';
@@ -26,6 +26,7 @@ export default function LoginScreen() {
   const theme = useThemeTokens();
   const [submitting, setSubmitting] = useState(false);
   const [loginError, setLoginError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   const { control, handleSubmit } = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
@@ -101,10 +102,23 @@ export default function LoginScreen() {
                   value={value}
                   onChangeText={onChange}
                   placeholder="••••••••"
-                  secureTextEntry
+                  secureTextEntry={!showPassword}
                   autoCapitalize="none"
                   autoCorrect={false}
                   iconLeft={<Lock size={iconSize.sm} color={theme.colors.textMuted} />}
+                  iconRight={
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
+                      onPress={() => setShowPassword((v) => !v)}
+                      hitSlop={8}>
+                      {showPassword ? (
+                        <EyeOff size={iconSize.sm} color={theme.colors.textMuted} />
+                      ) : (
+                        <Eye size={iconSize.sm} color={theme.colors.textMuted} />
+                      )}
+                    </Pressable>
+                  }
                 />
               </FormField>
             )}

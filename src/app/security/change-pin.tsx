@@ -1,12 +1,13 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Alert, View } from 'react-native';
+import { View } from 'react-native';
 
 import { toApiError } from '@/api/errors';
 import { FormField, OtpInput, ScreenHeader } from '@/components/composite';
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
 import { Button, Typography } from '@/components/ui';
 import { useChangePin } from '@/features/auth/mutations';
+import { useToast } from '@/hooks/useToast';
 import { useThemeTokens } from '@/theme';
 
 const PIN_LENGTH = 4;
@@ -46,6 +47,7 @@ export default function ChangePinScreen() {
   const [confirmPin, setConfirmPin] = useState('');
   const [error, setError] = useState('');
   const changePin = useChangePin();
+  const toast = useToast();
 
   const canSubmit =
     newPin.length === PIN_LENGTH && confirmPin.length === PIN_LENGTH && newPin === confirmPin;
@@ -59,9 +61,8 @@ export default function ChangePinScreen() {
     setError('');
     try {
       await changePin.mutateAsync({ currentPin: currentPin ?? '', newPin });
-      Alert.alert('Success', 'Your PIN has been updated.', [
-        { text: 'OK', onPress: () => router.back() },
-      ]);
+      toast.show('success', 'Your PIN has been updated.');
+      router.back();
     } catch (err: any) {
       setError(toApiError(err).message || 'Could not update PIN. Please try again.');
     }
