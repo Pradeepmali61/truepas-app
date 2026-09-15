@@ -168,20 +168,30 @@ export class RegulaScanCancelled extends Error {
   }
 }
 
+export interface RegulaScanResult {
+  /** Raw camera frame (source=3) — sent to the backend, whose server-side
+   *  Regula re-processes it for OCR/portrait/authenticity (Facepe pattern). */
+  imageBase64: string;
+  /** Regula's own cropped + perspective-corrected document image (207,
+   *  default processed source) — used for local preview/display so the
+   *  UI shows the document only, not the whole camera frame. */
+  previewBase64: string;
+}
+
 /**
- * Open the native Regula scanner and resolve with the cropped document
- * image as base64. Rejects with RegulaScanCancelled if the user cancels.
+ * Open the native Regula scanner and resolve with the document image.
+ * Rejects with RegulaScanCancelled if the user cancels.
  *
  * The app ONLY captures the document image — all OCR, portrait extraction,
  * authenticity checks, and face matching are done by the backend (same
  * architecture as Facepe, where the backend runs Regula server-side).
  */
-export function scanDocument(): Promise<string> {
+export function scanDocument(): Promise<RegulaScanResult> {
   if (!loadNativeModules() || !initialized) {
     return Promise.reject(new Error('Regula scanner not initialized'));
   }
 
-  return new Promise<string>((resolve, reject) => {
+  return new Promise<RegulaScanResult>((resolve, reject) => {
     let settled = false;
 
     // Results arrive via NativeEventEmitter 'completion' (not the scan callback)
@@ -202,13 +212,19 @@ export function scanDocument(): Promise<string> {
         settled = true;
         subscription.remove();
 
-        // PRIMARY: raw camera frame (source=3) — best input for backend OCR
+        // DISPLAY image: Regula's cropped + perspective-corrected document
+        // image (207 = GF_DOCUMENT_IMAGE, processed source). This is the
+        // "just the document" crop the scanner produces — used for local
+        // preview and the document-card back face (Facepe shows the
+        // backend-returned cropped image the same way).
+        let previewBase64: string | null = await extractImage(completion.results, 207);
+        if (!previewBase64) previewBase64 = await extractImage(completion.results, 102);
+
+        // UPLOAD image: raw camera frame (source=3) — best input for
+        // backend OCR per the KYC guide. Falls back to the cropped image
+        // (and generic fields) when the raw frame isn't produced.
         let imageBase64: string | null = await extractRawFrame(completion.results);
-        // FALLBACK 1: processed document image (207)
-        if (!imageBase64) imageBase64 = await extractImage(completion.results, 207);
-        // FALLBACK 2: front page image (102)
-        if (!imageBase64) imageBase64 = await extractImage(completion.results, 102);
-        // FALLBACK 3: any other graphic field (250)
+        if (!imageBase64) imageBase64 = previewBase64;
         if (!imageBase64) imageBase64 = await extractImage(completion.results, 250);
 
         if (!imageBase64) {
@@ -216,8 +232,8 @@ export function scanDocument(): Promise<string> {
           return;
         }
 
-        console.log('[Regula] Scan complete — image length:', imageBase64.length);
-        resolve(imageBase64);
+        console.log('[Regula] Scan complete — raw length:', imageBase64.length, '| preview length:', previewBase64?.length ?? 0);
+        resolve({ imageBase64, previewBase64: previewBase64 ?? imageBase64 });
       } catch (e: any) {
         settled = true;
         subscription.remove();

@@ -17,7 +17,6 @@ import type {
     ForgotPasswordRequest,
     IdentityDocument,
     IdentitySummary,
-    IssuedDoc,
     LivenessChallenge,
     LivenessChallengeResponse,
     LivenessEvidenceRequest,
@@ -46,7 +45,6 @@ import documentsData from './data/documents.json';
 import familyActivityData from './data/family-activity.json';
 import familyData from './data/family.json';
 import identitySummaryData from './data/identitySummary.json';
-import issuedDocumentsData from './data/issued-documents.json';
 import userData from './data/user.json';
 
 /**
@@ -87,7 +85,6 @@ let family: FamilyMember[] = (familyData as FamilyMember[]).map((f) => ({
   faceEnrolled: false,
 }));
 const bookings: Booking[] = bookingsData as Booking[];
-const issuedDocuments: IssuedDoc[] = issuedDocumentsData as IssuedDoc[];
 const familyActivity: ActivityLogItem[] = familyActivityData as ActivityLogItem[];
 const notifications: Notification[] = [
   { id: 'n1', title: 'Welcome to Truepas', body: 'Your account is set up.', read: false, createdAt: new Date().toISOString(), type: 'system' },
@@ -130,7 +127,6 @@ export const mockApi = {
           documents.filter((d) => !d.personId || d.personId === user.id),
     ),
   getDocument: (id: string) => respond(documents.find((d) => d.id === id) ?? null),
-  getIssuedDocuments: () => respond(issuedDocuments),
   getFamily: () => respond(family),
   getFamilyMember: (id: string) => respond(family.find((f) => f.id === id) ?? null),
   getFamilyActivity: (_id: string) => respond(familyActivity),

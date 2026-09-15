@@ -5,7 +5,6 @@ import { useEffect, useRef, useState, type ComponentType } from 'react';
 import { Animated, Image, ScrollView, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { api } from '@/api';
 import { Alert, ErrorState, Modal, ScreenHeader } from '@/components/composite';
 import { CoreButton, RowIcon, Skeleton, Typography, type BadgeVariant } from '@/components/ui';
 import { useDocument, useRemoveDocument } from '@/features/documents/hooks';
@@ -13,13 +12,6 @@ import { useToast } from '@/hooks/useToast';
 import { getDocumentImageUri } from '@/services/documentImageStore';
 import { makeStyles, useThemeTokens, type Theme } from '@/theme';
 import { iconSize } from '@/theme/tokens';
-import type { IdentityDocument, IssuedDoc } from '@/types/domain';
-
-type CombinedDoc = IssuedDoc | IdentityDocument;
-
-function isIdentityDocument(doc: CombinedDoc): doc is IdentityDocument {
-  return 'label' in doc;
-}
 
 const DOC_ICONS: Record<string, ComponentType<{ size?: number; color?: string }>> = {
   passport: BookUser,
@@ -50,7 +42,7 @@ const STATUS: Record<string, { variant: BadgeVariant; label: string }> = {
 function DetailItem({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
   const theme = useThemeTokens();
   return (
-    <View style={{ width: '50%', marginBottom: theme.spacing[3], minWidth: 0 }}>
+    <View style={{ width: '50%', marginBottom: theme.spacing[2], minWidth: 0, paddingRight: theme.spacing[2] }}>
       <Typography
         variant="caption"
         color="muted"
@@ -62,7 +54,6 @@ function DetailItem({ label, value, mono = false }: { label: string; value: stri
         numberOfLines={2}
         style={{
           fontWeight: theme.fontWeight.bold,
-          lineHeight: theme.lineHeight.snug,
           ...(mono ? { fontFamily: theme.fontFamily.mono.semibold } : null),
         }}>
         {value}
@@ -80,11 +71,9 @@ export default function DocumentDetailScreen() {
   const insets = useSafeAreaInsets();
   const styles = useStyles();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { data: identityDoc, isPending, isError, refetch } = useDocument(id);
+  const { data: doc, isPending, isError, refetch } = useDocument(id);
   const removeDocument = useRemoveDocument();
   const toast = useToast();
-  const [issuedDoc, setIssuedDoc] = useState<IssuedDoc | null>(null);
-  const [issuedLoaded, setIssuedLoaded] = useState(false);
   const [frontImageUri, setFrontImageUri] = useState<string | null>(null);
   const [selfieImageUri, setSelfieImageUri] = useState<string | null>(null);
   const [confirmRemove, setConfirmRemove] = useState(false);
@@ -93,9 +82,6 @@ export default function DocumentDetailScreen() {
 
   useEffect(() => {
     if (!id) return;
-    api.getIssuedDocuments()
-      .then((docs) => setIssuedDoc(docs.find((d) => d.id === id) ?? null))
-      .finally(() => setIssuedLoaded(true));
     // Captured images were persisted locally (keyed by docId) at scan time
     getDocumentImageUri(id, 'front').then(setFrontImageUri).catch(() => setFrontImageUri(null));
     getDocumentImageUri(id, 'selfie').then(setSelfieImageUri).catch(() => setSelfieImageUri(null));
@@ -129,10 +115,7 @@ export default function DocumentDetailScreen() {
     });
   };
 
-  const doc: CombinedDoc | null | undefined = issuedDoc ?? identityDoc;
-  const loading = isPending || !issuedLoaded;
-
-  if (loading) {
+  if (isPending) {
     return (
       <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: theme.colors.background }}>
         <ScreenHeader title="Document" onBack={() => router.back()} />
@@ -157,15 +140,13 @@ export default function DocumentDetailScreen() {
     );
   }
 
-  const title = isIdentityDocument(doc) ? doc.label : doc.name;
-  const type = isIdentityDocument(doc) ? doc.type : doc.icon;
+  const title = doc.label;
   const status = STATUS[doc.status] ?? { variant: 'neutral' as const, label: doc.status };
   const failed = doc.status === 'failed';
-  const isIdentity = isIdentityDocument(doc);
-  const isLicense = type.toLowerCase().includes('license');
-  const portraitUri = (isIdentity ? doc.portraitImageUrl : null) ?? selfieImageUri;
-  const scanUri = (isIdentity ? doc.documentImageUrl : null) ?? frontImageUri;
-  const IconCmp = DOC_ICONS[type] ?? FileText;
+  const isLicense = doc.type.toLowerCase().includes('license');
+  const portraitUri = doc.portraitImageUrl ?? selfieImageUri;
+  const scanUri = doc.documentImageUrl ?? frontImageUri;
+  const IconCmp = DOC_ICONS[doc.type] ?? FileText;
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: theme.colors.background }}>
@@ -232,30 +213,19 @@ export default function DocumentDetailScreen() {
               </View>
 
               <View style={styles.docDetailsGrid}>
-                {isIdentity ? (
-                  <>
-                    <DetailItem label="Full name" value={doc.extractedName || '—'} />
-                    <DetailItem label="Document no" value={doc.number || '—'} mono />
-                    <DetailItem label="Date of birth" value={formatDate(doc.extractedDob)} />
-                    <DetailItem label="Expires" value={formatDate(doc.expiresAt)} />
-                    <DetailItem
-                      label={isLicense ? 'State' : 'Nationality'}
-                      value={(isLicense ? doc.issuingState : doc.nationality) || '—'}
-                    />
-                    <DetailItem
-                      label="Match score"
-                      value={doc.matchScore != null ? `${Math.round(doc.matchScore * 100)}%` : '—'}
-                      mono
-                    />
-                  </>
-                ) : (
-                  <>
-                    <DetailItem label="Number" value={doc.number || '—'} mono />
-                    <DetailItem label="Issued by" value={doc.issuer} />
-                    <DetailItem label="Issued on" value={formatDate(doc.issuedAt)} />
-                    <DetailItem label="Type" value={doc.name} />
-                  </>
-                )}
+                <DetailItem label="Full name" value={doc.extractedName || '—'} />
+                <DetailItem label="Document no" value={doc.number || '—'} mono />
+                <DetailItem label="Date of birth" value={formatDate(doc.extractedDob)} />
+                <DetailItem label="Expires" value={formatDate(doc.expiresAt)} />
+                <DetailItem
+                  label={isLicense ? 'State' : 'Nationality'}
+                  value={(isLicense ? doc.issuingState : doc.nationality) || '—'}
+                />
+                <DetailItem
+                  label="Match score"
+                  value={doc.matchScore != null ? `${Math.round(doc.matchScore * 100)}%` : '—'}
+                  mono
+                />
               </View>
             </View>
           </Animated.View>
@@ -315,8 +285,7 @@ export default function DocumentDetailScreen() {
           </CoreButton>
         </View>
 
-        {isIdentity && (
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing[2] }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing[2] }}>
             <RowIcon
               tone="neutral"
               icon={<FileText size={iconSize.sm} color={theme.colors.textSecondary} />}
@@ -324,12 +293,10 @@ export default function DocumentDetailScreen() {
             <Typography variant="body-sm" color="secondary" style={{ flex: 1 }}>
               Added {formatDate(doc.addedAt)}
             </Typography>
-          </View>
-        )}
+        </View>
       </ScrollView>
 
-      {isIdentity && (
-        <View
+      <View
           style={{
             paddingHorizontal: theme.spacing[4],
             paddingTop: theme.spacing[2],
@@ -345,8 +312,7 @@ export default function DocumentDetailScreen() {
               Remove document
             </Typography>
           </CoreButton>
-        </View>
-      )}
+      </View>
 
       <Modal
         visible={confirmRemove}
@@ -379,7 +345,7 @@ export default function DocumentDetailScreen() {
 const useStyles = makeStyles((t: Theme) => ({
   cardWrapper: {
     width: '100%',
-    height: 300,
+    height: 340,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -439,8 +405,8 @@ const useStyles = makeStyles((t: Theme) => ({
     flexDirection: 'row',
   },
   docAvatarContainer: {
-    width: 96,
-    height: 96,
+    width: 88,
+    height: 88,
     borderRadius: t.radii.lg,
     overflow: 'hidden',
     backgroundColor: t.colors.surfaceSunken,

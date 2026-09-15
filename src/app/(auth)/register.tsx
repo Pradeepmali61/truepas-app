@@ -14,18 +14,18 @@ import { makeStyles, useThemeTokens } from '@/theme';
 import { iconSize } from '@/theme/tokens';
 
 const COUNTRIES = [
-  { code: '+1', name: 'United States' },
-  { code: '+44', name: 'United Kingdom' },
-  { code: '+91', name: 'India' },
-  { code: '+61', name: 'Australia' },
-  { code: '+86', name: 'China' },
-  { code: '+81', name: 'Japan' },
-  { code: '+49', name: 'Germany' },
-  { code: '+33', name: 'France' },
-  { code: '+971', name: 'UAE' },
-  { code: '+65', name: 'Singapore' },
-  { code: '+92', name: 'Pakistan' },
-  { code: '+880', name: 'Bangladesh' },
+  { code: '+1', flag: '🇺🇸', name: 'United States' },
+  { code: '+44', flag: '🇬🇧', name: 'United Kingdom' },
+  { code: '+91', flag: '🇮🇳', name: 'India' },
+  { code: '+61', flag: '🇦🇺', name: 'Australia' },
+  { code: '+86', flag: '🇨🇳', name: 'China' },
+  { code: '+81', flag: '🇯🇵', name: 'Japan' },
+  { code: '+49', flag: '🇩🇪', name: 'Germany' },
+  { code: '+33', flag: '🇫🇷', name: 'France' },
+  { code: '+971', flag: '🇦🇪', name: 'UAE' },
+  { code: '+65', flag: '🇸🇬', name: 'Singapore' },
+  { code: '+92', flag: '🇵🇰', name: 'Pakistan' },
+  { code: '+880', flag: '🇧🇩', name: 'Bangladesh' },
 ];
 
 function BrandMark() {
@@ -113,7 +113,7 @@ export default function RegisterScreen() {
                 style={styles.ccSelect}
                 value={countryCode}
                 onValueChange={setCountryCode}
-                options={COUNTRIES.map((c) => ({ value: c.code, label: `${c.code} ${c.name}` }))}
+                options={COUNTRIES.map((c) => ({ value: c.code, label: `${c.flag} ${c.code}` }))}
               />
               <Controller
                 control={control}
@@ -193,7 +193,7 @@ const useStyles = makeStyles((t) => ({
   dotDone: { backgroundColor: t.colors.actionPrimary },
   dotActive: { width: 18, backgroundColor: t.colors.actionPrimary },
   phoneRow: { flexDirection: 'row', gap: t.spacing[2], alignItems: 'stretch' },
-  ccSelect: { width: 96 },
+  ccSelect: { width: 112 },
   legal: { textAlign: 'center' },
   footer: {
     padding: t.spacing[4],

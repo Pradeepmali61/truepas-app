@@ -11,6 +11,9 @@
 
 interface ScanResultState {
   documentImageBase64?: string;
+  /** Regula-cropped document image for local display (falls back to
+   *  documentImageBase64 when unavailable). */
+  documentPreviewBase64?: string;
   selfieBase64?: string;
   backImageBase64?: string;
 }

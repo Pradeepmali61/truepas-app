@@ -13,7 +13,7 @@ import { clearDocumentImages, saveDocumentImages } from '@/services/documentImag
 import { clearScanResult, getScanResult } from '@/services/scanStore';
 import { useThemeTokens } from '@/theme';
 import { iconSize } from '@/theme/tokens';
-import type { DocumentType } from '@/types/domain';
+import type { DocumentType, FamilyMember, IdentityDocument } from '@/types/domain';
 
 type ProcessingStatus = 'adding' | 'done' | 'error';
 
@@ -48,13 +48,38 @@ export default function FamilyProcessingScreen() {
     band?: string;
   }>();
   const isExistingMember = !!personId;
-  const docType = (type ?? 'idCard') as DocumentType;
+  const docType = (type ?? 'passport') as DocumentType;
   const isMinorWithFace = band !== '0-4';
   const [status, setStatus] = useState<ProcessingStatus>('adding');
   const [error, setError] = useState<string | null>(null);
   const processRef = useRef<(() => Promise<void>) | null>(null);
   const addFamilyMember = useAddFamilyMember();
   const addDocument = useAddDocument();
+  // Retry-safe: created entities are reused so a retry after a verify
+  // failure doesn't mint duplicate members/documents.
+  const createdMemberRef = useRef<FamilyMember | null>(null);
+  const createdDocRef = useRef<IdentityDocument | null>(null);
+
+  /** Verify a member document — same pipeline as self-docs (session +
+   *  front-image verify, no selfie: the member's face is captured later).
+   *  Best-effort: the backend verification service may be unavailable or
+   *  may not verify member docs — a captured doc still counts as added
+   *  (family/[id] treats any non-failed doc as done). */
+  const verifyMemberDoc = async (docId: string, frontImageBase64: string) => {
+    try {
+      const session = await api.createVerificationSession(docId, {
+        requestId: `req-${Date.now()}`,
+      });
+      const result = await api.startVerificationWithImages(
+        session.id,
+        { frontImageBase64 },
+        { timeout: 90_000 },
+      );
+      console.log('[FamilyAdd] Member doc verify outcome:', result.outcome, result.reasonCode ?? '');
+    } catch (e: any) {
+      console.warn('[FamilyAdd] Member doc verification unavailable — continuing:', e?.message);
+    }
+  };
 
   const process = async () => {
     try {
@@ -67,13 +92,17 @@ export default function FamilyProcessingScreen() {
           throw new Error('No document image captured. Please scan again.');
         }
         console.log('[FamilyAdd] Adding document to member:', personId, docType);
-        const doc = await addDocument.mutateAsync({
-          type: docType,
-          label: DOC_LABELS[docType],
-          number: 'PENDING',
-          expiresAt: null,
-          personId,
-        });
+        let doc = createdDocRef.current;
+        if (!doc) {
+          doc = await addDocument.mutateAsync({
+            type: docType,
+            label: DOC_LABELS[docType],
+            number: 'PENDING',
+            expiresAt: null,
+            personId,
+          });
+          createdDocRef.current = doc;
+        }
         console.log('[FamilyAdd] Document created:', JSON.stringify({ id: doc.id, personId: doc.personId, type: doc.type, label: doc.label }));
         // Facepe-style REPLACE: the member's previous document of this type
         // is superseded by the new capture — remove the old one so duplicate
@@ -98,13 +127,14 @@ export default function FamilyProcessingScreen() {
         // Persist captured image locally so it can be shown in document detail
         try {
           await saveDocumentImages(doc.id, {
-            front: scanResult.documentImageBase64,
+            front: scanResult.documentPreviewBase64 ?? scanResult.documentImageBase64,
             selfie: scanResult.selfieBase64,
           });
         } catch (e) {
           console.warn('[FamilyAdd] Failed to save document images locally:', e);
         }
         console.log('[FamilyAdd] Document added for member:', personId, '| doc.personId=', doc.personId);
+        await verifyMemberDoc(doc.id, scanResult.documentImageBase64);
         clearScanResult();
         setStatus('done');
         // Route back to the member detail page (not just router.back()
@@ -118,29 +148,39 @@ export default function FamilyProcessingScreen() {
         return;
       }
       console.log('[FamilyAdd] Creating member:', JSON.stringify({ name, dob, relationship, band }));
-      const member = await addFamilyMember.mutateAsync({ name, dateOfBirth: dob, relationship });
+      let member = createdMemberRef.current;
+      if (!member) {
+        member = await addFamilyMember.mutateAsync({ name, dateOfBirth: dob, relationship });
+        createdMemberRef.current = member;
+      }
       console.log('[FamilyAdd] Member created:', member.id);
 
       // Attach the captured document to the newly created member
       const scanResult = getScanResult();
-      if (scanResult?.documentImageBase64) {
+      let doc = createdDocRef.current;
+      if (scanResult?.documentImageBase64 && !doc) {
         console.log('[FamilyAdd] Adding document to new member:', member.id, docType);
-        const doc = await addDocument.mutateAsync({
+        doc = await addDocument.mutateAsync({
           type: docType,
           label: DOC_LABELS[docType],
           number: 'PENDING',
           expiresAt: null,
           personId: member.id,
         });
+        createdDocRef.current = doc;
         console.log('[FamilyAdd] Document created:', JSON.stringify({ id: doc.id, personId: doc.personId, type: doc.type }));
         try {
           await saveDocumentImages(doc.id, {
-            front: scanResult.documentImageBase64,
+            front: scanResult.documentPreviewBase64 ?? scanResult.documentImageBase64,
             selfie: scanResult.selfieBase64,
           });
         } catch (e) {
           console.warn('[FamilyAdd] Failed to save document images locally:', e);
         }
+      }
+
+      if (doc && scanResult?.documentImageBase64) {
+        await verifyMemberDoc(doc.id, scanResult.documentImageBase64);
       }
 
       clearScanResult();
@@ -160,7 +200,9 @@ export default function FamilyProcessingScreen() {
         });
       }
     } catch (err: any) {
-      clearScanResult();
+      // Keep scanResult on failure — Retry re-runs the verify step and
+      // still needs the captured image. It's cleared on success or
+      // overwritten by the next capture.
       const msg = err?.response?.data?.message ?? err?.message ?? 'Could not add family member';
       console.error('[FamilyAdd] Failed:', msg, JSON.stringify(err?.response?.data));
       setError(msg);

@@ -18,7 +18,6 @@ import type {
     ForgotPasswordRequest,
     IdentityDocument,
     IdentitySummary,
-    IssuedDoc,
     LivenessChallengeResponse,
     LivenessEvidenceRequest,
     LivenessEvidenceResponse,
@@ -70,10 +69,6 @@ export const realApi = {
   },
   getDocument: async (id: string): Promise<IdentityDocument | null> => {
     const { data } = await apiClient.get<IdentityDocument>(`/documents/${id}`);
-    return data;
-  },
-  getIssuedDocuments: async (): Promise<IssuedDoc[]> => {
-    const { data } = await apiClient.get<IssuedDoc[]>('/documents/issued');
     return data;
   },
   getFamily: async (): Promise<FamilyMember[]> => {

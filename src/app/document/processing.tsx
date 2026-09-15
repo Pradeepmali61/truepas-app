@@ -110,7 +110,7 @@ export default function DocumentProcessingScreen() {
           // can show the originally captured photo later.
           try {
             await saveDocumentImages(doc.id, {
-              front: frontImage,
+              front: scanResult?.documentPreviewBase64 ?? frontImage,
               selfie: selfieImage,
             });
           } catch (e) {

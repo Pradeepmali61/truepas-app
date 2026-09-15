@@ -6,7 +6,6 @@ import type { AddDocumentRequest } from '@/types/domain';
 export const documentKeys = {
   all: ['documents'] as const,
   detail: (id: string) => ['documents', id] as const,
-  issued: ['documents', 'issued'] as const,
   member: (personId: string) => ['documents', 'member', personId] as const,
 };
 
@@ -30,10 +29,6 @@ export function useDocument(id?: string) {
     queryFn: () => api.getDocument(id!),
     enabled: !!id,
   });
-}
-
-export function useIssuedDocuments() {
-  return useQuery({ queryKey: documentKeys.issued, queryFn: api.getIssuedDocuments });
 }
 
 export function useAddDocument() {

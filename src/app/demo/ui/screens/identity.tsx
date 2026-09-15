@@ -1,40 +1,37 @@
-﻿import { View } from "react-native";
-import {
-  BadgeCheck,
-  CalendarDays,
-  CreditCard,
-  FileText,
-  Landmark,
-  ScanFace,
-  ShieldCheck,
-  UserRoundCheck,
-} from "lucide-react-native";
+﻿import { FileUploader } from "@/components/complex/FileUploader";
+import { Alert } from "@/components/composite/Alert";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/composite/Card";
+import { DatePicker } from "@/components/composite/DatePicker";
+import { FormField } from "@/components/composite/FormField";
+import { ScreenHeader } from "@/components/composite/ScreenHeader";
+import { EmptyState } from "@/components/composite/states";
+import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+import { Divider } from "@/components/ui/Divider";
+import { Input } from "@/components/ui/Input";
+import { Progress } from "@/components/ui/Progress";
+import { Select } from "@/components/ui/Select";
+import { Typography } from "@/components/ui/Typography";
 import { makeStyles, useThemeTokens } from "@/theme";
 import { iconSize } from "@/theme/tokens";
-import { Typography } from "@/components/ui/Typography";
-import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
-import { Badge } from "@/components/ui/Badge";
-import { Select } from "@/components/ui/Select";
-import { Progress } from "@/components/ui/Progress";
-import { Divider } from "@/components/ui/Divider";
-import { Alert } from "@/components/composite/Alert";
-import { FormField } from "@/components/composite/FormField";
-import { DatePicker } from "@/components/composite/DatePicker";
-import { ScreenHeader } from "@/components/composite/ScreenHeader";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/composite/Card";
-import { EmptyState } from "@/components/composite/states";
-import { FileUploader } from "@/components/complex/FileUploader";
+import {
+    BadgeCheck,
+    CreditCard,
+    FileText,
+    ScanFace,
+    ShieldCheck,
+    UserRoundCheck
+} from "lucide-react-native";
+import { View } from "react-native";
 import { Section } from "../demos";
-import { ScreenFrame, RowIcon } from "./ScreenFrame";
+import { RowIcon, ScreenFrame } from "./ScreenFrame";
+import { DOCUMENTS, IDENTITY_SUMMARY, VERIFICATION_SESSION } from "./mock";
 import { FadeUp, PopIn, Pulse, ScanLine } from "./motion";
-import { KV, Row, ScreenBody, StickyFooter } from "./shared";
-import { DOCUMENTS, IDENTITY_SUMMARY, ISSUED_DOCUMENTS, VERIFICATION_SESSION } from "./mock";
+import { KV, ScreenBody, StickyFooter } from "./shared";
 
 const DOC_TYPES = [
   { value: "passport", label: "Passport" },
   { value: "drivingLicense", label: "Driving license" },
-  { value: "idCard", label: "ID card" },
   { value: "greenCard", label: "Green card" },
   { value: "birthCertificate", label: "Birth certificate" },
   { value: "usVisa", label: "US visa" },
@@ -371,35 +368,6 @@ export function IdentityScreens() {
         </StickyFooter>
       </ScreenFrame>
 
-      {/* ---------- GET /cb/documents/issued ---------- */}
-      <ScreenFrame
-        title="Issued credentials"
-        method="GET"
-        path="/cb/documents/issued"
-        note="IssuedDoc[] â€” venue-issued credentials with Active/Expired status"
-      >
-        <ScreenHeader title="Issued to you" onBack={() => {}} />
-        <ScreenBody>
-          {ISSUED_DOCUMENTS.map((d) => (
-            <Card key={d.id}>
-              <View style={styles.checkRow}>
-                <RowIcon tone="info" icon={<Landmark size={iconSize.md} color={theme.colors.onInfoSubtle} />} />
-                <View style={styles.heroText}>
-                  <Typography variant="body">{d.name}</Typography>
-                  <Typography variant="body-sm" color="muted">
-                    {d.issuer} Â· <Typography variant="body-sm" color="muted" style={{ fontFamily: theme.fontFamily.mono.regular }}>{d.number}</Typography>
-                  </Typography>
-                </View>
-                <Badge variant={d.status === "Active" ? "success" : "neutral"}>{d.status}</Badge>
-              </View>
-            </Card>
-          ))}
-          <Row
-            leading={<CalendarDays size={iconSize.md} color={theme.colors.textMuted} />}
-            title={<Typography variant="body-sm" color="muted">Issued credentials appear after venue check-ins.</Typography>}
-          />
-        </ScreenBody>
-      </ScreenFrame>
     </Section>
   );
 }

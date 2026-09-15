@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { ChevronRight, CreditCard, FileText, Landmark } from 'lucide-react-native';
+import { CreditCard, FileText } from 'lucide-react-native';
 import { memo } from 'react';
 import { FlatList, RefreshControl, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -96,7 +96,7 @@ export default function DocumentsScreen() {
         ) : isEmpty ? (
           <EmptyState
             title="No documents yet"
-            description="Your issued documents will appear here once verified."
+            description="Your verified documents will appear here."
           />
         ) : (
           <FlatList
@@ -107,20 +107,6 @@ export default function DocumentsScreen() {
             renderItem={({ item }) => (
               <DocCard doc={item} onPress={() => router.push(`/document/${item.id}` as never)} />
             )}
-            ListFooterComponent={
-              <Card onPress={() => router.push('/document/issued' as never)}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing[3] }}>
-                  <RowIcon tone="info" icon={<Landmark size={iconSize.md} color={theme.colors.onInfoSubtle} />} />
-                  <View style={{ flex: 1, gap: 2, minWidth: 0 }}>
-                    <Typography variant="body" numberOfLines={1}>Issued to you</Typography>
-                    <Typography variant="body-sm" color="muted" numberOfLines={1}>
-                      Venue-issued credentials
-                    </Typography>
-                  </View>
-                  <ChevronRight size={iconSize.md} color={theme.colors.textMuted} />
-                </View>
-              </Card>
-            }
             refreshControl={
               <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={theme.colors.actionPrimary} />
             }

@@ -24,13 +24,12 @@ const OPTIONS_0_4: DocOption[] = [
   { id: 'usVisa', label: 'US Visa' },
 ];
 
-// Adults can hold any document type, including driving license and ID card.
+// Adults can hold any document type, including driving license.
 const OPTIONS_18_PLUS: DocOption[] = [
   { id: 'passport', label: 'Passport' },
   { id: 'drivingLicense', label: "Driver's License" },
   { id: 'greenCard', label: 'US Green Card' },
   { id: 'usVisa', label: 'US Visa' },
-  { id: 'idCard', label: 'Identity Card' },
 ];
 
 /** Add family — step 2: document. 5-17 → doc + selfie + face; 0-4 → doc only (PRD). */

@@ -31,6 +31,13 @@ const VERIFICATION: Record<string, { variant: BadgeVariant; label: string }> = {
   failed: { variant: 'error', label: 'Failed' },
 };
 
+const DOC_STATUS: Record<string, { variant: BadgeVariant; label: string }> = {
+  verified: { variant: 'success', label: 'Verified' },
+  pending: { variant: 'warning', label: 'Pending' },
+  failed: { variant: 'error', label: 'Failed' },
+  missing: { variant: 'neutral', label: 'Missing' },
+};
+
 function verificationBadge(verification: string) {
   const meta = VERIFICATION[verification] ?? { variant: 'neutral' as const, label: verification };
   return <Badge variant={meta.variant}>{meta.label}</Badge>;
@@ -108,8 +115,10 @@ export default function FamilyMemberScreen() {
   const first = m.name.split(' ')[0];
   const isPhoto = (m.faceCaptureMode ?? (m.ageBand === '0-4' ? 'photo' : 'liveness')) === 'photo';
   const anyCamera = m.allowedCameras?.includes('back') ?? false;
-  const verifiedDoc = memberDocs?.find((d) => d.status === 'verified');
-  const docDone = verifiedDoc != null;
+  const doneDoc = memberDocs?.find((d) => d.status !== 'failed' && d.status !== 'missing');
+  // Member docs may stay 'pending' when backend verification isn't run for
+  // them — any captured (non-failed) document completes this step.
+  const docDone = doneDoc != null;
   const faceDone = m.faceEnrolled;
   const docNext = !docDone;
   const faceNext = docDone && !faceDone;
@@ -129,7 +138,7 @@ export default function FamilyMemberScreen() {
       tone={docDone ? 'success' : 'warning'}
       icon={<FileText size={iconSize.md} color={docDone ? theme.colors.onSuccessSubtle : theme.colors.onWarningSubtle} />}
       title={isPhoto ? 'Document' : '1 · Verify a document'}
-      subtitle={docDone ? `${verifiedDoc?.label ?? 'Document'} verified.` : 'Birth certificate or passport.'}
+      subtitle={docDone ? `${doneDoc?.label ?? 'Document'} added.` : 'Birth certificate or passport.'}
       trailing={docDone ? <Badge variant="success">Done</Badge> : <Badge variant="warning">Next</Badge>}
     />
   );
@@ -240,6 +249,37 @@ export default function FamilyMemberScreen() {
             {faceRow}
           </CardContent>
         </Card>
+
+        {/* Member's scanned documents — tap to open the flip-card detail */}
+        {memberDocs && memberDocs.length > 0 ? (
+          <View style={{ gap: theme.spacing[2] }}>
+            <Typography
+              variant="caption"
+              color="muted"
+              style={{ textTransform: 'uppercase', letterSpacing: theme.letterSpacing.caps }}>
+              Documents
+            </Typography>
+            {memberDocs.map((d) => {
+              const st = DOC_STATUS[d.status] ?? { variant: 'neutral' as const, label: d.status };
+              return (
+                <Card key={d.id} onPress={() => router.push(`/document/${d.id}` as never)}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing[3] }}>
+                    <RowIcon tone="primary" icon={<FileText size={iconSize.md} color={theme.colors.actionPrimary} />} />
+                    <View style={{ flex: 1, gap: 2, minWidth: 0 }}>
+                      <Typography variant="body" numberOfLines={1}>
+                        {d.label}
+                      </Typography>
+                      <Typography variant="body-sm" color="muted" numberOfLines={1}>
+                        {d.number}
+                      </Typography>
+                    </View>
+                    <Badge variant={st.variant}>{st.label}</Badge>
+                  </View>
+                </Card>
+              );
+            })}
+          </View>
+        ) : null}
         {m.verification === 'verified' && (
           <Alert variant="success" title="Ready for check-in">
             {first} can be added to venue check-ins with you.

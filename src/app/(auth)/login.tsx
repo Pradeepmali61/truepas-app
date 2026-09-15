@@ -38,8 +38,13 @@ export default function LoginScreen() {
     setLoginError('');
     try {
       let identifier = values.identifier.trim();
-      if (/^\d{10}$/.test(identifier)) {
-        identifier = `${DEFAULT_COUNTRY_CODE}${identifier}`;
+      if (!identifier.includes('@')) {
+        const digits = identifier.replace(/\D/g, '');
+        if (digits.length === 10) {
+          identifier = `${DEFAULT_COUNTRY_CODE}${digits}`;
+        } else if (digits.length > 10) {
+          identifier = `+${digits}`;
+        }
       }
 
       const { user, accessToken, refreshToken } = await api.login({

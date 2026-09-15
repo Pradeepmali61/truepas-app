@@ -71,27 +71,6 @@ export const VERIFICATION_SESSION = {
   document: DOCUMENTS[0],
 };
 
-export const ISSUED_DOCUMENTS = [
-  {
-    id: "issued-1",
-    name: "REAL ID",
-    issuer: "Florida DHSMV",
-    issuedAt: "2024-03-11",
-    icon: "idCard",
-    number: "•••••9021",
-    status: "Active",
-  },
-  {
-    id: "issued-2",
-    name: "TSA PreCheck",
-    issuer: "U.S. DHS",
-    issuedAt: "2022-07-20",
-    icon: "badge",
-    number: "•••••3345",
-    status: "Active",
-  },
-];
-
 export const FAMILY = [
   {
     id: "person-child-01",

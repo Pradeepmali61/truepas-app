@@ -86,16 +86,6 @@ export interface Booking {
   checkedInMembers?: string[];
 }
 
-export interface IssuedDoc {
-  id: string;
-  name: string;
-  issuer: string;
-  issuedAt: string;
-  icon: 'drivingLicense' | 'passport' | 'greenCard' | 'birthCertificate' | 'usVisa';
-  number: string;
-  status: 'Active' | 'Expired';
-}
-
 export interface ActivityLogItem {
   id: string;
   title: string;

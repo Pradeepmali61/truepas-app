@@ -2,7 +2,7 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { Image, Pressable, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CoreButton, Spinner, Typography } from '@/components/ui';
@@ -67,6 +67,8 @@ export default function DocumentScanScreen() {
   const [capturing, setCapturing] = useState(false);
   const [step, setStep] = useState<ScanStep>('front');
   const [frontImage, setFrontImage] = useState<string | null>(null);
+  // Regula-cropped document image for display (raw frame goes to backend).
+  const [frontPreview, setFrontPreview] = useState<string | null>(null);
   const [selfieImage, setSelfieImage] = useState<string | null>(null);
   const [cameraLayout, setCameraLayout] = useState({ width: 0, height: 0 });
 
@@ -101,8 +103,9 @@ export default function DocumentScanScreen() {
     setRegulaBusy(true);
     setScanError(null);
     try {
-      const base64 = await scanDocument();
-      setFrontImage(base64);
+      const result = await scanDocument();
+      setFrontImage(result.imageBase64);
+      setFrontPreview(result.previewBase64);
       // Doc-only + family mode: no separate selfie — face capture via liveness
       setStep(skipSelfie ? 'done' : 'selfie');
     } catch (e: any) {
@@ -201,6 +204,8 @@ export default function DocumentScanScreen() {
 
       if (step === 'front') {
         setFrontImage(base64);
+        // Manual capture is already cropped to the on-screen frame.
+        setFrontPreview(base64);
         // Doc-only + family mode: no separate selfie — face capture via liveness
         setStep(skipSelfie ? 'done' : 'selfie');
       } else if (step === 'selfie') {
@@ -218,6 +223,7 @@ export default function DocumentScanScreen() {
     // Store captured images for processing screen
     setScanResult({
       documentImageBase64: frontImage ?? undefined,
+      documentPreviewBase64: frontPreview ?? undefined,
       selfieBase64: selfieImage ?? undefined,
     });
 
@@ -226,7 +232,7 @@ export default function DocumentScanScreen() {
       router.replace({
         pathname: '/family/add/processing',
         params: {
-          type: type ?? 'idCard',
+          type: type ?? 'passport',
           personId: personId ?? '',
           name: name ?? '',
           dob: dob ?? '',
@@ -251,11 +257,13 @@ export default function DocumentScanScreen() {
   const handleRetake = () => {
     if (step === 'selfie') {
       setFrontImage(null);
+      setFrontPreview(null);
       setStep('front');
     } else if (step === 'done') {
       if (skipSelfie) {
         // No selfie step in this flow — retake the document itself
         setFrontImage(null);
+        setFrontPreview(null);
         setStep('front');
       } else {
         setSelfieImage(null);
@@ -300,6 +308,7 @@ export default function DocumentScanScreen() {
 
   // Done — show review and continue
   if (step === 'done') {
+    const previewUri = frontPreview ?? frontImage;
     return (
       <SafeAreaView style={centered} edges={['top', 'bottom']}>
         <Typography variant="h3" style={{ color: ON_DARK, marginBottom: theme.spacing[2] }}>
@@ -308,20 +317,67 @@ export default function DocumentScanScreen() {
         <Typography
           variant="body-sm"
           center
-          style={{ color: ON_DARK_MUTED, marginBottom: theme.spacing[8] }}>
+          style={{ color: ON_DARK_MUTED, marginBottom: theme.spacing[6] }}>
           {skipSelfie
             ? 'Document captured successfully.'
             : 'Document and selfie captured successfully.'}
           {"\n"}
           Tap continue to proceed.
         </Typography>
-        <View style={{ flexDirection: 'row', gap: theme.spacing[3] }}>
-          <CoreButton
-            variant="outline"
+
+        {/* Captured previews — document crop + selfie */}
+        <View style={{ flexDirection: 'row', gap: theme.spacing[4], marginBottom: theme.spacing[8] }}>
+          {previewUri ? (
+            <Image
+              source={{ uri: `data:image/jpeg;base64,${previewUri}` }}
+              accessibilityLabel="Captured document"
+              style={{
+                width: 150,
+                height: 96,
+                borderRadius: theme.radii.lg,
+                borderWidth: 1,
+                borderColor: 'rgba(255,255,255,0.25)',
+                backgroundColor: 'rgba(255,255,255,0.06)',
+              }}
+              resizeMode="cover"
+            />
+          ) : null}
+          {!skipSelfie && selfieImage ? (
+            <Image
+              source={{ uri: `data:image/jpeg;base64,${selfieImage}` }}
+              accessibilityLabel="Captured selfie"
+              style={{
+                width: 96,
+                height: 96,
+                borderRadius: theme.radii.lg,
+                borderWidth: 1,
+                borderColor: 'rgba(255,255,255,0.25)',
+                backgroundColor: 'rgba(255,255,255,0.06)',
+              }}
+              resizeMode="cover"
+            />
+          ) : null}
+        </View>
+
+        <View style={{ flexDirection: 'row', gap: theme.spacing[3], alignItems: 'center' }}>
+          {/* Outline variant uses light-surface colors — invisible on the dark
+              camera chrome, so this is a dark-safe bordered button. */}
+          <Pressable
+            accessibilityRole="button"
             accessibilityLabel={skipSelfie ? 'Retake document' : 'Retake selfie'}
-            onPress={handleRetake}>
-            {skipSelfie ? 'Retake Document' : 'Retake Selfie'}
-          </CoreButton>
+            onPress={handleRetake}
+            style={({ pressed }) => ({
+              borderWidth: 1,
+              borderColor: 'rgba(255,255,255,0.65)',
+              borderRadius: theme.radii.full,
+              paddingHorizontal: theme.spacing[5],
+              paddingVertical: theme.spacing[3],
+              opacity: pressed ? 0.7 : 1,
+            })}>
+            <Typography variant="body" style={{ color: ON_DARK, fontWeight: theme.fontWeight.semibold }}>
+              {skipSelfie ? 'Retake Document' : 'Retake Selfie'}
+            </Typography>
+          </Pressable>
           <CoreButton accessibilityLabel="Continue" onPress={handleContinue}>
             Continue
           </CoreButton>

@@ -298,7 +298,7 @@ export default function DocumentVerifiedScreen() {
 const useStyles = makeStyles((t: Theme) => ({
   cardWrapper: {
     width: '100%',
-    height: 260,
+    height: 300,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -358,8 +358,8 @@ const useStyles = makeStyles((t: Theme) => ({
     flexDirection: 'row',
   },
   docAvatarContainer: {
-    width: 96,
-    height: 96,
+    width: 88,
+    height: 88,
     borderRadius: t.radii.lg,
     overflow: 'hidden',
     backgroundColor: t.colors.surfaceSunken,
@@ -395,7 +395,8 @@ const useStyles = makeStyles((t: Theme) => ({
   },
   docDetailItem: {
     width: '50%',
-    marginBottom: t.spacing[4],
+    marginBottom: t.spacing[2],
+    paddingRight: t.spacing[2],
   },
   docDetailLabel: {
     fontWeight: t.fontWeight.bold,
@@ -404,6 +405,5 @@ const useStyles = makeStyles((t: Theme) => ({
   },
   docDetailValue: {
     fontWeight: t.fontWeight.bold,
-    lineHeight: t.lineHeight.snug,
   },
 }));
