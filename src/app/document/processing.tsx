@@ -5,8 +5,7 @@ import { ActivityIndicator, Text, View } from 'react-native';
 
 import { api } from '@/api';
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
-import { Button } from '@/components/ui';
-import { Icon } from '@/components/ui';
+import { Button, Icon } from '@/components/ui';
 import { Colors } from '@/constants/theme';
 import { documentKeys, useAddDocument } from '@/features/documents/hooks';
 import { clearDocumentImages, saveDocumentImages } from '@/services/documentImageStore';
@@ -37,8 +36,18 @@ const msg0 = (err: any): string =>
  *  4. No polling needed â€” verify returns final outcome directly */
 export default function DocumentProcessingScreen() {
   const router = useRouter();
-  const { type } = useLocalSearchParams<{ type?: string }>();
+  const { type, label, number, expiresAt } = useLocalSearchParams<{
+    type?: string;
+    label?: string;
+    number?: string;
+    expiresAt?: string;
+  }>();
   const docType = (type ?? 'passport') as DocumentType;
+  // Metadata collected on the add-document form — falls back to the type
+  // label / 'PENDING' placeholder when reached without it (deep links).
+  const docLabel = label?.trim() || DOC_LABELS[docType];
+  const docNumber = number?.trim() || 'PENDING';
+  const docExpiresAt = expiresAt?.trim() || null;
   const [status, setStatus] = useState<ProcessingStatus>('adding');
   const [error, setError] = useState<string | null>(null);
   const hasStarted = useRef(false);
@@ -86,9 +95,9 @@ export default function DocumentProcessingScreen() {
           setStatus('adding');
           doc = await addDocument.mutateAsync({
             type: docType,
-            label: DOC_LABELS[docType],
-            number: 'PENDING',
-            expiresAt: null,
+            label: docLabel,
+            number: docNumber,
+            expiresAt: docExpiresAt,
           });
           createdDocRef.current = doc;
 
@@ -162,7 +171,7 @@ export default function DocumentProcessingScreen() {
             pathname: '/document/verified',
             params: {
               docId: doc.id,
-              docLabel: DOC_LABELS[docType],
+              docLabel,
               docNumber: result.document?.number ?? doc.number ?? '',
               extractedName: result.extractedName ?? '',
               extractedDob: result.extractedDob ?? '',

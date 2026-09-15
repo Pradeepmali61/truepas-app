@@ -37,8 +37,11 @@ const SELFIE_FRAME = { width: 300, height: 300 };
  *  certificates (0-4) skip the selfie step — no portrait, no face match. */
 export default function DocumentScanScreen() {
   const router = useRouter();
-  const { type, family, personId, name, dob, relationship, band } = useLocalSearchParams<{
+  const { type, label, number, expiresAt, family, personId, name, dob, relationship, band } = useLocalSearchParams<{
     type?: string;
+    label?: string;
+    number?: string;
+    expiresAt?: string;
     family?: string;
     personId?: string;
     name?: string;
@@ -229,7 +232,12 @@ export default function DocumentScanScreen() {
 
     router.push({
       pathname: '/document/processing',
-      params: { type: type ?? 'passport' },
+      params: {
+        type: type ?? 'passport',
+        label: label ?? '',
+        number: number ?? '',
+        expiresAt: expiresAt ?? '',
+      },
     });
   };
 

@@ -1,21 +1,20 @@
-import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AppBackground } from '@/components/layout/AppBackground';
-import { ScreenContainer, Spacer } from '@/components/layout/ScreenContainer';
-import { ScreenHeader } from '@/components/layout/ScreenHeader';
-import { Button, Icon } from '@/components/ui';
-import { Colors } from '@/constants/theme';
+import { DatePicker, FormField, ScreenHeader } from '@/components/composite';
+import { CoreButton, Input, Select } from '@/components/ui';
+import { useThemeTokens } from '@/theme';
 import type { DocumentType } from '@/types/domain';
 
-const OPTIONS: DocumentType[] = [
-  'passport',
-  'drivingLicense',
-  'greenCard',
-  'birthCertificate',
-  'usVisa',
+const DOC_TYPES: { value: DocumentType; label: string }[] = [
+  { value: 'passport', label: 'Passport' },
+  { value: 'drivingLicense', label: "Driver's License" },
+  { value: 'idCard', label: 'Identity Card' },
+  { value: 'greenCard', label: 'US Green Card' },
+  { value: 'birthCertificate', label: 'Birth Certificate' },
+  { value: 'usVisa', label: 'U.S. Visa' },
 ];
 
 const LABELS: Record<DocumentType, string> = {
@@ -27,10 +26,21 @@ const LABELS: Record<DocumentType, string> = {
   idCard: 'Identity Card',
 };
 
-/** Add document — select type. Supports family mode: when `family` param is
- *  set, the scan flow is scoped to a family member (personId). */
-export default function SelectTypeScreen() {
+function todayISO(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+/** Add document — step 1 of 2: metadata (POST /cb/documents contract).
+ *  "Continue to upload" forwards { type, label, number, expiresAt } to the
+ *  capture screen; the document is POSTed by the processing screen after
+ *  capture so no orphan pending doc is left if the user abandons the scan.
+ *  Supports family mode: when `family` param is set, the scan flow is scoped
+ *  to a family member (personId). */
+export default function AddDocumentScreen() {
+  const theme = useThemeTokens();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { family, personId, memberName, band } = useLocalSearchParams<{
     family?: string;
     personId?: string;
@@ -38,12 +48,37 @@ export default function SelectTypeScreen() {
     band?: string;
   }>();
   const isFamilyMode = family === '1';
-  const isDocOnly = isFamilyMode && band === '0-4';
-  const [selected, setSelected] = useState<DocumentType>('passport');
-  const [open, setOpen] = useState(false);
 
-  const continueToScan = () => {
-    const params: Record<string, string> = { type: selected };
+  const [type, setType] = useState<DocumentType>('passport');
+  const [label, setLabel] = useState(LABELS.passport);
+  const [number, setNumber] = useState('');
+  const [expiresAt, setExpiresAt] = useState<string | undefined>(undefined);
+  const [submitted, setSubmitted] = useState(false);
+
+  const onTypeChange = (v: string) => {
+    const next = v as DocumentType;
+    // Keep the label in sync while it is untouched/auto-filled.
+    setLabel((prev) => (prev.trim() === '' || prev === LABELS[type] ? LABELS[next] : prev));
+    setType(next);
+  };
+
+  const errors = submitted
+    ? {
+        label: label.trim() ? undefined : 'Enter a label',
+        number: number.trim().length >= 2 ? undefined : 'Enter the document number',
+        expiresAt: expiresAt ? undefined : 'Pick the expiry date',
+      }
+    : {};
+
+  const continueToUpload = () => {
+    setSubmitted(true);
+    if (!label.trim() || number.trim().length < 2 || !expiresAt) return;
+    const params: Record<string, string> = {
+      type,
+      label: label.trim(),
+      number: number.trim(),
+      expiresAt,
+    };
     if (isFamilyMode) {
       params.family = '1';
       params.personId = personId ?? '';
@@ -54,255 +89,69 @@ export default function SelectTypeScreen() {
   };
 
   return (
-    <ScreenContainer scroll={false} background={false}>
-      {Platform.OS === 'web' ? (
-        <View style={[StyleSheet.absoluteFill, { backgroundImage: 'linear-gradient(180deg, #F8FBFF, #EAF4FF)' } as any]} />
-      ) : (
-        <LinearGradient
-          colors={['#F8FBFF', '#EAF4FF']}
-          style={StyleSheet.absoluteFill}
-        />
-      )}
-      <AppBackground />
-      {/* Header */}
-      <ScreenHeader title={isFamilyMode ? `${memberName ?? 'Member'}'s Documents` : 'Verify Your Identity'} />
-
-      <View className="flex-1 px-6">
-        {/* Progress bar — Document → Selfie */}
-        <View style={styles.progressContainer}>
-          <View style={styles.progressRow}>
-            <View style={styles.dotActive}>
-              <View style={styles.dotActiveInner} />
-            </View>
-            <View style={styles.progressLine} />
-            <View style={styles.dotInactive}>
-              <View style={styles.dotInactiveInner} />
-            </View>
-          </View>
-          <View style={styles.labelsRow}>
-            <Text style={styles.stepLabelActive}>Document</Text>
-            <Text style={styles.stepLabelInactive}>{isDocOnly ? 'Upload' : 'Selfie'}</Text>
-          </View>
-        </View>
-
-        <Text style={styles.subtitle}>
-          Choose your document type and upload a clear photo.
-        </Text>
-
-        {/* Inline dropdown — button expands options below with dividers */}
-        <Pressable
-          onPress={() => setOpen(!open)}
-          accessibilityRole="button"
-          accessibilityLabel="Select document type"
-          accessibilityState={{ expanded: open }}
-          style={styles.dropdownButton}>
-          <Text style={styles.dropdownButtonText}>{LABELS[selected]}</Text>
-          <View style={{ transform: [{ rotate: open ? '180deg' : '0deg' }] }}>
-            <Icon name="chevronDown" size={20} color={Colors.textFaint} />
-          </View>
-        </Pressable>
-
-        {open && (
-          <View style={styles.dropdownOptionsContainer}>
-            {OPTIONS.map((option, index) => {
-              const active = option === selected;
-              return (
-                <View key={option}>
-                  {index > 0 && <View style={styles.dropdownDivider} />}
-                  <Pressable
-                    accessibilityRole="radio"
-                    accessibilityState={{ selected: active }}
-                    accessibilityLabel={LABELS[option]}
-                    onPress={() => {
-                      setSelected(option);
-                      setOpen(false);
-                    }}
-                    style={styles.dropdownOption}>
-                    <Text style={styles.dropdownOptionText}>{LABELS[option]}</Text>
-                    {active && <Icon name="check" size={18} color={Colors.primary} />}
-                  </Pressable>
-                </View>
-              );
-            })}
-          </View>
-        )}
-
-        {/* Scan instructions card */}
-        <View style={styles.instructionsCard}>
-          <Text style={styles.instructionsTitle}>Scan the Front of Your Document</Text>
-          <View style={styles.instructionRow}>
-            <View style={styles.instructionNumberBox}>
-              <Text style={styles.instructionNumberText}>1</Text>
-            </View>
-            <Text style={styles.instructionRowText}>
-              Place your document inside the frame
-            </Text>
-          </View>
-          <View style={styles.instructionRow}>
-            <View style={styles.instructionNumberBox}>
-              <Text style={styles.instructionNumberText}>2</Text>
-            </View>
-            <Text style={styles.instructionRowText}>
-              Ensure all corners are visible and text is fully readable
-            </Text>
-          </View>
-          <View style={styles.instructionRow}>
-            <View style={styles.instructionNumberBox}>
-              <Text style={styles.instructionNumberText}>3</Text>
-            </View>
-            <Text style={styles.instructionRowText}>
-              No glare, blur, or shadow on the document
-            </Text>
-          </View>
-        </View>
-
-        <Spacer />
-        <View className="pb-6 pt-4">
-          <Button label="Next" onPress={continueToScan} />
-        </View>
+    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: theme.colors.background }}>
+      <ScreenHeader title="Add document" subtitle="Step 1 of 2 — details" onBack={() => router.back()} />
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{ padding: theme.spacing[4], gap: theme.spacing[4] }}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}>
+          <FormField label="Document type" required>
+            <Select
+              options={DOC_TYPES}
+              value={type}
+              onValueChange={onTypeChange}
+              placeholder="Choose a type"
+              title="Document type"
+              accessibilityLabel="Document type"
+            />
+          </FormField>
+          <FormField label="Label" required error={errors.label}>
+            <Input
+              value={label}
+              onChangeText={setLabel}
+              placeholder="US Passport"
+              accessibilityLabel="Label"
+            />
+          </FormField>
+          <FormField label="Document number" required error={errors.number}>
+            <Input
+              value={number}
+              onChangeText={setNumber}
+              placeholder="e.g. 123456789"
+              autoCapitalize="characters"
+              autoCorrect={false}
+              accessibilityLabel="Document number"
+            />
+          </FormField>
+          <FormField label="Expiry date" required error={errors.expiresAt}>
+            <DatePicker
+              value={expiresAt}
+              onValueChange={setExpiresAt}
+              placeholder="YYYY-MM-DD"
+              minDate={todayISO()}
+              accessibilityLabel="Expiry date"
+            />
+          </FormField>
+        </ScrollView>
+      </KeyboardAvoidingView>
+      <View
+        style={{
+          padding: theme.spacing[4],
+          paddingTop: theme.spacing[3],
+          paddingBottom: theme.spacing[4] + insets.bottom,
+          borderTopWidth: theme.sizes.fieldBorderWidth,
+          borderTopColor: theme.colors.borderSubtle,
+          backgroundColor: theme.colors.surface,
+          gap: theme.spacing[2],
+        }}>
+        <CoreButton fullWidth size="lg" accessibilityLabel="Continue to upload" onPress={continueToUpload}>
+          Continue to upload
+        </CoreButton>
       </View>
-    </ScreenContainer>
+    </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  progressContainer: {
-    marginTop: 8,
-    marginBottom: 20,
-  },
-  progressRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  dotActive: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    borderWidth: 2,
-    borderColor: Colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  dotActiveInner: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: Colors.primary,
-  },
-  progressLine: {
-    flex: 1,
-    height: 2,
-    backgroundColor: Colors.borderInput,
-  },
-  dotInactive: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: Colors.borderInput,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  dotInactiveInner: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: Colors.bgWhite,
-  },
-  labelsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 8,
-  },
-  stepLabelActive: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: Colors.primary,
-  },
-  stepLabelInactive: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: Colors.textFaint,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    marginBottom: 20,
-  },
-  dropdownButton: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: Colors.borderInput,
-    borderRadius: 14,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    backgroundColor: Colors.bgWhite,
-  },
-  dropdownButtonText: {
-    fontSize: 16,
-    color: Colors.text,
-    fontWeight: '500',
-  },
-  dropdownOptionsContainer: {
-    marginTop: 8,
-    backgroundColor: Colors.bgWhite,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: Colors.borderInput,
-    overflow: 'hidden',
-  },
-  dropdownOption: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 14,
-  },
-  dropdownOptionText: {
-    fontSize: 16,
-    color: Colors.text,
-  },
-  dropdownDivider: {
-    height: 1,
-    backgroundColor: Colors.divider,
-  },
-  instructionsCard: {
-    marginTop: 24,
-    backgroundColor: Colors.bgWhite,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: Colors.borderLight,
-    padding: 16,
-  },
-  instructionsTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: Colors.text,
-    marginBottom: 14,
-  },
-  instructionRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
-    marginBottom: 12,
-  },
-  instructionNumberBox: {
-    width: 24,
-    height: 24,
-    borderRadius: 7,
-    backgroundColor: Colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  instructionNumberText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: Colors.primary,
-  },
-  instructionRowText: {
-    flex: 1,
-    fontSize: 14,
-    lineHeight: 20,
-    color: Colors.textSecondary,
-  },
-});
