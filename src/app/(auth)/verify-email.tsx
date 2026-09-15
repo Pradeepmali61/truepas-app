@@ -1,4 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Inbox } from 'lucide-react-native';
 import { useEffect } from 'react';
 
 import { api } from '@/api';
@@ -8,6 +9,8 @@ import { sessionStarted } from '@/features/auth/slice';
 import { accountDetailsStore } from '@/services/accountDetailsStore';
 import { secureStorage } from '@/services/secureStorage';
 import { useAppDispatch } from '@/store';
+import { useThemeTokens } from '@/theme';
+import { iconSize } from '@/theme/tokens';
 
 /** Verify email OTP — registration flow step 4 (contract v1.1.0).
  *  Email verification returns AuthResponse; dispatch sessionStarted and
@@ -15,6 +18,7 @@ import { useAppDispatch } from '@/store';
 export default function VerifyEmailScreen() {
   const router = useRouter();
   const dispatch = useAppDispatch();
+  const theme = useThemeTokens();
   const { email } = useLocalSearchParams<{ email?: string }>();
 
   useEffect(() => {
@@ -37,7 +41,7 @@ export default function VerifyEmailScreen() {
       title="Verify Email"
       heading="Check your inbox"
       sentTo={`Code sent to ${email ?? 'your email'}`}
-      icon="inbox"
+      icon={<Inbox size={iconSize.lg} color={theme.colors.actionPrimary} />}
       progress={35}
       purpose="email"
       identifier={{ email: email ?? '' }}

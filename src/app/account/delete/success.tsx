@@ -1,70 +1,108 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
-import { Text, View } from 'react-native';
+import { Check, CircleCheck, Database, Image as ImageIcon, ScanFace } from 'lucide-react-native';
+import type { ReactNode } from 'react';
+import { View } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { ScreenContainer, Spacer } from '@/components/layout/ScreenContainer';
-import { Button, Card, Icon, IconName } from '@/components/ui';
-import { Colors } from '@/constants/theme';
+import { Card, CardContent } from '@/components/composite';
+import { CoreButton, Divider, PopIn, RowIcon, Typography } from '@/components/ui';
 import { sessionEnded } from '@/features/auth/slice';
 import { useAppDispatch } from '@/store';
-
-const VERIFIED_SYSTEMS: { icon: IconName; label: string }[] = [
-  { icon: 'document', label: 'PostgreSQL' },
-  { icon: 'documents', label: 'S3 Images' },
-  { icon: 'face', label: 'ROC Gallery' },
-];
+import { useThemeTokens } from '@/theme';
+import { iconSize } from '@/theme/tokens';
 
 /** Delete account — success with all-3-systems verification (PRD). */
 export default function DeleteSuccessScreen() {
+  const theme = useThemeTokens();
+  const insets = useSafeAreaInsets();
   const dispatch = useAppDispatch();
   const router = useRouter();
   const queryClient = useQueryClient();
 
+  const systems: { icon: ReactNode; label: string }[] = [
+    { icon: <Database size={iconSize.sm} color={theme.colors.actionPrimary} />, label: 'PostgreSQL' },
+    { icon: <ImageIcon size={iconSize.sm} color={theme.colors.actionPrimary} />, label: 'S3 Images' },
+    { icon: <ScanFace size={iconSize.sm} color={theme.colors.actionPrimary} />, label: 'ROC Gallery' },
+  ];
+
   return (
-    <ScreenContainer scroll={false}>
-      <View className="flex-1 items-center justify-center p-5">
-        <View className="h-[90px] w-[90px] items-center justify-center rounded-full bg-[#ecfdf5]">
-          <Icon name="checkCircle" size={40} />
-        </View>
-        <Text accessibilityRole="header" className="mb-2 mt-5 text-[20px] font-bold text-primary">
-          Account Deleted
-        </Text>
-        <Text className="mb-4 text-[14px] text-muted">
+    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: theme.colors.background }}>
+      <View
+        style={{
+          flex: 1,
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: theme.spacing[5],
+          gap: theme.spacing[3],
+        }}>
+        <PopIn>
+          <RowIcon
+            tone="success"
+            icon={<CircleCheck size={iconSize.xl} color={theme.colors.onSuccessSubtle} />}
+          />
+        </PopIn>
+        <Typography variant="h3">Account Deleted</Typography>
+        <Typography variant="body-sm" color="secondary" center>
           All your data has been permanently removed
-        </Text>
-        <View className="w-full max-w-[280px]">
-          <Card className="mx-0 my-0">
-            <Text className="mb-2 text-[12px] text-muted">Deletion Verified</Text>
-            {VERIFIED_SYSTEMS.map((system) => (
-              <View key={system.label} className="mb-[6px] flex-row items-center justify-between">
-                <View className="flex-row items-center gap-2">
-                  <Icon name={system.icon} size={16} />
-                  <Text className="text-[12px] text-ink">
-                    {system.label}
-                  </Text>
+        </Typography>
+        <View style={{ alignSelf: 'stretch', marginTop: theme.spacing[2] }}>
+          <Card>
+            <CardContent>
+              <Typography variant="caption" color="muted">
+                DELETION VERIFIED
+              </Typography>
+              {systems.map((system, i) => (
+                <View key={system.label}>
+                  {i > 0 ? <Divider /> : null}
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: theme.spacing[2],
+                      paddingVertical: theme.spacing[3],
+                    }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing[2] }}>
+                      {system.icon}
+                      <Typography variant="body-sm">{system.label}</Typography>
+                    </View>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing[1] }}>
+                      <Check size={iconSize.xs} color={theme.colors.success} />
+                      <Typography variant="body-sm" style={{ color: theme.colors.success, fontWeight: theme.fontWeight.semibold }}>
+                        Deleted
+                      </Typography>
+                    </View>
+                  </View>
                 </View>
-                <View className="flex-row items-center gap-1">
-                  <Icon name="check" size={12} color={Colors.primary} />
-                  <Text className="text-[12px] font-bold text-primary">Deleted</Text>
-                </View>
-              </View>
-            ))}
+              ))}
+            </CardContent>
           </Card>
         </View>
       </View>
-      <Spacer />
-      <View className="px-6 pb-6">
-        <Button
-          label="Close App"
+      <View
+        style={{
+          padding: theme.spacing[4],
+          paddingTop: theme.spacing[3],
+          paddingBottom: theme.spacing[4] + insets.bottom,
+          borderTopWidth: theme.sizes.fieldBorderWidth,
+          borderTopColor: theme.colors.borderSubtle,
+          backgroundColor: theme.colors.surface,
+        }}>
+        <CoreButton
+          fullWidth
+          size="lg"
+          accessibilityLabel="Close app"
           onPress={() => {
             queryClient.clear();
             dispatch(sessionEnded());
             // Session is gone — the entry gate won't re-render, so navigate
             // explicitly to the login screen.
             router.dismissTo('/(auth)/login' as never);
-          }}
-        />
+          }}>
+          Close App
+        </CoreButton>
       </View>
-    </ScreenContainer>
+    </SafeAreaView>
   );
 }

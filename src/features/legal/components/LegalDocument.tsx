@@ -1,7 +1,9 @@
-import { Text, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { ScreenContainer } from '@/components/layout/ScreenContainer';
-import { TopBar } from '@/components/layout/TopBar';
+import { ScreenHeader } from '@/components/composite';
+import { Typography } from '@/components/ui';
+import { useThemeTokens } from '@/theme';
 
 export interface LegalSection {
   heading: string;
@@ -16,20 +18,30 @@ interface LegalDocumentProps {
 
 /** Shared legal document renderer — plain text only, no HTML rendering (OWASP A03/XSS-safe). */
 export function LegalDocument({ title, updated, sections }: LegalDocumentProps) {
+  const theme = useThemeTokens();
+
   return (
-    <ScreenContainer>
-      <TopBar title={title} />
-      <View className="px-6 py-4">
-        <Text className="mb-3 text-[12px] text-muted">{updated}</Text>
+    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: theme.colors.background }}>
+      <ScreenHeader title={title} />
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{
+          padding: theme.spacing[4],
+          paddingBottom: theme.spacing[8],
+        }}
+        showsVerticalScrollIndicator={false}>
+        <Typography variant="caption" color="muted">
+          {updated}
+        </Typography>
         {sections.map((section) => (
-          <View key={section.heading}>
-            <Text accessibilityRole="header" className="mb-[6px] mt-4 text-[14px] font-bold text-ink">
-              {section.heading}
-            </Text>
-            <Text className="mb-3 text-[14px] leading-[22px] text-muted">{section.body}</Text>
+          <View key={section.heading} style={{ marginTop: theme.spacing[4], gap: theme.spacing[1] }}>
+            <Typography variant="h4">{section.heading}</Typography>
+            <Typography variant="body-sm" color="secondary">
+              {section.body}
+            </Typography>
           </View>
         ))}
-      </View>
-    </ScreenContainer>
+      </ScrollView>
+    </SafeAreaView>
   );
 }

@@ -1,8 +1,11 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Smartphone } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 
 import { api } from '@/api';
 import { OtpVerification } from '@/features/auth/components/OtpVerification';
+import { useThemeTokens } from '@/theme';
+import { iconSize } from '@/theme/tokens';
 
 /** Verify phone OTP — registration flow step 2. Stores registrationToken and
  *  navigates to account-details (NOT verify-email, per contract v1.1.0).
@@ -10,6 +13,7 @@ import { OtpVerification } from '@/features/auth/components/OtpVerification';
  *  endpoint) — a fresh registrationId is returned and used for verification. */
 export default function VerifyPhoneScreen() {
   const router = useRouter();
+  const theme = useThemeTokens();
   const { phone, countryCode, registrationId } = useLocalSearchParams<{
     phone?: string;
     countryCode?: string;
@@ -31,7 +35,7 @@ export default function VerifyPhoneScreen() {
       title="Verify Phone"
       heading="Enter verification code"
       sentTo={`Sent to ${countryCode ?? '+1'} ${phone ?? '(555) 123-4567'}`}
-      icon="smartphone"
+      icon={<Smartphone size={iconSize.lg} color={theme.colors.actionPrimary} />}
       progress={25}
       purpose="phone"
       identifier={{ registrationId: activeRegistrationId, phone: phone ?? '', countryCode: countryCode ?? '' }}

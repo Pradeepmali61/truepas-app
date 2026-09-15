@@ -1,106 +1,77 @@
 import { useRouter } from 'expo-router';
-import { Pressable, Text, View } from 'react-native';
+import { Cake, Clock, Plus } from 'lucide-react-native';
+import { ScrollView, View } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { ScreenContainer, Spacer } from '@/components/layout/ScreenContainer';
-import { TopBar } from '@/components/layout/TopBar';
-import { Icon } from '@/components/ui';
-import { Colors, Elevation } from '@/constants/theme';
+import { Alert, Card, CardContent, ScreenHeader } from '@/components/composite';
+import { CoreButton, PopIn, RowIcon, Typography } from '@/components/ui';
+import { useThemeTokens } from '@/theme';
+import { iconSize } from '@/theme/tokens';
 
 /** Age-18 transition notification — dependent is eligible for own Truepas account. */
 export default function Age18NotificationScreen() {
+  const theme = useThemeTokens();
+  const insets = useSafeAreaInsets();
   const router = useRouter();
 
   return (
-    <ScreenContainer scroll={false}>
-      <TopBar title="Notification" />
-      <View className="flex-1 px-6">
-        {/* Hero card */}
-        <View style={{ alignItems: 'center', paddingTop: 24, paddingBottom: 20 }}>
-          <View style={{
-            width: 80, height: 80, borderRadius: 40,
-            backgroundColor: '#e6f8ff',
-            alignItems: 'center', justifyContent: 'center',
-            ...Elevation.small,
-          }}>
-            <Icon name="cake" size={40} color="#08B6FC" />
-          </View>
+    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: theme.colors.background }}>
+      <ScreenHeader title="Notification" />
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ padding: theme.spacing[4], gap: theme.spacing[4] }}
+        showsVerticalScrollIndicator={false}>
+        <View style={{ alignItems: 'center', paddingVertical: theme.spacing[4] }}>
+          <PopIn>
+            <RowIcon
+              tone="primary"
+              icon={<Cake size={iconSize.xl} color={theme.colors.actionPrimary} />}
+            />
+          </PopIn>
         </View>
-
-        {/* Main message card */}
-        <View style={{
-          backgroundColor: '#FFFFFF',
-          borderRadius: 20,
-          paddingHorizontal: 22,
-          paddingVertical: 24,
-          ...Elevation.medium,
+        <Card>
+          <CardContent style={{ alignItems: 'center', gap: theme.spacing[3] }}>
+            <Typography variant="h3" center>
+              You&apos;re eligible for a new Truepas account
+            </Typography>
+            <Typography variant="body" color="secondary" center>
+              Max Kim has turned 18 and can now create an independent Truepas account to manage
+              their own identity verification.
+            </Typography>
+            <View style={{ alignSelf: 'stretch', gap: theme.spacing[2] }}>
+              <Alert variant="success">Eligible to create own account</Alert>
+              <Alert variant="warning">Data retained for 30 days after removal</Alert>
+            </View>
+          </CardContent>
+        </Card>
+      </ScrollView>
+      <View
+        style={{
+          padding: theme.spacing[4],
+          paddingTop: theme.spacing[3],
+          paddingBottom: theme.spacing[4] + insets.bottom,
+          gap: theme.spacing[2],
+          borderTopWidth: theme.sizes.fieldBorderWidth,
+          borderTopColor: theme.colors.borderSubtle,
+          backgroundColor: theme.colors.surface,
         }}>
-          <Text style={{ fontSize: 22, fontWeight: '800', color: Colors.ink, textAlign: 'center' }}>
-            You're eligible for a new Truepas account
-          </Text>
-          <Text style={{ fontSize: 14, fontWeight: '400', color: Colors.textMuted, textAlign: 'center', marginTop: 10, lineHeight: 21 }}>
-            Max Kim has turned 18 and can now create an independent Truepas account to manage their own identity verification.
-          </Text>
-
-          {/* Info row */}
-          <View style={{
-            flexDirection: 'row', alignItems: 'center', gap: 8,
-            backgroundColor: '#F0FDF4', borderRadius: 12,
-            paddingHorizontal: 14, paddingVertical: 10,
-            marginTop: 18,
-          }}>
-            <Icon name="check" size={16} color="#059669" />
-            <Text style={{ fontSize: 13, fontWeight: '500', color: '#059669', flex: 1 }}>
-              Eligible to create own account
-            </Text>
-          </View>
-
-          <View style={{
-            flexDirection: 'row', alignItems: 'center', gap: 8,
-            backgroundColor: '#FEF3C7', borderRadius: 12,
-            paddingHorizontal: 14, paddingVertical: 10,
-            marginTop: 8,
-          }}>
-            <Icon name="info" size={16} color="#D97706" />
-            <Text style={{ fontSize: 13, fontWeight: '500', color: '#D97706', flex: 1 }}>
-              Data retained for 30 days after removal
-            </Text>
-          </View>
-        </View>
-
-        <Spacer />
-
-        {/* Redesigned buttons */}
-        <View style={{ paddingBottom: 24, paddingTop: 8 }}>
-          {/* Primary button */}
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Create their own account"
-            onPress={() => router.dismissTo('/(tabs)/family')}
-            style={{
-              flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10,
-              backgroundColor: '#08B6FC', borderRadius: 16, paddingVertical: 16,
-              ...Elevation.medium,
-            }}>
-            <Icon name="plus" size={20} color="#FFFFFF" />
-            <Text style={{ fontSize: 16, fontWeight: '700', color: '#FFFFFF' }}>Create their account</Text>
-          </Pressable>
-
-          {/* Secondary outline button */}
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Remind later"
-            onPress={() => router.back()}
-            style={{
-              flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-              backgroundColor: 'transparent', borderRadius: 16, paddingVertical: 16,
-              borderWidth: 1.5, borderColor: '#cef0fe',
-              marginTop: 10,
-            }}>
-            <Icon name="clock" size={18} color="#08B6FC" />
-            <Text style={{ fontSize: 16, fontWeight: '700', color: '#08B6FC' }}>Remind me later</Text>
-          </Pressable>
-        </View>
+        <CoreButton
+          fullWidth
+          size="lg"
+          accessibilityLabel="Create their own account"
+          iconLeft={<Plus size={iconSize.sm} color={theme.colors.onActionPrimary} />}
+          onPress={() => router.dismissTo('/(tabs)/family')}>
+          Create their account
+        </CoreButton>
+        <CoreButton
+          fullWidth
+          variant="outline"
+          accessibilityLabel="Remind later"
+          iconLeft={<Clock size={iconSize.sm} color={theme.colors.actionPrimary} />}
+          onPress={() => router.back()}>
+          Remind me later
+        </CoreButton>
       </View>
-    </ScreenContainer>
+    </SafeAreaView>
   );
 }

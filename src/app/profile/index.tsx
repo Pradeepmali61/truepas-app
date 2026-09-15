@@ -9,11 +9,11 @@ import {
     Phone
 } from 'lucide-react-native';
 import { type ReactNode } from 'react';
-import { ActivityIndicator, Platform, Pressable, View } from 'react-native';
+import { Platform, Pressable, View } from 'react-native';
 
 import { Card, ScreenHeader } from '@/components/composite';
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
-import { Avatar, Divider, Typography } from '@/components/ui';
+import { Avatar, Divider, Spinner, Typography } from '@/components/ui';
 import { useLogout } from '@/features/auth/mutations';
 import { sessionEnded } from '@/features/auth/slice';
 import { useProfilePicture, useUploadProfilePicture } from '@/features/profile/hooks';
@@ -190,7 +190,7 @@ export default function ProfileScreen() {
                 alignItems: 'center',
                 justifyContent: 'center',
               }}>
-              <ActivityIndicator size="small" color="#FFFFFF" />
+              <Spinner size="md" color="#FFFFFF" label="Uploading photo" />
             </View>
           )}
           <Pressable

@@ -1,3 +1,4 @@
+/** @jsxImportSource react */
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -10,14 +11,13 @@ import {
     ListRenderItemInfo,
     NativeScrollEvent,
     NativeSyntheticEvent,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
+    Pressable,
     View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Colors, Gradients } from '@/constants/theme';
+import { Typography } from '@/components/ui';
+import { makeStyles, useThemeTokens } from '@/theme';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const CARD_HEIGHT = SCREEN_HEIGHT * 0.42;
@@ -56,9 +56,14 @@ const SLIDES: Slide[] = [
 
 export default function WelcomeScreen() {
   const router = useRouter();
+  const theme = useThemeTokens();
+  const styles = useStyles();
   const listRef = useRef<FlatList<Slide>>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const insets = useSafeAreaInsets();
+
+  // Brand gradient — accent → primary → pressed (was Gradients.welcome)
+  const cardGradient = [theme.colors.accent, theme.colors.actionPrimary, theme.colors.actionPrimaryPressed] as const;
 
   const handleFinish = useCallback(() => {
     router.push('/(auth)/login');
@@ -91,13 +96,13 @@ export default function WelcomeScreen() {
         </View>
 
         <LinearGradient
-          colors={Gradients.welcome}
+          colors={cardGradient}
           locations={[0, 0.36, 1]}
           start={{ x: 0.5, y: 0 }}
           end={{ x: 0.5, y: 1 }}
           style={[styles.bottomCard, { marginTop: -IMAGE_OVERLAP }]}>
-          <Text style={styles.title}>{item.title}</Text>
-          <Text style={styles.description}>{item.description}</Text>
+          <Typography style={styles.title}>{item.title}</Typography>
+          <Typography style={styles.description}>{item.description}</Typography>
 
           <View style={styles.dotsRow}>
             {SLIDES.map((s, i) => (
@@ -111,41 +116,40 @@ export default function WelcomeScreen() {
             ))}
           </View>
 
-          <TouchableOpacity
+          <Pressable
             onPress={handleNext}
-            activeOpacity={0.88}
-            style={styles.ctaButton}
+            style={({ pressed }) => [styles.ctaButton, pressed && { opacity: 0.88 }]}
             accessibilityRole="button"
             accessibilityLabel={
               activeIndex === SLIDES.length - 1 ? 'Get Started' : 'Next'
             }>
-            <Text style={styles.ctaText}>
+            <Typography style={styles.ctaText}>
               {activeIndex === SLIDES.length - 1 ? 'Get Started' : 'Next'}
-            </Text>
-          </TouchableOpacity>
+            </Typography>
+          </Pressable>
         </LinearGradient>
       </View>
     ),
-    [activeIndex, handleNext],
+    [activeIndex, handleNext, cardGradient, styles],
   );
 
   return (
     <LinearGradient
-      colors={['#b8e8fc', '#7fd8fa']}
+      colors={[theme.colors.infoSubtle, theme.colors.accent]}
       start={{ x: 0, y: 0 }}
       end={{ x: 0, y: 1 }}
       style={styles.container}>
       <StatusBar style="dark" />
 
       <View style={[styles.skipWrapper, { top: insets.top + 8 }]}>
-        <TouchableOpacity
+        <Pressable
           onPress={handleFinish}
-          activeOpacity={0.7}
           hitSlop={12}
           accessibilityRole="button"
-          accessibilityLabel="Skip introduction">
-          <Text style={styles.skipText}>Skip</Text>
-        </TouchableOpacity>
+          accessibilityLabel="Skip introduction"
+          style={({ pressed }) => pressed && { opacity: 0.7 }}>
+          <Typography style={styles.skipText}>Skip</Typography>
+        </Pressable>
       </View>
 
       <FlatList
@@ -172,13 +176,13 @@ export default function WelcomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((t) => ({
   container: { flex: 1 },
-  skipWrapper: { position: 'absolute', right: 20, zIndex: 30 },
+  skipWrapper: { position: 'absolute', right: t.spacing[5], zIndex: 30 },
   skipText: {
-    color: 'rgba(8, 182, 252, 0.85)',
-    fontSize: 15,
-    fontWeight: '700',
+    color: t.colors.actionPrimary,
+    fontSize: t.fontSize.md,
+    fontWeight: t.fontWeight.bold,
     textDecorationLine: 'underline',
   },
   flatList: { flex: 1 },
@@ -197,56 +201,51 @@ const styles = StyleSheet.create({
   image: { width: '100%', height: '100%' },
   bottomCard: {
     height: CARD_HEIGHT,
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    paddingHorizontal: 28,
-    paddingTop: 32,
-    paddingBottom: 24,
+    borderTopLeftRadius: t.radii['2xl'] + 8,
+    borderTopRightRadius: t.radii['2xl'] + 8,
+    paddingHorizontal: t.spacing[6],
+    paddingTop: t.spacing[8],
+    paddingBottom: t.spacing[6],
     alignItems: 'center',
   },
   title: {
     color: '#FFFFFF',
     fontSize: 38,
-    fontWeight: '500',
+    fontWeight: t.fontWeight.medium,
     textAlign: 'center',
     lineHeight: 50,
-    marginBottom: 12,
+    marginBottom: t.spacing[3],
   },
   description: {
     color: 'rgba(255, 255, 255, 0.78)',
-    fontSize: 18,
+    fontSize: t.fontSize.lg,
     lineHeight: 23,
-    fontWeight: '400',
     textAlign: 'center',
     flex: 1,
   },
   dotsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 20,
+    gap: t.spacing[2],
+    marginBottom: t.spacing[5],
   },
-  dot: { height: 4, borderRadius: 99 },
+  dot: { height: 4, borderRadius: t.radii.full },
   dotActive: { width: 32, backgroundColor: '#FFFFFF' },
   dotInactive: { width: 22, backgroundColor: 'rgba(255, 255, 255, 0.35)' },
   ctaButton: {
     width: '100%',
-    height: 58,
-    borderRadius: 29,
+    height: t.sizes.heightLg,
+    borderRadius: t.radii.full,
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.14,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 5,
+    ...t.shadows.lg,
   },
   ctaText: {
-    color: '#08B6FC',
-    fontSize: 17,
-    fontWeight: '800',
-    letterSpacing: 0.2,
+    color: t.colors.actionPrimary,
+    fontSize: t.fontSize.md,
+    fontWeight: t.fontWeight.bold,
+    letterSpacing: t.letterSpacing.wide,
   },
-  bottomBar: { backgroundColor: Colors.primaryDark },
-});
+  bottomBar: { backgroundColor: t.colors.actionPrimaryPressed },
+}));

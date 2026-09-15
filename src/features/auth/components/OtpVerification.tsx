@@ -1,22 +1,25 @@
 import * as Haptics from 'expo-haptics';
-import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { useRouter } from 'expo-router';
+import { CircleCheck } from 'lucide-react-native';
+import { useState, type ReactNode } from 'react';
+import { KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
 import Animated, { useSharedValue, withSequence, withTiming } from 'react-native-reanimated';
 
 import { setRegistrationToken } from '@/api/client';
-import { ScreenContainer, Spacer } from '@/components/layout/ScreenContainer';
-import { TopBar } from '@/components/layout/TopBar';
-import { Button, Icon, IconName, OtpRow, ProgressTrack } from '@/components/ui';
-import { Colors } from '@/constants/theme';
+import { OtpInput, ScreenHeader } from '@/components/composite';
+import { ScreenContainer } from '@/components/layout/ScreenContainer';
+import { CoreButton, Link, Progress, RowIcon, Typography } from '@/components/ui';
 import { useVerifyOtp } from '@/features/auth/mutations';
 import { formatCountdown, useCountdown } from '@/hooks/useCountdown';
+import { useThemeTokens } from '@/theme';
+import { iconSize } from '@/theme/tokens';
 import type { OtpPurpose, VerifyOtpRequest, VerifyOtpResponse } from '@/types/domain';
 
 interface OtpVerificationProps {
   title: string;
   heading: string;
   sentTo: string;
-  icon: IconName;
+  icon: ReactNode;
   progress: number;
   purpose: OtpPurpose;
   /** Identifier fields to send with the OTP verification. */
@@ -52,6 +55,8 @@ export function OtpVerification({
   onVerified,
   onResend,
 }: OtpVerificationProps) {
+  const router = useRouter();
+  const theme = useThemeTokens();
   const [code, setCode] = useState('');
   const [verifyState, setVerifyState] = useState<VerifyState>('idle');
   const [errorMsg, setErrorMsg] = useState('');
@@ -61,7 +66,7 @@ export function OtpVerification({
   const verifyOtp = useVerifyOtp();
 
   const handleChange = (value: string) => {
-    setCode(value.replace(/\D/g, '').slice(0, OTP_LENGTH));
+    setCode(value);
     if (verifyState === 'error') {
       setVerifyState('idle');
       setErrorMsg('');
@@ -135,82 +140,95 @@ export function OtpVerification({
   const shakeStyle = { transform: [{ translateX: shakeX }] };
 
   return (
-    <ScreenContainer scroll={false}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        className="flex-1">
+    <ScreenContainer scroll={false} background={false}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+        <ScreenHeader title={title} onBack={router.back} />
+        <View style={{ paddingHorizontal: theme.spacing[4] }}>
+          <Progress value={progress} accessibilityLabel="Verification progress" />
+        </View>
         <ScrollView
+          style={{ flex: 1 }}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={{ flexGrow: 1 }}>
-      <TopBar title={title} />
-      <ProgressTrack percent={progress} />
-      <View className="flex-1 items-center justify-center p-5">
-        {verifyState === 'success' ? (
-          <View className="items-center">
-            <View className="mb-4 h-20 w-20 items-center justify-center rounded-full" style={{ backgroundColor: Colors.successBg }}>
-              <Icon name="checkCircle" size={48} color={Colors.success} />
-            </View>
-            <Text className="text-[18px] font-bold text-ink">Verified!</Text>
-            <Text className="mt-1 text-[14px] text-muted">Redirecting...</Text>
-          </View>
-        ) : (
-          <>
-            <Icon name={icon} size={40} />
-            <Text accessibilityRole="header" className="mb-[6px] mt-4 text-[18px] font-bold text-primary">
-              {heading}
-            </Text>
-            <Text className="mb-[6px] text-[14px] text-muted">{sentTo}</Text>
-            <Animated.View style={shakeStyle} className="w-full items-center">
-              <Pressable accessibilityLabel="Enter one time password" className="w-full items-center">
-                <OtpRow length={OTP_LENGTH} value={code} />
-                <TextInput
-                  value={code}
-                  onChangeText={handleChange}
-                  keyboardType="number-pad"
-                  textContentType="oneTimeCode"
-                  autoFocus
-                  maxLength={OTP_LENGTH}
-                  className="absolute h-full w-full opacity-0"
-                  accessibilityLabel="One time password input"
+          <View
+            style={{
+              flex: 1,
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: theme.spacing[5],
+              gap: theme.spacing[3],
+            }}>
+            {verifyState === 'success' ? (
+              <View style={{ alignItems: 'center', gap: theme.spacing[2] }}>
+                <RowIcon
+                  tone="success"
+                  icon={<CircleCheck size={iconSize.xl} color={theme.colors.onSuccessSubtle} />}
                 />
-              </Pressable>
-            </Animated.View>
+                <Typography variant="h3">Verified!</Typography>
+                <Typography variant="body-sm" color="secondary">
+                  Redirecting...
+                </Typography>
+              </View>
+            ) : (
+              <>
+                <RowIcon tone="primary" icon={icon} />
+                <View style={{ alignItems: 'center', gap: theme.spacing[1] }}>
+                  <Typography variant="h3" center>
+                    {heading}
+                  </Typography>
+                  <Typography variant="body-sm" color="secondary" center>
+                    {sentTo}
+                  </Typography>
+                </View>
+                <Animated.View style={[shakeStyle, { width: '100%', alignItems: 'center' }]}>
+                  <OtpInput
+                    length={OTP_LENGTH}
+                    value={code}
+                    onChange={handleChange}
+                    onComplete={handleVerify}
+                    autoFocus
+                    state={verifyState === 'error' ? 'error' : 'default'}
+                    accessibilityLabel="One time password"
+                  />
+                </Animated.View>
 
-            {verifyState === 'error' ? (
-              <Text className="mt-2 text-[13px] font-medium" style={{ color: Colors.error }}>
-                {errorMsg}
-              </Text>
-            ) : null}
+                {verifyState === 'error' ? (
+                  <Typography variant="body-sm" style={{ color: theme.colors.error }} center>
+                    {errorMsg}
+                  </Typography>
+                ) : null}
 
-            {seconds > 0 ? (
-              <Text className="mt-2 text-[14px] font-medium text-muted">
-                Resend code in {formatCountdown(seconds)}
-              </Text>
-            ) : onResend ? (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Resend code"
-                onPress={handleResend}
-                disabled={resending}>
-                <Text className="mt-2 text-[14px] font-medium text-primary underline">
-                  {resending ? 'Sending…' : 'Resend code'}
-                </Text>
-              </Pressable>
-            ) : null}
-          </>
-        )}
-      </View>
-      <Spacer />
-      <View className="px-6 pb-6">
-        <Button
-          label={verifyState === 'success' ? 'Verified' : 'Verify'}
-          onPress={handleVerify}
-          loading={verifyState === 'loading'}
-          disabled={code.length !== OTP_LENGTH || verifyState === 'loading' || verifyState === 'success'}
-        />
-      </View>
+                {seconds > 0 ? (
+                  <Typography variant="body-sm" color="muted">
+                    Resend code in {formatCountdown(seconds)}
+                  </Typography>
+                ) : onResend ? (
+                  <Link onPress={handleResend} accessibilityLabel="Resend code" disabled={resending}>
+                    {resending ? 'Sending…' : 'Resend code'}
+                  </Link>
+                ) : null}
+              </>
+            )}
+          </View>
         </ScrollView>
+        <View
+          style={{
+            padding: theme.spacing[4],
+            borderTopWidth: theme.sizes.fieldBorderWidth,
+            borderTopColor: theme.colors.borderSubtle,
+            backgroundColor: theme.colors.surface,
+          }}>
+          <CoreButton
+            fullWidth
+            size="lg"
+            loading={verifyState === 'loading'}
+            disabled={code.length !== OTP_LENGTH || verifyState === 'loading' || verifyState === 'success'}
+            accessibilityLabel="Verify code"
+            onPress={handleVerify}>
+            {verifyState === 'success' ? 'Verified' : 'Verify'}
+          </CoreButton>
+        </View>
       </KeyboardAvoidingView>
     </ScreenContainer>
   );

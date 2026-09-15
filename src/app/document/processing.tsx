@@ -1,16 +1,19 @@
 ﻿import { useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Check, Hourglass, TriangleAlert } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Text, View } from 'react-native';
+import { View } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { api } from '@/api';
-import { ScreenContainer } from '@/components/layout/ScreenContainer';
-import { Button, Icon } from '@/components/ui';
-import { Colors } from '@/constants/theme';
+import { Alert } from '@/components/composite';
+import { CoreButton, RowIcon, Spinner, Typography } from '@/components/ui';
 import { documentKeys, useAddDocument } from '@/features/documents/hooks';
 import { clearDocumentImages, saveDocumentImages } from '@/services/documentImageStore';
 import { clearScanResult, getScanResult } from '@/services/scanStore';
 import { useAppSelector } from '@/store';
+import { useThemeTokens } from '@/theme';
+import { iconSize } from '@/theme/tokens';
 import type { DocumentType, IdentityDocument } from '@/types/domain';
 
 const DOC_LABELS: Record<DocumentType, string> = {
@@ -48,6 +51,8 @@ export default function DocumentProcessingScreen() {
   const docLabel = label?.trim() || DOC_LABELS[docType];
   const docNumber = number?.trim() || 'PENDING';
   const docExpiresAt = expiresAt?.trim() || null;
+  const theme = useThemeTokens();
+  const insets = useSafeAreaInsets();
   const [status, setStatus] = useState<ProcessingStatus>('adding');
   const [error, setError] = useState<string | null>(null);
   const hasStarted = useRef(false);
@@ -234,76 +239,92 @@ export default function DocumentProcessingScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [docType]);
 
-  return (
-    <ScreenContainer scroll={false}>
-      <View className="flex-1 items-center justify-center p-5">
-        {status !== 'error' && <ActivityIndicator size={80} color={Colors.primary} />}
-        {status === 'error' && (
-          <View className="mb-3 h-16 w-16 items-center justify-center rounded-full" style={{ backgroundColor: Colors.errorBg }}>
-            <Icon name="warning" size={36} color={Colors.error} />
-          </View>
-        )}
-        <Text
-          accessibilityRole="header"
-          accessibilityLiveRegion="polite"
-          className="mb-1 mt-5 text-[16px] font-bold"
-          style={{ color: status === 'error' ? Colors.error : Colors.primary }}>
-          {status === 'adding' && 'Adding documentâ€¦'}
-          {status === 'creating_session' && 'Creating verification sessionâ€¦'}
-          {status === 'verifying' && 'Verifying documentâ€¦'}
-          {status === 'done' && 'Verified!'}
-          {status === 'error' && 'Verification failed'}
-        </Text>
-        <Text className="text-[14px] text-muted">
-          {status === 'verifying' ? 'Regula processing â€” this may take a moment' : 'Extracting details & matching your face'}
-        </Text>
+  const step = (active: boolean, done: boolean, text: string) => (
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: theme.spacing[2],
+        paddingVertical: theme.spacing[1.5],
+      }}>
+      {done ? (
+        <Check size={iconSize.sm} color={theme.colors.success} />
+      ) : (
+        <Hourglass size={iconSize.sm} color={active ? theme.colors.actionPrimary : theme.colors.textMuted} />
+      )}
+      <Typography variant="body-sm" color="secondary">
+        {text}
+      </Typography>
+    </View>
+  );
 
-        <View className="mt-4">
-          <View className="my-1 flex-row items-center gap-2">
-            <Icon name="check" size={14} color={Colors.primary} />
-            <Text className="text-[12px] text-muted">Document scanned</Text>
-          </View>
-          <View className="my-1 flex-row items-center gap-2">
-            <Icon name={status === 'adding' ? 'hourglass' : 'check'} size={14} color={Colors.primary} />
-            <Text className="text-[12px] text-muted">
-              {status === 'adding' ? 'Adding to accountâ€¦' : 'Document added'}
-            </Text>
-          </View>
-          <View className="my-1 flex-row items-center gap-2">
-            <Icon
-              name={status === 'verifying' || status === 'creating_session' ? 'hourglass' : 'check'}
-              size={14}
-              color={Colors.primary}
-            />
-            <Text className="text-[12px] text-muted">
-              {status === 'creating_session' ? 'Creating sessionâ€¦' :
-               status === 'verifying' ? 'Matching facesâ€¦' :
-               status === 'done' ? 'Verified' :
-               status === 'error' ? 'Failed' : 'Pending'}
-            </Text>
-          </View>
+  return (
+    <SafeAreaView edges={['top', 'bottom']} style={{ flex: 1, backgroundColor: theme.colors.background }}>
+      <View
+        style={{
+          flex: 1,
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: theme.spacing[5],
+          paddingBottom: insets.bottom,
+          gap: theme.spacing[4],
+        }}>
+        {status !== 'error' ? (
+          <Spinner size="lg" label="Verifying document" />
+        ) : (
+          <RowIcon
+            tone="error"
+            icon={<TriangleAlert size={iconSize.lg} color={theme.colors.onErrorSubtle} />}
+          />
+        )}
+        <View style={{ alignItems: 'center', gap: theme.spacing[1] }}>
+          <Typography
+            variant="h4"
+            accessibilityLiveRegion="polite"
+            style={{ color: status === 'error' ? theme.colors.error : theme.colors.textPrimary }}>
+            {status === 'adding' && 'Adding documentâ€¦'}
+            {status === 'creating_session' && 'Creating verification sessionâ€¦'}
+            {status === 'verifying' && 'Verifying documentâ€¦'}
+            {status === 'done' && 'Verified!'}
+            {status === 'error' && 'Verification failed'}
+          </Typography>
+          <Typography variant="body-sm" color="secondary" center>
+            {status === 'verifying' ? 'Regula processing â€” this may take a moment' : 'Extracting details & matching your face'}
+          </Typography>
         </View>
 
-        {error ? (
-          <Text className="mt-3 text-[13px] text-center" style={{ color: Colors.error }}>
-            {error}
-          </Text>
-        ) : null}
+        <View>
+          {step(false, true, 'Document scanned')}
+          {step(status === 'adding', status !== 'adding', status === 'adding' ? 'Adding to accountâ€¦' : 'Document added')}
+          {step(
+            status === 'creating_session' || status === 'verifying',
+            status === 'done',
+            status === 'creating_session' ? 'Creating sessionâ€¦' :
+            status === 'verifying' ? 'Matching facesâ€¦' :
+            status === 'done' ? 'Verified' :
+            status === 'error' ? 'Failed' : 'Pending',
+          )}
+        </View>
+
+        {error ? <Alert variant="error">{error}</Alert> : null}
 
         {status === 'error' && (
-          <View className="mt-6 w-full gap-3 px-2">
-            <Button
-              label="Retry Verification"
+          <View style={{ alignSelf: 'stretch', gap: theme.spacing[3] }}>
+            <CoreButton
+              fullWidth
+              accessibilityLabel="Retry verification"
               onPress={() => {
                 hasStarted.current = false;
                 setError(null);
                 setStatus('adding');
                 processRef.current?.();
-              }}
-            />
-            <Button
-              label="Back to Documents"
+              }}>
+              Retry Verification
+            </CoreButton>
+            <CoreButton
+              fullWidth
               variant="outline"
+              accessibilityLabel="Back to documents"
               onPress={() => {
                 // Discard the unverified document created by this attempt so
                 // no pending duplicate is left in My Documents.
@@ -314,12 +335,13 @@ export default function DocumentProcessingScreen() {
                   createdDocRef.current = null;
                 }
                 router.back();
-              }}
-            />
+              }}>
+              Back to Documents
+            </CoreButton>
           </View>
         )}
       </View>
-    </ScreenContainer>
+    </SafeAreaView>
   );
 }
 

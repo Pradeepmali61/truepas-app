@@ -2,10 +2,10 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Colors } from '@/constants/theme';
+import { CoreButton, Spinner, Typography } from '@/components/ui';
 import {
     RegulaScanCancelled,
     initializeRegula,
@@ -13,6 +13,7 @@ import {
     scanDocument,
 } from '@/features/documents/regulaScanner';
 import { setScanResult } from '@/services/scanStore';
+import { useThemeTokens } from '@/theme';
 
 type ScanStep = 'front' | 'selfie' | 'done';
 
@@ -21,6 +22,11 @@ type ScanStep = 'front' | 'selfie' | 'done';
 // use these.
 const FRONT_FRAME = { width: 280, height: 175 };
 const SELFIE_FRAME = { width: 300, height: 300 };
+
+// Camera chrome is intentionally dark — the viewfinder sits behind it.
+const CAMERA_BG = '#111111';
+const ON_DARK = '#FFFFFF';
+const ON_DARK_MUTED = 'rgba(255,255,255,0.7)';
 
 /** Document scan — captures front of document (+ selfie for portrait documents).
  *  Document capture uses the Regula Document Reader native scanner (edge
@@ -36,6 +42,7 @@ const SELFIE_FRAME = { width: 300, height: 300 };
  *  after capture instead of the user document processing screen. Birth
  *  certificates (0-4) skip the selfie step — no portrait, no face match. */
 export default function DocumentScanScreen() {
+  const theme = useThemeTokens();
   const router = useRouter();
   const { type, label, number, expiresAt, family, personId, name, dob, relationship, band } = useLocalSearchParams<{
     type?: string;
@@ -257,12 +264,22 @@ export default function DocumentScanScreen() {
     }
   };
 
+  const centered = {
+    flex: 1,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    backgroundColor: CAMERA_BG,
+    paddingHorizontal: theme.spacing[8],
+  };
+
   // Permission not yet determined — show loading
   if (permission === null) {
     return (
-      <SafeAreaView className="flex-1 items-center justify-center bg-[#111111]" edges={['top', 'bottom']}>
-        <ActivityIndicator size="large" color={Colors.primary} />
-        <Text className="mt-4 text-[14px] text-white">Requesting camera permission...</Text>
+      <SafeAreaView style={centered} edges={['top', 'bottom']}>
+        <Spinner size="lg" label="Requesting camera permission" />
+        <Typography variant="body-sm" style={{ color: ON_DARK, marginTop: theme.spacing[4] }}>
+          Requesting camera permission...
+        </Typography>
       </SafeAreaView>
     );
   }
@@ -270,13 +287,13 @@ export default function DocumentScanScreen() {
   // Permission denied
   if (!permission.granted) {
     return (
-      <SafeAreaView className="flex-1 items-center justify-center bg-[#111111]" edges={['top', 'bottom']}>
-        <Text className="mb-4 text-center text-[16px] text-white">
+      <SafeAreaView style={centered} edges={['top', 'bottom']}>
+        <Typography variant="body" style={{ color: ON_DARK, marginBottom: theme.spacing[4] }} center>
           Camera permission is required for document scanning.
-        </Text>
-        <Pressable onPress={requestPermission} className="rounded-btn bg-primary px-6 py-3">
-          <Text className="text-[14px] font-bold text-white">Grant Permission</Text>
-        </Pressable>
+        </Typography>
+        <CoreButton onPress={requestPermission} accessibilityLabel="Grant camera permission">
+          Grant Permission
+        </CoreButton>
       </SafeAreaView>
     );
   }
@@ -284,22 +301,30 @@ export default function DocumentScanScreen() {
   // Done — show review and continue
   if (step === 'done') {
     return (
-      <SafeAreaView className="flex-1 items-center justify-center bg-[#111111]" edges={['top', 'bottom']}>
-        <Text className="mb-2 text-[20px] font-bold text-white">Capture Complete!</Text>
-        <Text className="mb-8 text-center text-[14px] text-white/70 px-6">
+      <SafeAreaView style={centered} edges={['top', 'bottom']}>
+        <Typography variant="h3" style={{ color: ON_DARK, marginBottom: theme.spacing[2] }}>
+          Capture Complete!
+        </Typography>
+        <Typography
+          variant="body-sm"
+          center
+          style={{ color: ON_DARK_MUTED, marginBottom: theme.spacing[8] }}>
           {skipSelfie
             ? 'Document captured successfully.'
             : 'Document and selfie captured successfully.'}
           {"\n"}
           Tap continue to proceed.
-        </Text>
-        <View className="flex-row gap-3">
-          <Pressable onPress={handleRetake} className="rounded-btn border border-white/30 px-6 py-3">
-            <Text className="text-[14px] font-bold text-white">{skipSelfie ? 'Retake Document' : 'Retake Selfie'}</Text>
-          </Pressable>
-          <Pressable onPress={handleContinue} className="rounded-btn bg-primary px-6 py-3">
-            <Text className="text-[14px] font-bold text-white">Continue</Text>
-          </Pressable>
+        </Typography>
+        <View style={{ flexDirection: 'row', gap: theme.spacing[3] }}>
+          <CoreButton
+            variant="outline"
+            accessibilityLabel={skipSelfie ? 'Retake document' : 'Retake selfie'}
+            onPress={handleRetake}>
+            {skipSelfie ? 'Retake Document' : 'Retake Selfie'}
+          </CoreButton>
+          <CoreButton accessibilityLabel="Continue" onPress={handleContinue}>
+            Continue
+          </CoreButton>
         </View>
       </SafeAreaView>
     );
@@ -314,36 +339,43 @@ export default function DocumentScanScreen() {
   // ── Regula native scanner UI (front step) ────────────────────────────────
   if (showRegulaUI) {
     return (
-      <SafeAreaView className="flex-1 bg-[#111111]" edges={['top', 'bottom']}>
-        <View className="flex-1 items-center justify-center px-8">
-          <Text className="mb-2 text-[20px] font-bold text-white">Scan Front of Document</Text>
-          <Text className="mb-10 text-center text-[14px] text-white/70">
+      <SafeAreaView style={{ flex: 1, backgroundColor: CAMERA_BG }} edges={['top', 'bottom']}>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: theme.spacing[8] }}>
+          <Typography variant="h3" style={{ color: ON_DARK, marginBottom: theme.spacing[2] }}>
+            Scan Front of Document
+          </Typography>
+          <Typography
+            variant="body-sm"
+            center
+            style={{ color: ON_DARK_MUTED, marginBottom: theme.spacing[10] }}>
             The scanner will detect the document edges automatically and capture
             when it is aligned and in focus.
-          </Text>
+          </Typography>
 
           {regulaBusy ? (
-            <View className="items-center gap-4">
-              <ActivityIndicator size="large" color={Colors.primary} />
-              <Text className="text-[13px] text-white/60">Scanner open — align the document…</Text>
+            <View style={{ alignItems: 'center', gap: theme.spacing[4] }}>
+              <Spinner size="lg" label="Scanner active" />
+              <Typography variant="body-sm" style={{ color: ON_DARK_MUTED }}>
+                Scanner open — align the document…
+              </Typography>
             </View>
           ) : (
-            <Pressable
-              accessibilityRole="button"
+            <CoreButton
+              size="lg"
               accessibilityLabel="Open document scanner"
               onPress={handleRegulaScan}
-              disabled={!regulaReady}
-              className={`rounded-btn bg-primary px-10 py-4 ${!regulaReady ? 'opacity-50' : 'active:opacity-80'}`}>
-              <Text className="text-[16px] font-bold text-white">
-                {regulaReady ? 'Scan Document' : 'Preparing Scanner…'}
-              </Text>
-            </Pressable>
+              disabled={!regulaReady}>
+              {regulaReady ? 'Scan Document' : 'Preparing Scanner…'}
+            </CoreButton>
           )}
 
           {scanError ? (
-            <Text className="mt-6 text-center text-[13px]" style={{ color: Colors.error }}>
+            <Typography
+              variant="body-sm"
+              center
+              style={{ color: theme.colors.error, marginTop: theme.spacing[6] }}>
               {scanError}
-            </Text>
+            </Typography>
           ) : null}
         </View>
       </SafeAreaView>
@@ -352,9 +384,9 @@ export default function DocumentScanScreen() {
 
   // ── Manual expo-camera UI (selfie step + front fallback) ─────────────────
   return (
-    <SafeAreaView className="flex-1 bg-[#111111]" edges={['top', 'bottom']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: CAMERA_BG }} edges={['top', 'bottom']}>
       <View
-        className="flex-1"
+        style={{ flex: 1 }}
         onLayout={(e) => {
           const { width, height } = e.nativeEvent.layout;
           setCameraLayout({ width, height });
@@ -368,44 +400,99 @@ export default function DocumentScanScreen() {
         />
 
         {/* Frame overlay */}
-        <View className="absolute inset-0 items-center justify-center pointer-events-none">
+        <View
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+          pointerEvents="none">
           {isFront ? (
-            <View className="h-[175px] w-[280px] items-center justify-center rounded-btn border-[3px] border-dashed border-white/70" />
+            <View
+              style={{
+                height: FRONT_FRAME.height,
+                width: FRONT_FRAME.width,
+                borderRadius: theme.radii.lg,
+                borderWidth: 3,
+                borderStyle: 'dashed',
+                borderColor: 'rgba(255,255,255,0.7)',
+              }}
+            />
           ) : (
-            <View className="h-[300px] w-[300px] items-center justify-center rounded-full border-4 border-white/60" />
+            <View
+              style={{
+                height: SELFIE_FRAME.height,
+                width: SELFIE_FRAME.width,
+                borderRadius: theme.radii.full,
+                borderWidth: 4,
+                borderColor: 'rgba(255,255,255,0.6)',
+              }}
+            />
           )}
         </View>
 
         {/* Instruction */}
-        <View className="absolute top-[60px] left-0 right-0 items-center px-6">
-          <View className="rounded-btn bg-black/60 px-4 py-2">
-            <Text className="text-[15px] font-semibold text-white text-center">
+        <View
+          style={{
+            position: 'absolute',
+            top: 60,
+            left: 0,
+            right: 0,
+            alignItems: 'center',
+            paddingHorizontal: theme.spacing[6],
+          }}>
+          <View
+            style={{
+              borderRadius: theme.radii.md,
+              backgroundColor: 'rgba(0,0,0,0.6)',
+              paddingHorizontal: theme.spacing[4],
+              paddingVertical: theme.spacing[2],
+            }}>
+            <Typography variant="body" center style={{ color: ON_DARK, fontWeight: theme.fontWeight.semibold }}>
               {isFront ? 'Scan Front of Document' : 'Capture Your Selfie'}
-            </Text>
+            </Typography>
           </View>
-          <Text className="mt-2 text-[12px] text-white/70">
+          <Typography variant="body-sm" style={{ color: ON_DARK_MUTED, marginTop: theme.spacing[2] }}>
             {isFront ? 'Align document within the frame' : 'Look at the camera and hold still'}
-          </Text>
+          </Typography>
         </View>
 
         {/* Step indicator */}
-        <View className="absolute bottom-[100px] left-0 right-0 items-center">
-          <Text className="text-[12px] text-white/50">
+        <View
+          style={{
+            position: 'absolute',
+            bottom: 100,
+            left: 0,
+            right: 0,
+            alignItems: 'center',
+          }}>
+          <Typography variant="body-sm" style={{ color: 'rgba(255,255,255,0.5)' }}>
             {isDocOnly ? 'Document photo' : `Step ${isFront ? '1' : '2'} of 2`}
-          </Text>
+          </Typography>
         </View>
       </View>
 
       {/* Capture button */}
-      <View className="items-center pb-[30px]">
+      <View style={{ alignItems: 'center', paddingBottom: theme.spacing[8] }}>
         {capturing ? (
-          <ActivityIndicator size="large" color={Colors.primary} />
+          <Spinner size="lg" label="Capturing" />
         ) : (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={isFront ? "Capture document" : "Capture selfie"}
+            accessibilityLabel={isFront ? 'Capture document' : 'Capture selfie'}
             onPress={handleCapture}
-            className="h-16 w-16 rounded-full border-4 border-primary bg-white active:opacity-80"
+            style={{
+              height: 64,
+              width: 64,
+              borderRadius: theme.radii.full,
+              borderWidth: 4,
+              borderColor: theme.colors.actionPrimary,
+              backgroundColor: ON_DARK,
+            }}
           />
         )}
       </View>

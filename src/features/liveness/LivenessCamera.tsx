@@ -1,7 +1,7 @@
 ﻿import { useRouter } from 'expo-router';
 import { Camera as CameraIcon, CircleCheck, Eye, ScanFace, TriangleAlert, X } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
     Camera,
@@ -18,8 +18,7 @@ import { runOnJS } from 'react-native-worklets';
 
 import { toApiError } from '@/api/errors';
 import { Alert, Card, CardContent, ScreenHeader } from '@/components/composite';
-import { Badge, Blink, CoreButton, IconButton, PopIn, Pulse, RowIcon, ScanLine, Typography } from '@/components/ui';
-import { Colors } from '@/constants/theme';
+import { Badge, Blink, CoreButton, IconButton, PopIn, Pulse, RowIcon, ScanLine, Spinner, Typography } from '@/components/ui';
 import { useEnrollFace, useUpdateFace } from '@/features/auth/mutations';
 import { faceEnrollmentCompleted } from '@/features/auth/slice';
 import { useLivenessSession } from '@/features/liveness/useLivenessSession';
@@ -486,13 +485,21 @@ export function LivenessCamera({ mode, personId, onSuccess }: LivenessCameraProp
   // Permission not granted
   if (!hasPermission) {
     return (
-      <SafeAreaView className="flex-1 items-center justify-center bg-[#F8FBFF]" edges={['top', 'bottom']}>
-        <Text className="mb-4 text-center text-[16px] text-[#111827]">Camera permission is required for face verification.</Text>
-        <Pressable
-          onPress={requestPermission}
-          className="rounded-btn bg-primary px-6 py-3">
-          <Text className="text-[14px] font-bold text-white">Grant Permission</Text>
-        </Pressable>
+      <SafeAreaView
+        style={{
+          flex: 1,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: theme.colors.background,
+          paddingHorizontal: theme.spacing[8],
+        }}
+        edges={['top', 'bottom']}>
+        <Typography variant="body" center style={{ marginBottom: theme.spacing[4] }}>
+          Camera permission is required for face verification.
+        </Typography>
+        <CoreButton onPress={requestPermission} accessibilityLabel="Grant camera permission">
+          Grant Permission
+        </CoreButton>
       </SafeAreaView>
     );
   }
@@ -500,9 +507,18 @@ export function LivenessCamera({ mode, personId, onSuccess }: LivenessCameraProp
   // No camera device
   if (!device) {
     return (
-      <SafeAreaView className="flex-1 items-center justify-center bg-[#F8FBFF]" edges={['top', 'bottom']}>
-        <ActivityIndicator size="large" color={Colors.primary} />
-        <Text className="mt-4 text-[14px] text-[#6B7280]">Loading camera...</Text>
+      <SafeAreaView
+        style={{
+          flex: 1,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: theme.colors.background,
+        }}
+        edges={['top', 'bottom']}>
+        <Spinner size="lg" label="Loading camera" />
+        <Typography variant="body-sm" color="secondary" style={{ marginTop: theme.spacing[4] }}>
+          Loading camera...
+        </Typography>
       </SafeAreaView>
     );
   }
@@ -510,9 +526,18 @@ export function LivenessCamera({ mode, personId, onSuccess }: LivenessCameraProp
   // Loading / creating session
   if (liveness.phase === 'creating' || liveness.phase === 'idle') {
     return (
-      <SafeAreaView className="flex-1 items-center justify-center bg-[#F8FBFF]" edges={['top', 'bottom']}>
-        <ActivityIndicator size="large" color={Colors.primary} />
-        <Text className="mt-4 text-[14px] text-[#6B7280]">Preparing liveness challenge...</Text>
+      <SafeAreaView
+        style={{
+          flex: 1,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: theme.colors.background,
+        }}
+        edges={['top', 'bottom']}>
+        <Spinner size="lg" label="Preparing liveness challenge" />
+        <Typography variant="body-sm" color="secondary" style={{ marginTop: theme.spacing[4] }}>
+          Preparing liveness challenge...
+        </Typography>
       </SafeAreaView>
     );
   }

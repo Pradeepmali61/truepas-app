@@ -1,82 +1,157 @@
+/** @jsxImportSource react */
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { ChevronRight, KeyRound, Lock, ScanFace } from 'lucide-react-native';
+import { useState, type ReactNode } from 'react';
+import { Pressable, ScrollView, View } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Modal } from '@/components/composite';
-import { ScreenContainer } from '@/components/layout/ScreenContainer';
-import { TopBar } from '@/components/layout/TopBar';
-import { Card, CoreButton, ListItem, Pill, SectionTitle, Toggle, Typography } from '@/components/ui';
+import { Card, CardContent, Modal, ScreenHeader } from '@/components/composite';
+import { Badge, CoreButton, Divider, Link, RowIcon, Switch, Typography } from '@/components/ui';
+import { useThemeTokens } from '@/theme';
+import { iconSize } from '@/theme/tokens';
 
 /** Security settings — login/access, biometric toggles, consent management (PRD). */
 export default function SecurityScreen() {
   const router = useRouter();
+  const theme = useThemeTokens();
+  const insets = useSafeAreaInsets();
   const [faceIdLogin, setFaceIdLogin] = useState(true);
   const [smsVerification, setSmsVerification] = useState(false);
   const [consentGranted, setConsentGranted] = useState(true);
   const [consentAction, setConsentAction] = useState<'withdraw' | 'give' | null>(null);
 
+  const sectionLabel = (text: string) => (
+    <Typography variant="caption" color="muted" style={{ letterSpacing: theme.letterSpacing.caps }}>
+      {text}
+    </Typography>
+  );
+
+  const linkRow = (icon: ReactNode, title: string, onPress: () => void) => (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={title}
+      onPress={onPress}
+      style={({ pressed }) => [
+        {
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: theme.spacing[3],
+          paddingVertical: theme.spacing[3],
+        },
+        pressed && { opacity: 0.7 },
+      ]}>
+      <RowIcon tone="neutral" icon={icon} />
+      <Typography variant="body" style={{ flex: 1 }}>
+        {title}
+      </Typography>
+      <ChevronRight size={iconSize.sm} color={theme.colors.textMuted} />
+    </Pressable>
+  );
+
+  const toggleRow = (icon: ReactNode, title: string, subtitle: string, value: boolean, onChange: (v: boolean) => void) => (
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: theme.spacing[3],
+        paddingVertical: theme.spacing[3],
+      }}>
+      <RowIcon tone="neutral" icon={icon} />
+      <View style={{ flex: 1, minWidth: 0, gap: theme.spacing[0.5] }}>
+        <Typography variant="body">{title}</Typography>
+        <Typography variant="body-sm" color="secondary">
+          {subtitle}
+        </Typography>
+      </View>
+      <Switch value={value} onValueChange={onChange} />
+    </View>
+  );
+
   return (
-    <ScreenContainer>
-      <TopBar title="Security" />
-
-      <SectionTitle>Login &amp; Access</SectionTitle>
-      <ListItem title="Change Password" showChevron onPress={() => router.push({ pathname: '/security/confirm-pin', params: { next: '/security/change-password' } } as never)} />
-      <ListItem title="Change PIN" showChevron onPress={() => router.push({ pathname: '/security/confirm-pin', params: { next: '/security/change-pin' } } as never)} />
-      <ListItem title="Update Face" showChevron onPress={() => router.push('/face-update/pin')} />
-
-      <SectionTitle>Biometric &amp; Verification</SectionTitle>
-      <ListItem
-        title="Face ID Login"
-        subtitle="Use face to unlock app"
-        rightSlot={
-          <Toggle
-            on={faceIdLogin}
-            onToggle={() => setFaceIdLogin((v) => !v)}
-            accessibilityLabel="Face ID login"
-          />
-        }
-      />
-      <ListItem
-        title="SMS Verification for Login"
-        subtitle="Extra security layer"
-        rightSlot={
-          <Toggle
-            on={smsVerification}
-            onToggle={() => setSmsVerification((v) => !v)}
-            accessibilityLabel="SMS verification for login"
-          />
-        }
-      />
-
-      <SectionTitle>Biometric Consent</SectionTitle>
-      <Card>
-        <View className="flex-row items-center justify-between">
-          <Text className="text-[13px] text-muted">Consent Status</Text>
-          <Pill label={consentGranted ? 'Granted' : 'Withdrawn'} />
+    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: theme.colors.background }}>
+      <ScreenHeader title="Security" />
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{
+          padding: theme.spacing[4],
+          paddingBottom: theme.spacing[8] + insets.bottom,
+          gap: theme.spacing[5],
+        }}
+        showsVerticalScrollIndicator={false}>
+        <View style={{ gap: theme.spacing[2] }}>
+          {sectionLabel('LOGIN & ACCESS')}
+          <Card>
+            <CardContent style={{ paddingVertical: theme.spacing[1] }}>
+              {linkRow(
+                <Lock size={iconSize.md} color={theme.colors.actionPrimary} />,
+                'Change Password',
+                () => router.push({ pathname: '/security/confirm-pin', params: { next: '/security/change-password' } } as never),
+              )}
+              <Divider />
+              {linkRow(
+                <KeyRound size={iconSize.md} color={theme.colors.actionPrimary} />,
+                'Change PIN',
+                () => router.push({ pathname: '/security/confirm-pin', params: { next: '/security/change-pin' } } as never),
+              )}
+              <Divider />
+              {linkRow(
+                <ScanFace size={iconSize.md} color={theme.colors.actionPrimary} />,
+                'Update Face',
+                () => router.push('/face-update/pin'),
+              )}
+            </CardContent>
+          </Card>
         </View>
-        <Text className="mt-2 text-[12px] text-muted">
-          {consentGranted
-            ? 'You consented to biometric enrollment on Jul 29, 2026 at 9:10 AM'
-            : 'Biometric consent withdrawn. Face verification is disabled until you re-consent.'}
-        </Text>
-        {consentGranted ? (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Withdraw consent"
-            className="mt-2"
-            onPress={() => setConsentAction('withdraw')}>
-            <Text className="text-[14px] font-medium text-primary underline">Withdraw Consent</Text>
-          </Pressable>
-        ) : (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Give consent"
-            className="mt-2"
-            onPress={() => setConsentAction('give')}>
-            <Text className="text-[14px] font-medium text-primary underline">Give Consent</Text>
-          </Pressable>
-        )}
-      </Card>
+
+        <View style={{ gap: theme.spacing[2] }}>
+          {sectionLabel('BIOMETRIC & VERIFICATION')}
+          <Card>
+            <CardContent style={{ paddingVertical: theme.spacing[1] }}>
+              {toggleRow(
+                <ScanFace size={iconSize.md} color={theme.colors.actionPrimary} />,
+                'Face ID Login',
+                'Use face to unlock app',
+                faceIdLogin,
+                setFaceIdLogin,
+              )}
+              <Divider />
+              {toggleRow(
+                <KeyRound size={iconSize.md} color={theme.colors.actionPrimary} />,
+                'SMS Verification for Login',
+                'Extra security layer',
+                smsVerification,
+                setSmsVerification,
+              )}
+            </CardContent>
+          </Card>
+        </View>
+
+        <View style={{ gap: theme.spacing[2] }}>
+          {sectionLabel('BIOMETRIC CONSENT')}
+          <Card>
+            <CardContent style={{ gap: theme.spacing[2] }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Typography variant="body-sm" color="secondary">
+                  Consent Status
+                </Typography>
+                <Badge variant={consentGranted ? 'success' : 'neutral'}>
+                  {consentGranted ? 'Granted' : 'Withdrawn'}
+                </Badge>
+              </View>
+              <Typography variant="body-sm" color="secondary">
+                {consentGranted
+                  ? 'You consented to biometric enrollment on Jul 29, 2026 at 9:10 AM'
+                  : 'Biometric consent withdrawn. Face verification is disabled until you re-consent.'}
+              </Typography>
+              <Link
+                onPress={() => setConsentAction(consentGranted ? 'withdraw' : 'give')}
+                accessibilityLabel={consentGranted ? 'Withdraw consent' : 'Give consent'}>
+                {consentGranted ? 'Withdraw Consent' : 'Give Consent'}
+              </Link>
+            </CardContent>
+          </Card>
+        </View>
+      </ScrollView>
 
       <Modal
         visible={consentAction !== null}
@@ -103,6 +178,6 @@ export default function SecurityScreen() {
             : 'Giving biometric consent will enable face verification. You can withdraw at any time.'}
         </Typography>
       </Modal>
-    </ScreenContainer>
+    </SafeAreaView>
   );
 }

@@ -1,42 +1,77 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Text, View } from 'react-native';
+import { TriangleAlert } from 'lucide-react-native';
+import { View } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { ScreenContainer, Spacer } from '@/components/layout/ScreenContainer';
-import { Button, Icon, InfoBanner } from '@/components/ui';
+import { Alert, ScreenHeader } from '@/components/composite';
+import { CoreButton, PopIn, RowIcon, Typography } from '@/components/ui';
+import { useThemeTokens } from '@/theme';
+import { iconSize } from '@/theme/tokens';
 
 /** Update face — ROC retry error. Never marks success on failure (PRD).
  *  `retry` param (when set) routes Retry back to the flow that failed —
  *  registration passes '/(onboarding)/face-scan', the default is the
  *  face-update camera. */
 export default function FaceUpdateErrorScreen() {
+  const theme = useThemeTokens();
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const { message, retry } = useLocalSearchParams<{ message?: string; retry?: string }>();
 
   return (
-    <ScreenContainer scroll={false}>
-      <View className="flex-1 items-center justify-center p-5">
-        <View className="mb-5 h-[100px] w-[100px] items-center justify-center rounded-full bg-[#fef2f2]">
-          <Icon name="warning" size={32} />
+    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: theme.colors.background }}>
+      <ScreenHeader title="Face Update" />
+      <View
+        style={{
+          flex: 1,
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: theme.spacing[5],
+          gap: theme.spacing[4],
+        }}>
+        <PopIn>
+          <RowIcon
+            tone="error"
+            icon={<TriangleAlert size={iconSize.xl} color={theme.colors.onErrorSubtle} />}
+          />
+        </PopIn>
+        <View style={{ alignItems: 'center', gap: theme.spacing[2] }}>
+          <Typography variant="h3" center>
+            Registration Failed
+          </Typography>
+          <Typography variant="body" color="secondary" center style={{ maxWidth: 280 }}>
+            {message ?? "We couldn't complete your face update. Please try again later."}
+          </Typography>
         </View>
-        <Text accessibilityRole="header" className="mb-[6px] text-[18px] font-bold text-primary">
-          Registration Failed
-        </Text>
-        <Text className="mb-4 max-w-[270px] text-center text-[14px] leading-[21px] text-muted">
-          {message ?? "We couldn't complete your face update. Please try again later."}
-        </Text>
-        <View className="max-w-[280px]">
-          <InfoBanner variant="danger" leading="warning">
-            Your face has NOT been marked as updated. Please retry.
-          </InfoBanner>
-        </View>
+        <Alert variant="error" style={{ alignSelf: 'stretch' }}>
+          Your face has NOT been marked as updated. Please retry.
+        </Alert>
       </View>
-      <Spacer />
-      <View className="px-6 pb-6">
-        <Button label="Retry Now" onPress={() => router.replace((retry as any) ?? '/face-update/camera')} />
-        <View className="mt-3">
-          <Button label="Try Again Later" variant="link" onPress={() => router.dismissTo('/(tabs)')} />
-        </View>
+      <View
+        style={{
+          padding: theme.spacing[4],
+          paddingTop: theme.spacing[3],
+          paddingBottom: theme.spacing[4] + insets.bottom,
+          gap: theme.spacing[2],
+          borderTopWidth: theme.sizes.fieldBorderWidth,
+          borderTopColor: theme.colors.borderSubtle,
+          backgroundColor: theme.colors.surface,
+        }}>
+        <CoreButton
+          fullWidth
+          size="lg"
+          accessibilityLabel="Retry now"
+          onPress={() => router.replace((retry as any) ?? '/face-update/camera')}>
+          Retry Now
+        </CoreButton>
+        <CoreButton
+          fullWidth
+          variant="ghost"
+          accessibilityLabel="Try again later"
+          onPress={() => router.dismissTo('/(tabs)')}>
+          Try Again Later
+        </CoreButton>
       </View>
-    </ScreenContainer>
+    </SafeAreaView>
   );
 }

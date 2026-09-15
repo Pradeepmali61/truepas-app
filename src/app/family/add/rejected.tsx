@@ -1,55 +1,62 @@
-import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Platform, StyleSheet, Text, View } from 'react-native';
+import { CircleX } from 'lucide-react-native';
+import { View } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AppBackground } from '@/components/layout/AppBackground';
-import { ScreenContainer, Spacer } from '@/components/layout/ScreenContainer';
-import { ScreenHeader } from '@/components/layout/ScreenHeader';
-import { Button, Icon } from '@/components/ui';
-import { Elevation } from '@/constants/theme';
+import { ScreenHeader } from '@/components/composite';
+import { CoreButton, PopIn, RowIcon, Typography } from '@/components/ui';
+import { useThemeTokens } from '@/theme';
+import { iconSize } from '@/theme/tokens';
 
 /** Add family — 18+ rejected: adults must create their own account (PRD). */
 export default function AgeRejectedScreen() {
+  const theme = useThemeTokens();
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const { name, age } = useLocalSearchParams<{ name?: string; age?: string }>();
 
   return (
-    <ScreenContainer scroll={false} background={false}>
-      {Platform.OS === 'web' ? (
-        <View style={[StyleSheet.absoluteFill, { backgroundImage: 'linear-gradient(180deg, #F8FBFF, #EAF4FF)' } as any]} />
-      ) : (
-        <LinearGradient
-          colors={['#F8FBFF', '#EAF4FF']}
-          style={StyleSheet.absoluteFill}
-        />
-      )}
-      <AppBackground />
+    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: theme.colors.background }}>
       <ScreenHeader title="Add Family Member" />
-      <View className="flex-1 items-center justify-center p-5">
-        <View style={{
-          width: 80,
-          height: 80,
-          borderRadius: 40,
-          backgroundColor: '#FEF2F2',
+      <View
+        style={{
+          flex: 1,
           alignItems: 'center',
           justifyContent: 'center',
-          marginBottom: 20,
-          ...Elevation.small,
+          padding: theme.spacing[5],
+          gap: theme.spacing[2],
         }}>
-          <Icon name="cross" size={40} color="#EF4444" />
-        </View>
-        <Text accessibilityRole="header" className="mb-[6px] text-[22px] font-bold text-ink">
+        <PopIn>
+          <RowIcon
+            tone="error"
+            icon={<CircleX size={iconSize.xl} color={theme.colors.onErrorSubtle} />}
+          />
+        </PopIn>
+        <Typography variant="h3" center>
           Adults need their own account
-        </Text>
-        <Text className="max-w-[270px] text-center text-[15px] leading-[21px] text-muted">
+        </Typography>
+        <Typography variant="body" color="secondary" center style={{ maxWidth: 280 }}>
           {name ?? 'This person'} is {age ?? '18 or more'} years old. Family onboarding is only for
           dependents under 18. Please ask them to register independently.
-        </Text>
+        </Typography>
       </View>
-      <Spacer />
-      <View className="px-6 pb-6">
-        <Button label="Go Back" variant="outline" onPress={() => router.back()} />
+      <View
+        style={{
+          padding: theme.spacing[4],
+          paddingTop: theme.spacing[3],
+          paddingBottom: theme.spacing[4] + insets.bottom,
+          borderTopWidth: theme.sizes.fieldBorderWidth,
+          borderTopColor: theme.colors.borderSubtle,
+          backgroundColor: theme.colors.surface,
+        }}>
+        <CoreButton
+          fullWidth
+          variant="outline"
+          accessibilityLabel="Go back"
+          onPress={() => router.back()}>
+          Go Back
+        </CoreButton>
       </View>
-    </ScreenContainer>
+    </SafeAreaView>
   );
 }

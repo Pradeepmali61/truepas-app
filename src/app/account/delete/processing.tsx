@@ -1,15 +1,19 @@
 ﻿import { useRouter } from 'expo-router';
+import { Check, Hourglass } from 'lucide-react-native';
 import { useEffect } from 'react';
-import { ActivityIndicator, Text, View } from 'react-native';
+import { View } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { ScreenContainer } from '@/components/layout/ScreenContainer';
-import { Icon } from '@/components/ui';
-import { Colors } from '@/constants/theme';
+import { Spinner, Typography } from '@/components/ui';
+import { useThemeTokens } from '@/theme';
+import { iconSize } from '@/theme/tokens';
 
 const PROCESSING_MS = 2500;
 
-/** Delete account â€” processing across PostgreSQL, S3, ROC (PRD). */
+/** Delete account — processing across PostgreSQL, S3, ROC (PRD). */
 export default function DeleteProcessingScreen() {
+  const theme = useThemeTokens();
+  const insets = useSafeAreaInsets();
   const router = useRouter();
 
   useEffect(() => {
@@ -17,32 +21,36 @@ export default function DeleteProcessingScreen() {
     return () => clearTimeout(timer);
   }, [router]);
 
+  const step = (icon: React.ReactNode, text: string) => (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing[2], paddingVertical: theme.spacing[1.5] }}>
+      {icon}
+      <Typography variant="body-sm" color="secondary">
+        {text}
+      </Typography>
+    </View>
+  );
+
   return (
-    <ScreenContainer scroll={false}>
-      <View className="flex-1 items-center justify-center p-5">
-        <ActivityIndicator size={80} color={Colors.primary} />
-        <Text
-          accessibilityRole="header"
-          accessibilityLiveRegion="polite"
-          className="mb-1 mt-5 text-[16px] font-bold text-primary">
-          Deleting your dataâ€¦
-        </Text>
-        <View className="mt-4">
-          <View className="my-[6px] flex-row items-center gap-2">
-            <Icon name="check" size={14} color={Colors.primary} />
-            <Text className="text-[13px] text-muted">Account data removed (PostgreSQL)</Text>
-          </View>
-          <View className="my-[6px] flex-row items-center gap-2">
-            <Icon name="check" size={14} color={Colors.primary} />
-            <Text className="text-[13px] text-muted">Images deleted (S3)</Text>
-          </View>
-          <View className="my-[6px] flex-row items-center gap-2">
-            <Icon name="hourglass" size={14} color={Colors.primary} />
-            <Text className="text-[13px] text-muted">Removing face template (ROC)â€¦</Text>
-          </View>
+    <SafeAreaView edges={['top', 'bottom']} style={{ flex: 1, backgroundColor: theme.colors.background }}>
+      <View
+        style={{
+          flex: 1,
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: theme.spacing[5],
+          paddingBottom: insets.bottom,
+          gap: theme.spacing[4],
+        }}>
+        <Spinner size="lg" label="Deleting your data" />
+        <Typography variant="h4" accessibilityLiveRegion="polite">
+          Deleting your data…
+        </Typography>
+        <View>
+          {step(<Check size={iconSize.sm} color={theme.colors.success} />, 'Account data removed (PostgreSQL)')}
+          {step(<Check size={iconSize.sm} color={theme.colors.success} />, 'Images deleted (S3)')}
+          {step(<Hourglass size={iconSize.sm} color={theme.colors.actionPrimary} />, 'Removing face template (ROC)…')}
         </View>
       </View>
-    </ScreenContainer>
+    </SafeAreaView>
   );
 }
-

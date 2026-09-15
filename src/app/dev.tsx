@@ -1,12 +1,16 @@
+/** @jsxImportSource react */
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { checkAllHealth } from '@/api/health';
 import { mockUser } from '@/api/mock';
+import { Card, CardContent } from '@/components/composite';
+import { CoreButton, Divider, Typography } from '@/components/ui';
 import { faceEnrollmentCompleted, sessionEnded, sessionStarted } from '@/features/auth/slice';
 import { useAppDispatch } from '@/store';
+import { useThemeTokens } from '@/theme';
 import type { HealthStatus } from '@/types/domain';
 
 type AuthPreset = 'unauth' | 'auth-no-face' | 'auth-face';
@@ -137,26 +141,25 @@ const PRESET_LABELS: Record<AuthPreset, string> = {
   'auth-face': 'Auth + Face Enrolled',
 };
 
-const PRESET_COLORS: Record<AuthPreset, string> = {
-  unauth: '#ef4444',
-  'auth-no-face': '#ff9900',
-  'auth-face': '#059669',
-};
-
 function HealthRow({ label, url, status }: { label: string; url: string; status?: HealthStatus }) {
+  const theme = useThemeTokens();
   const loading = status === undefined;
   const healthy = status?.healthy === true;
-  const dotColor = loading ? '#d1d5db' : healthy ? '#059669' : '#ef4444';
+  const dotColor = loading ? theme.colors.textMuted : healthy ? theme.colors.success : theme.colors.error;
   return (
-    <View className="flex-row items-center gap-2">
-      <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: dotColor }} />
-      <View className="flex-1">
-        <Text className="text-[12px] font-medium text-ink">{label}</Text>
-        <Text className="text-[10px] text-muted" numberOfLines={1}>{url}</Text>
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing[2] }}>
+      <View style={{ width: 8, height: 8, borderRadius: theme.radii.full, backgroundColor: dotColor }} />
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Typography variant="body-sm" style={{ fontWeight: theme.fontWeight.medium }}>
+          {label}
+        </Typography>
+        <Typography variant="caption" color="muted" numberOfLines={1}>
+          {url}
+        </Typography>
       </View>
-      <Text style={{ fontSize: 11, fontWeight: '600', color: dotColor }}>
+      <Typography variant="caption" style={{ fontWeight: theme.fontWeight.semibold, color: dotColor }}>
         {loading ? '…' : healthy ? 'Healthy' : 'Down'}
-      </Text>
+      </Typography>
     </View>
   );
 }
@@ -164,6 +167,7 @@ function HealthRow({ label, url, status }: { label: string; url: string; status?
 export default function DevScreen() {
   const router = useRouter();
   const dispatch = useAppDispatch();
+  const theme = useThemeTokens();
   const [health, setHealth] = useState<{ bff: HealthStatus } | null>(null);
 
   const refreshHealth = useCallback(async () => {
@@ -196,78 +200,136 @@ export default function DevScreen() {
     router.push(entry.route as never);
   };
 
+  const presetColors: Record<AuthPreset, string> = {
+    unauth: theme.colors.error,
+    'auth-no-face': theme.colors.warning,
+    'auth-face': theme.colors.success,
+  };
+
   return (
-    <SafeAreaView className="flex-1 bg-white" edges={['top', 'bottom']}>
-      <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 40 }}>
-        <View className="bg-primary px-5 pb-4 pt-3">
-          <Text className="text-[20px] font-bold text-white">Dev Screen Browser</Text>
-          <Text className="mt-1 text-[13px] text-white/70">
+    <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.background }} edges={['top', 'bottom']}>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: theme.spacing[10] }}>
+        <View
+          style={{
+            backgroundColor: theme.colors.actionPrimary,
+            paddingHorizontal: theme.spacing[5],
+            paddingTop: theme.spacing[3],
+            paddingBottom: theme.spacing[4],
+          }}>
+          <Typography variant="h3" style={{ color: theme.colors.onActionPrimary }}>
+            Dev Screen Browser
+          </Typography>
+          <Typography variant="body-sm" style={{ color: 'rgba(255,255,255,0.7)', marginTop: theme.spacing[1] }}>
             Tap any screen to jump directly to it
-          </Text>
+          </Typography>
         </View>
 
         {/* Backend status */}
-        <View className="mx-5 mt-3 rounded-btn border border-gray-200 bg-white p-3">
-          <View className="flex-row items-center justify-between">
-            <Text className="text-[13px] font-semibold text-ink">Backend Status</Text>
-            <Pressable onPress={refreshHealth} hitSlop={8}>
-              <Text className="text-[12px] font-medium text-primary">Refresh</Text>
-            </Pressable>
-          </View>
-          <View className="mt-2 gap-1.5">
+        <Card style={{ marginHorizontal: theme.spacing[5], marginTop: theme.spacing[3] }}>
+          <CardContent style={{ gap: theme.spacing[2] }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Typography variant="body-sm" style={{ fontWeight: theme.fontWeight.semibold }}>
+                Backend Status
+              </Typography>
+              <Pressable onPress={refreshHealth} hitSlop={8} accessibilityRole="button" accessibilityLabel="Refresh health">
+                <Typography variant="body-sm" style={{ color: theme.colors.actionPrimary, fontWeight: theme.fontWeight.medium }}>
+                  Refresh
+                </Typography>
+              </Pressable>
+            </View>
             <HealthRow
               label="customer-app-bff"
               url="https://api.dev.truepas.com/cb"
               status={health?.bff}
             />
-          </View>
-        </View>
+          </CardContent>
+        </Card>
 
-        <View className="flex-row gap-2 px-5 py-3">
+        {/* Auth presets */}
+        <View style={{ flexDirection: 'row', gap: theme.spacing[2], paddingHorizontal: theme.spacing[5], paddingVertical: theme.spacing[3] }}>
           {(['unauth', 'auth-no-face', 'auth-face'] as AuthPreset[]).map((p) => (
             <Pressable
               key={p}
+              accessibilityRole="button"
+              accessibilityLabel={`Preset ${PRESET_LABELS[p]}`}
               onPress={() => applyPreset(p)}
-              className="flex-1 rounded-btn border-[1.5px] py-2.5 items-center"
-              style={{ borderColor: PRESET_COLORS[p] }}>
-              <Text className="text-[11px] font-semibold" style={{ color: PRESET_COLORS[p] }}>
+              style={{
+                flex: 1,
+                borderRadius: theme.radii.md,
+                borderWidth: theme.sizes.fieldBorderWidth,
+                borderColor: presetColors[p],
+                paddingVertical: theme.spacing[2],
+                alignItems: 'center',
+              }}>
+              <Typography variant="caption" style={{ fontWeight: theme.fontWeight.semibold, color: presetColors[p] }}>
                 {PRESET_LABELS[p]}
-              </Text>
+              </Typography>
             </Pressable>
           ))}
         </View>
 
         {GROUPS.map((group) => (
           <View key={group.title}>
-            <Text className="mx-5 mb-1.5 mt-4 text-[12px] font-semibold uppercase tracking-[0.5px] text-muted">
+            <Typography
+              variant="caption"
+              color="muted"
+              style={{
+                marginHorizontal: theme.spacing[5],
+                marginTop: theme.spacing[4],
+                marginBottom: theme.spacing[1.5],
+                letterSpacing: theme.letterSpacing.caps,
+              }}>
               {group.title}
-            </Text>
+            </Typography>
             {group.screens.map((screen) => (
               <Pressable
                 key={screen.route}
+                accessibilityRole="button"
+                accessibilityLabel={screen.label}
                 onPress={() => navigate(screen)}
-                className="flex-row items-center justify-between px-5 py-3 active:bg-gray-50">
-                <View className="flex-1">
-                  <Text className="text-[14px] font-medium text-ink">{screen.label}</Text>
-                  <Text className="mt-0.5 text-[11px] text-muted">{screen.route}</Text>
+                style={({ pressed }) => [
+                  {
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    paddingHorizontal: theme.spacing[5],
+                    paddingVertical: theme.spacing[3],
+                  },
+                  pressed && { backgroundColor: theme.colors.background },
+                ]}>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Typography variant="body-sm" style={{ fontWeight: theme.fontWeight.medium }}>
+                    {screen.label}
+                  </Typography>
+                  <Typography variant="caption" color="muted" style={{ marginTop: theme.spacing[0.5] }}>
+                    {screen.route}
+                  </Typography>
                 </View>
-                <View className="ml-2 rounded-[4px] px-2 py-1" style={{ backgroundColor: PRESET_COLORS[screen.preset] + '20' }}>
-                  <Text className="text-[10px] font-semibold" style={{ color: PRESET_COLORS[screen.preset] }}>
+                <View
+                  style={{
+                    marginLeft: theme.spacing[2],
+                    borderRadius: theme.radii.sm,
+                    paddingHorizontal: theme.spacing[2],
+                    paddingVertical: theme.spacing[1],
+                    backgroundColor: presetColors[screen.preset] + '20',
+                  }}>
+                  <Typography variant="caption" style={{ fontWeight: theme.fontWeight.semibold, color: presetColors[screen.preset] }}>
                     {PRESET_LABELS[screen.preset]}
-                  </Text>
+                  </Typography>
                 </View>
               </Pressable>
             ))}
-            <View className="mx-5 mt-1 h-px bg-gray-100" />
+            <Divider style={{ marginHorizontal: theme.spacing[5], marginTop: theme.spacing[1] }} />
           </View>
         ))}
 
-        <View className="mt-6 px-5">
-          <Pressable
-            onPress={() => router.replace('/' as never)}
-            className="rounded-btn bg-primary py-3.5 items-center">
-            <Text className="text-[15px] font-bold text-white">Resume Normal Flow</Text>
-          </Pressable>
+        <View style={{ marginTop: theme.spacing[6], paddingHorizontal: theme.spacing[5] }}>
+          <CoreButton
+            fullWidth
+            accessibilityLabel="Resume normal flow"
+            onPress={() => router.replace('/' as never)}>
+            Resume Normal Flow
+          </CoreButton>
         </View>
       </ScrollView>
     </SafeAreaView>

@@ -1,19 +1,21 @@
 import { Redirect } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { View } from 'react-native';
 
 import { api } from '@/api';
 import { getOrRefreshAccessToken } from '@/api/client';
-import { Colors } from '@/constants/theme';
+import { Spinner } from '@/components/ui';
 import { sessionStarted } from '@/features/auth/slice';
 import { secureStorage } from '@/services/secureStorage';
 import { useAppDispatch, useAppSelector } from '@/store';
+import { useThemeTokens } from '@/theme';
 
 /** Entry gate: restores the session from the persisted refresh token,
  *  then routes — unauthenticated → welcome; no face → mandatory
  *  enrollment (PRD); else tabs. */
 export default function Index() {
   const dispatch = useAppDispatch();
+  const theme = useThemeTokens();
   const { status, faceEnrolled } = useAppSelector((state) => state.auth);
   const [restoring, setRestoring] = useState(true);
 
@@ -44,8 +46,14 @@ export default function Index() {
 
   if (restoring) {
     return (
-      <View className="flex-1 items-center justify-center bg-white">
-        <ActivityIndicator size="large" color={Colors.primary} />
+      <View
+        style={{
+          flex: 1,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: theme.colors.background,
+        }}>
+        <Spinner size="lg" label="Restoring session" />
       </View>
     );
   }

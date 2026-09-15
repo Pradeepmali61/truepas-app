@@ -1,20 +1,23 @@
-import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
+import { EyeOff, Lock, Shield, Trash2 } from 'lucide-react-native';
 import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AppBackground } from '@/components/layout/AppBackground';
-import { ScreenContainer, Spacer } from '@/components/layout/ScreenContainer';
-import { TopBar } from '@/components/layout/TopBar';
-import { Button, CheckboxRow, Icon, ListItem, ProgressTrack } from '@/components/ui';
+import { Card, CardContent, ScreenHeader } from '@/components/composite';
+import { Checkbox, CoreButton, Divider, FadeUp, PopIn, Progress, RowIcon, Typography } from '@/components/ui';
 import { useBiometricConsent } from '@/features/auth/mutations';
 import { biometricConsentGiven } from '@/features/auth/slice';
 import { useToast } from '@/hooks/useToast';
 import { useAppDispatch } from '@/store';
+import { useThemeTokens } from '@/theme';
+import { iconSize } from '@/theme/tokens';
 
 /** Biometric consent — explicit consent before face capture (PRD requirement).
  *  Calls POST /user/me/biometric-consent with { accepted: true }. */
 export default function ConsentScreen() {
+  const theme = useThemeTokens();
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const dispatch = useAppDispatch();
   const [checked, setChecked] = useState(false);
@@ -31,41 +34,93 @@ export default function ConsentScreen() {
     }
   };
 
+  const assurances = [
+    {
+      icon: <Lock size={iconSize.md} color={theme.colors.actionPrimary} />,
+      text: 'Encrypted and stored securely (ROC)',
+    },
+    {
+      icon: <EyeOff size={iconSize.md} color={theme.colors.actionPrimary} />,
+      text: 'Never shared with third parties',
+    },
+    {
+      icon: <Trash2 size={iconSize.md} color={theme.colors.actionPrimary} />,
+      text: 'Deleted permanently on account deletion',
+    },
+  ];
+
   return (
-    <ScreenContainer scroll={false}>
-      <LinearGradient
-        colors={['#F8FBFF', '#EAF4FF']}
-        style={StyleSheet.absoluteFill}
-      />
-      <AppBackground />
-      <TopBar title="Biometric Consent" />
-      <ProgressTrack percent={55} />
-      <View className="items-center px-6 pb-2 pt-4">
-        <Icon name="shield" size={44} />
-        <Text accessibilityRole="header" className="mb-[6px] mt-3 text-[18px] font-bold text-primary">
-          We need your consent
-        </Text>
+    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: theme.colors.background }}>
+      <ScreenHeader title="Biometric Consent" />
+      <View style={{ paddingHorizontal: theme.spacing[4] }}>
+        <Progress value={55} accessibilityLabel="Onboarding progress" />
       </View>
-      <Text className="px-6 text-center text-[13px] leading-[21px] text-muted">
-        Truepas will capture and store an encrypted facial template to verify your identity. This
-        biometric data is:
-      </Text>
-      <View className="px-6 py-3">
-        <ListItem icon="lock" iconBg="transparent" title="Encrypted and stored securely (ROC)" />
-        <ListItem icon="cross" iconBg="transparent" title="Never shared with third parties" />
-        <ListItem icon="trash" iconBg="transparent" title="Deleted permanently on account deletion" />
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ padding: theme.spacing[4], gap: theme.spacing[4] }}
+        showsVerticalScrollIndicator={false}>
+        <View style={{ alignItems: 'center', gap: theme.spacing[2], marginTop: theme.spacing[4] }}>
+          <PopIn>
+            <RowIcon tone="primary" icon={<Shield size={iconSize.xl} color={theme.colors.actionPrimary} />} />
+          </PopIn>
+          <Typography variant="h3" center>
+            We need your consent
+          </Typography>
+          <Typography variant="body-sm" color="secondary" center>
+            Truepas will capture and store an encrypted facial template to verify your identity. This
+            biometric data is:
+          </Typography>
+        </View>
+        <FadeUp delay={140}>
+          <Card>
+            <CardContent>
+              {assurances.map((item, i) => (
+                <View key={item.text}>
+                  {i > 0 ? <Divider /> : null}
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: theme.spacing[3],
+                      paddingVertical: theme.spacing[2],
+                    }}>
+                    {item.icon}
+                    <Typography variant="body" style={{ flex: 1 }}>
+                      {item.text}
+                    </Typography>
+                  </View>
+                </View>
+              ))}
+            </CardContent>
+          </Card>
+        </FadeUp>
+        <FadeUp delay={240}>
+          <Checkbox
+            checked={checked}
+            onCheckedChange={setChecked}
+            label="I consent to the enrollment and processing of my biometric (facial) data for identity verification purposes."
+          />
+        </FadeUp>
+      </ScrollView>
+      <View
+        style={{
+          padding: theme.spacing[4],
+          paddingTop: theme.spacing[3],
+          paddingBottom: theme.spacing[4] + insets.bottom,
+          borderTopWidth: theme.sizes.fieldBorderWidth,
+          borderTopColor: theme.colors.borderSubtle,
+          backgroundColor: theme.colors.surface,
+        }}>
+        <CoreButton
+          fullWidth
+          size="lg"
+          disabled={!checked}
+          loading={biometricConsent.isPending}
+          accessibilityLabel="Agree and continue"
+          onPress={agree}>
+          Agree & Continue
+        </CoreButton>
       </View>
-      <View className="mt-2">
-        <CheckboxRow
-          checked={checked}
-          onToggle={() => setChecked((v) => !v)}
-          label="I consent to the enrollment and processing of my biometric (facial) data for identity verification purposes."
-        />
-      </View>
-      <Spacer />
-      <View className="px-6 pb-6">
-        <Button label="Agree & Continue" onPress={agree} disabled={!checked} loading={biometricConsent.isPending} />
-      </View>
-    </ScreenContainer>
+    </SafeAreaView>
   );
 }

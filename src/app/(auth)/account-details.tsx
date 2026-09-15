@@ -1,17 +1,18 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'expo-router';
+import { Calendar, Eye, EyeOff, Lock, Mail, User } from 'lucide-react-native';
 import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { ScreenContainer, Spacer } from '@/components/layout/ScreenContainer';
-import { TopBar } from '@/components/layout/TopBar';
-import { Button, FloatingInput, Icon, InfoBanner, ProgressTrack } from '@/components/ui';
-import { Colors } from '@/constants/theme';
+import { Alert, BottomSheet, FormField, ScreenHeader } from '@/components/composite';
+import { CoreButton, Input, Progress, Typography } from '@/components/ui';
 import { useCompleteAccountDetails } from '@/features/auth/mutations';
 import { AccountDetailsForm, accountDetailsSchema } from '@/features/auth/schemas';
 import { accountDetailsStore } from '@/services/accountDetailsStore';
+import { useThemeTokens } from '@/theme';
+import { iconSize } from '@/theme/tokens';
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
@@ -22,8 +23,9 @@ function getDaysInMonth(year: number, month: number) {
 /** Register — account details + PIN + email + password (contract v1.1.0).
  *  After submission, navigates to verify-email (NOT sessionStarted). */
 export default function AccountDetailsScreen() {
-  const router = useRouter();
+  const theme = useThemeTokens();
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedYear, setSelectedYear] = useState(2000);
@@ -91,271 +93,269 @@ export default function AccountDetailsScreen() {
   const years = Array.from({ length: 100 }, (_, i) => currentYear - i);
   const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
 
+  const pickerColumn = (items: { label: string; selected: boolean; onPress: () => void }[]) => (
+    <View
+      style={{
+        flex: 1,
+        borderWidth: theme.sizes.fieldBorderWidth,
+        borderColor: theme.colors.border,
+        borderRadius: theme.radii.md,
+        height: 200,
+        overflow: 'hidden',
+      }}>
+      <ScrollView showsVerticalScrollIndicator={false} nestedScrollEnabled>
+        {items.map((item) => (
+          <Pressable
+            key={item.label}
+            accessibilityRole="button"
+            accessibilityState={{ selected: item.selected }}
+            onPress={item.onPress}
+            style={{
+              paddingVertical: theme.spacing[2],
+              alignItems: 'center',
+              backgroundColor: item.selected ? theme.colors.actionPrimarySubtle : 'transparent',
+            }}>
+            <Typography
+              variant="body"
+              style={{
+                fontWeight: item.selected ? theme.fontWeight.semibold : theme.fontWeight.regular,
+                color: item.selected ? theme.colors.actionPrimary : theme.colors.textPrimary,
+              }}>
+              {item.label}
+            </Typography>
+          </Pressable>
+        ))}
+      </ScrollView>
+    </View>
+  );
+
   return (
-    <ScreenContainer scroll={false}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        className="flex-1"
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}>
+    <SafeAreaView edges={['top', 'bottom']} style={{ flex: 1, backgroundColor: theme.colors.background }}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+        <ScreenHeader title="Sign Up" />
+        <View style={{ paddingHorizontal: theme.spacing[4] }}>
+          <Progress value={45} accessibilityLabel="Registration progress" />
+        </View>
         <ScrollView
+          style={{ flex: 1 }}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
-          contentContainerStyle={{ flexGrow: 1 }}>
-        <TopBar title="Sign Up" />
-      <ProgressTrack percent={45} />
-      <View className="flex-1 px-6">
-        <View className="items-center pb-1 pt-[10px]">
-          <Text accessibilityRole="header" className="text-center text-[18px] font-bold text-primary">
+          contentContainerStyle={{ padding: theme.spacing[4], gap: theme.spacing[3] }}>
+          <Typography variant="h3" center>
             Your details
-          </Text>
-        </View>
-        <View className="-mx-6 mt-4">
+          </Typography>
+
           <Controller
             control={control}
             name="fullName"
             render={({ field: { onChange, value }, fieldState }) => (
-              <FloatingInput
-                label="Full Name"
-                placeholder="Jane Doe"
-                autoComplete="name"
-                value={value}
-                onChangeText={onChange}
-                error={fieldState.error?.message}
-              />
+              <FormField label="Full Name" error={fieldState.error?.message}>
+                <Input
+                  placeholder="Jane Doe"
+                  autoComplete="name"
+                  value={value}
+                  onChangeText={onChange}
+                  state={fieldState.error ? 'error' : 'default'}
+                  iconLeft={<User size={iconSize.sm} color={theme.colors.textMuted} />}
+                />
+              </FormField>
             )}
           />
           <Controller
             control={control}
             name="dateOfBirth"
-            render={({ field: { value }, fieldState }) => {
-              const hasValue = value !== undefined && value !== '';
-              const borderColor = fieldState.error?.message
-                ? Colors.warning
-                : hasValue
-                  ? Colors.primary
-                  : Colors.borderInput;
-              const labelColor = fieldState.error?.message
-                ? Colors.warning
-                : hasValue
-                  ? Colors.primary
-                  : Colors.textFaint;
-              return (
-                <View style={{ marginBottom: 6, marginHorizontal: 24 }}>
-                  <Text allowFontScaling={false} style={{ fontSize: 12, marginBottom: 6, color: labelColor, fontWeight: '500' }}>
-                    Date of Birth
-                  </Text>
-                  <Pressable
-                    onPress={() => setShowDatePicker(true)}
+            render={({ field: { value }, fieldState }) => (
+              <FormField label="Date of Birth" error={fieldState.error?.message}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Select date of birth"
+                  onPress={() => setShowDatePicker(true)}
+                  style={{
+                    height: theme.sizes.heightMd,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: theme.spacing[2],
+                    borderRadius: theme.radii.md,
+                    borderWidth: theme.sizes.fieldBorderWidth,
+                    borderColor: fieldState.error ? theme.colors.error : theme.colors.border,
+                    backgroundColor: theme.colors.surface,
+                    paddingHorizontal: theme.sizes.controlPaddingXMd,
+                  }}>
+                  <Typography
+                    variant="body"
                     style={{
-                      height: 56,
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      borderRadius: 12,
-                      borderWidth: 1,
-                      borderColor,
-                      backgroundColor: '#FFFFFF',
-                      paddingHorizontal: 16,
+                      flex: 1,
+                      color: value ? theme.colors.textPrimary : theme.colors.textMuted,
                     }}>
-                    <Text
-                      style={{
-                        flex: 1,
-                        fontSize: 16,
-                        fontWeight: '500',
-                        color: hasValue ? Colors.ink : Colors.textFaint,
-                      }}>
-                      {hasValue ? value : 'MM/DD/YYYY'}
-                    </Text>
-                    <Icon name="calendar" size={20} color={Colors.primary} />
-                  </Pressable>
-                  {fieldState.error?.message ? (
-                    <Text style={{ marginTop: 4, paddingHorizontal: 4, fontSize: 11, color: Colors.warning }}>
-                      {fieldState.error?.message}
-                    </Text>
-                  ) : null}
-                </View>
-              );
-            }}
+                    {value || 'MM/DD/YYYY'}
+                  </Typography>
+                  <Calendar size={iconSize.sm} color={theme.colors.textMuted} />
+                </Pressable>
+              </FormField>
+            )}
           />
           <Controller
             control={control}
             name="email"
             render={({ field: { onChange, value }, fieldState }) => (
-              <FloatingInput
-                label="Email"
-                placeholder="jane.doe@email.com"
-                autoComplete="email"
-                autoCapitalize="none"
-                keyboardType="email-address"
-                value={value}
-                onChangeText={onChange}
-                error={fieldState.error?.message}
-              />
+              <FormField label="Email" error={fieldState.error?.message}>
+                <Input
+                  placeholder="jane.doe@email.com"
+                  autoComplete="email"
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                  value={value}
+                  onChangeText={onChange}
+                  state={fieldState.error ? 'error' : 'default'}
+                  iconLeft={<Mail size={iconSize.sm} color={theme.colors.textMuted} />}
+                />
+              </FormField>
             )}
           />
           <Controller
             control={control}
             name="pin"
             render={({ field: { onChange, value }, fieldState }) => (
-              <FloatingInput
-                label="Set 4-digit PIN"
-                placeholder="• • • •"
-                keyboardType="number-pad"
-                secureTextEntry
-                maxLength={4}
-                value={value}
-                onChangeText={onChange}
-                error={fieldState.error?.message}
-              />
+              <FormField label="Set 4-digit PIN" error={fieldState.error?.message}>
+                <Input
+                  placeholder="• • • •"
+                  keyboardType="number-pad"
+                  secureTextEntry
+                  maxLength={4}
+                  value={value}
+                  onChangeText={onChange}
+                  state={fieldState.error ? 'error' : 'default'}
+                  iconLeft={<Lock size={iconSize.sm} color={theme.colors.textMuted} />}
+                />
+              </FormField>
             )}
           />
           <Controller
             control={control}
             name="password"
             render={({ field: { onChange, value }, fieldState }) => (
-              <FloatingInput
-                label="Password"
-                placeholder="••••••••"
-                secureTextEntry={!showPassword}
-                autoCapitalize="none"
-                value={value}
-                onChangeText={onChange}
-                error={fieldState.error?.message}
-                rightSlot={
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
-                    onPress={() => setShowPassword((v) => !v)}
-                    className="h-9 w-9 items-center justify-center">
-                    <Icon name={showPassword ? 'eyeClosed' : 'eye'} size={20} color="#999" />
-                  </Pressable>
-                }
-              />
+              <FormField label="Password" error={fieldState.error?.message}>
+                <Input
+                  placeholder="••••••••"
+                  secureTextEntry={!showPassword}
+                  autoCapitalize="none"
+                  value={value}
+                  onChangeText={onChange}
+                  state={fieldState.error ? 'error' : 'default'}
+                  iconLeft={<Lock size={iconSize.sm} color={theme.colors.textMuted} />}
+                  iconRight={
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
+                      onPress={() => setShowPassword((v) => !v)}
+                      hitSlop={8}>
+                      {showPassword ? (
+                        <EyeOff size={iconSize.sm} color={theme.colors.textMuted} />
+                      ) : (
+                        <Eye size={iconSize.sm} color={theme.colors.textMuted} />
+                      )}
+                    </Pressable>
+                  }
+                />
+              </FormField>
             )}
           />
           <Controller
             control={control}
             name="confirmPassword"
             render={({ field: { onChange, value }, fieldState }) => (
-              <FloatingInput
-                label="Confirm Password"
-                placeholder="••••••••"
-                secureTextEntry={!showConfirmPassword}
-                autoCapitalize="none"
-                value={value}
-                onChangeText={onChange}
-                error={fieldState.error?.message}
-                rightSlot={
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={showConfirmPassword ? 'Hide password' : 'Show password'}
-                    onPress={() => setShowConfirmPassword((v) => !v)}
-                    className="h-9 w-9 items-center justify-center">
-                    <Icon name={showConfirmPassword ? 'eyeClosed' : 'eye'} size={20} color="#999" />
-                  </Pressable>
-                }
-              />
+              <FormField label="Confirm Password" error={fieldState.error?.message}>
+                <Input
+                  placeholder="••••••••"
+                  secureTextEntry={!showConfirmPassword}
+                  autoCapitalize="none"
+                  value={value}
+                  onChangeText={onChange}
+                  state={fieldState.error ? 'error' : 'default'}
+                  iconLeft={<Lock size={iconSize.sm} color={theme.colors.textMuted} />}
+                  iconRight={
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={showConfirmPassword ? 'Hide password' : 'Show password'}
+                      onPress={() => setShowConfirmPassword((v) => !v)}
+                      hitSlop={8}>
+                      {showConfirmPassword ? (
+                        <EyeOff size={iconSize.sm} color={theme.colors.textMuted} />
+                      ) : (
+                        <Eye size={iconSize.sm} color={theme.colors.textMuted} />
+                      )}
+                    </Pressable>
+                  }
+                />
+              </FormField>
             )}
           />
-          <InfoBanner leading="info">
+          <Alert variant="info">
             Your PIN secures your face enrollment and future updates.
-          </InfoBanner>
-        </View>
-        <Spacer />
-        {submitError ? (
-          <Text className="mb-3 text-center text-[13px]" style={{ color: '#EF4444' }}>
-            {submitError}
-          </Text>
-        ) : null}
-        <View className="pb-6 pt-4">
-          <Button label="Continue" onPress={onSubmit} loading={completeAccount.isPending} />
-        </View>
-      </View>
+          </Alert>
+          {submitError ? <Alert variant="error">{submitError}</Alert> : null}
         </ScrollView>
+
+        <View
+          style={{
+            padding: theme.spacing[4],
+            paddingTop: theme.spacing[3],
+            paddingBottom: theme.spacing[4] + insets.bottom,
+            borderTopWidth: theme.sizes.fieldBorderWidth,
+            borderTopColor: theme.colors.borderSubtle,
+            backgroundColor: theme.colors.surface,
+          }}>
+          <CoreButton
+            fullWidth
+            size="lg"
+            loading={completeAccount.isPending}
+            accessibilityLabel="Continue"
+            onPress={onSubmit}>
+            Continue
+          </CoreButton>
+        </View>
       </KeyboardAvoidingView>
 
-      {/* Date Picker Modal */}
-      <Modal visible={showDatePicker} transparent animationType="slide" onRequestClose={() => setShowDatePicker(false)}>
-        <Pressable style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' }} onPress={() => setShowDatePicker(false)} />
-        <View style={{ backgroundColor: '#FFFFFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingBottom: insets.bottom + 16 }}>
-          <View style={{ alignItems: 'center', paddingTop: 12, paddingBottom: 8 }}>
-            <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: '#E5E7EB' }} />
+      {/* Date of birth picker — wheel-style bottom sheet */}
+      <BottomSheet
+        visible={showDatePicker}
+        onClose={() => setShowDatePicker(false)}
+        title="Select Date of Birth"
+        maxHeightRatio={0.55}
+        footer={
+          <View style={{ flexDirection: 'row', gap: theme.spacing[3] }}>
+            <CoreButton variant="outline" style={{ flex: 1 }} onPress={() => setShowDatePicker(false)}>
+              Cancel
+            </CoreButton>
+            <CoreButton style={{ flex: 1 }} onPress={confirmDate}>
+              Confirm
+            </CoreButton>
           </View>
-          <Text style={{ fontSize: 18, fontWeight: '700', color: Colors.ink, textAlign: 'center', marginBottom: 20 }}>
-            Select Date of Birth
-          </Text>
-
-          {/* Scroll pickers */}
-          <View style={{ flexDirection: 'row', height: 200, paddingHorizontal: 24, gap: 12 }}>
-            {/* Month */}
-            <View style={{ flex: 1.3, borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 12 }}>
-              <ScrollView showsVerticalScrollIndicator={false}>
-                {MONTHS.map((m, i) => (
-                  <Pressable
-                    key={m}
-                    onPress={() => setSelectedMonth(i)}
-                    style={{
-                      paddingVertical: 10,
-                      alignItems: 'center',
-                      backgroundColor: selectedMonth === i ? '#F0FAFF' : 'transparent',
-                    }}>
-                    <Text style={{ fontSize: 15, fontWeight: selectedMonth === i ? '700' : '400', color: selectedMonth === i ? Colors.primary : Colors.ink }}>
-                      {m}
-                    </Text>
-                  </Pressable>
-                ))}
-              </ScrollView>
-            </View>
-            {/* Day */}
-            <View style={{ flex: 0.7, borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 12 }}>
-              <ScrollView showsVerticalScrollIndicator={false}>
-                {days.map((d) => (
-                  <Pressable
-                    key={d}
-                    onPress={() => setSelectedDay(d)}
-                    style={{
-                      paddingVertical: 10,
-                      alignItems: 'center',
-                      backgroundColor: selectedDay === d ? '#F0FAFF' : 'transparent',
-                    }}>
-                    <Text style={{ fontSize: 15, fontWeight: selectedDay === d ? '700' : '400', color: selectedDay === d ? Colors.primary : Colors.ink }}>
-                      {d}
-                    </Text>
-                  </Pressable>
-                ))}
-              </ScrollView>
-            </View>
-            {/* Year */}
-            <View style={{ flex: 1, borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 12 }}>
-              <ScrollView showsVerticalScrollIndicator={false}>
-                {years.map((y) => (
-                  <Pressable
-                    key={y}
-                    onPress={() => setSelectedYear(y)}
-                    style={{
-                      paddingVertical: 10,
-                      alignItems: 'center',
-                      backgroundColor: selectedYear === y ? '#F0FAFF' : 'transparent',
-                    }}>
-                    <Text style={{ fontSize: 15, fontWeight: selectedYear === y ? '700' : '400', color: selectedYear === y ? Colors.primary : Colors.ink }}>
-                      {y}
-                    </Text>
-                  </Pressable>
-                ))}
-              </ScrollView>
-            </View>
-          </View>
-
-          <View style={{ flexDirection: 'row', gap: 12, paddingHorizontal: 24, marginTop: 20 }}>
-            <View style={{ flex: 1 }}>
-              <Button label="Cancel" onPress={() => setShowDatePicker(false)} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Button label="Confirm" onPress={confirmDate} />
-            </View>
-          </View>
+        }>
+        <View style={{ flexDirection: 'row', gap: theme.spacing[3] }}>
+          {pickerColumn(
+            MONTHS.map((m, i) => ({
+              label: m,
+              selected: selectedMonth === i,
+              onPress: () => setSelectedMonth(i),
+            })),
+          )}
+          {pickerColumn(
+            days.map((d) => ({
+              label: String(d),
+              selected: selectedDay === d,
+              onPress: () => setSelectedDay(d),
+            })),
+          )}
+          {pickerColumn(
+            years.map((y) => ({
+              label: String(y),
+              selected: selectedYear === y,
+              onPress: () => setSelectedYear(y),
+            })),
+          )}
         </View>
-      </Modal>
-    </ScreenContainer>
+      </BottomSheet>
+    </SafeAreaView>
   );
 }
-
