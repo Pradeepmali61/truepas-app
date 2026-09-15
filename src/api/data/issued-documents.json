@@ -1,47 +1,20 @@
 [
   {
     "id": "i1",
-    "name": "Driving License",
-    "issuer": "Ministry of Road Transport and Highways",
-    "issuedAt": "Thu, 19 Jan 2022 14:27 GMT",
+    "name": "REAL ID",
+    "issuer": "Florida DHSMV",
+    "issuedAt": "2024-03-11",
     "icon": "drivingLicense",
-    "number": "DL\u00b2\u00b2\u00b2\u00b2\u00b29034",
+    "number": "•••••9021",
     "status": "Active"
   },
   {
     "id": "i2",
-    "name": "Passport",
-    "issuer": "Ministry of External Affairs",
-    "issuedAt": "Thu, 19 Jan 2022 15:12 GMT",
+    "name": "TSA PreCheck",
+    "issuer": "U.S. DHS",
+    "issuedAt": "2022-07-20",
     "icon": "passport",
-    "number": "P\u00b2\u00b2\u00b2\u00b2\u00b24821",
-    "status": "Active"
-  },
-  {
-    "id": "i3",
-    "name": "US Green Card",
-    "issuer": "U.S. Citizenship and Immigration Services",
-    "issuedAt": "Thu, 19 Jan 2022 16:05 GMT",
-    "icon": "greenCard",
-    "number": "USCIS\u00b2\u00b2\u00b2\u00b2\u00b21234",
-    "status": "Active"
-  },
-  {
-    "id": "i4",
-    "name": "Birth Certificate",
-    "issuer": "Municipal Corporation",
-    "issuedAt": "Mon, 15 Aug 2022 09:30 GMT",
-    "icon": "birthCertificate",
-    "number": "BC\u00b2\u00b2\u00b2\u00b2\u00b25678",
-    "status": "Active"
-  },
-  {
-    "id": "i5",
-    "name": "US Visa",
-    "issuer": "U.S. Department of State",
-    "issuedAt": "Wed, 02 Mar 2023 11:45 GMT",
-    "icon": "usVisa",
-    "number": "V\u00b2\u00b2\u00b2\u00b2\u00b29012",
+    "number": "•••••3345",
     "status": "Active"
   }
 ]

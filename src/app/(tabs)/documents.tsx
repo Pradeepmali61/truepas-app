@@ -1,11 +1,11 @@
 import { useRouter } from 'expo-router';
-import { CreditCard, FileText } from 'lucide-react-native';
-import { memo, type ReactNode } from 'react';
+import { ChevronRight, CreditCard, FileText, Landmark } from 'lucide-react-native';
+import { memo } from 'react';
 import { FlatList, RefreshControl, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Card, EmptyState, ErrorState, ScreenHeader } from '@/components/composite';
-import { Badge, CoreButton, Skeleton, Typography, type BadgeVariant } from '@/components/ui';
+import { Badge, CoreButton, RowIcon, Skeleton, Typography, type BadgeVariant } from '@/components/ui';
 import { useDocuments } from '@/features/documents/hooks';
 import { useThemeTokens } from '@/theme';
 import { iconSize } from '@/theme/tokens';
@@ -26,26 +26,6 @@ const STATUS_BADGE: Record<string, { variant: BadgeVariant; label: string }> = {
   failed:   { variant: 'error',   label: 'Failed' },
   missing:  { variant: 'neutral', label: 'Missing' },
 };
-
-type RowIconTone = 'neutral' | 'primary' | 'success' | 'warning' | 'error' | 'info';
-
-/** Small square icon chip used on list rows (ported from ui-native showcase). */
-function RowIcon({ icon, tone = 'neutral' }: { icon: ReactNode; tone?: RowIconTone }) {
-  const theme = useThemeTokens();
-  const bg = {
-    neutral: theme.colors.actionSecondary,
-    primary: theme.colors.actionPrimarySubtle,
-    success: theme.colors.successSubtle,
-    warning: theme.colors.warningSubtle,
-    error: theme.colors.errorSubtle,
-    info: theme.colors.infoSubtle,
-  }[tone];
-  return (
-    <View style={{ width: 40, height: 40, borderRadius: theme.radii.lg, alignItems: 'center', justifyContent: 'center', backgroundColor: bg }}>
-      {icon}
-    </View>
-  );
-}
 
 const DocCard = memo(function DocCard({ doc, onPress }: { doc: IdentityDocument; onPress: () => void }) {
   const theme = useThemeTokens();
@@ -127,6 +107,20 @@ export default function DocumentsScreen() {
             renderItem={({ item }) => (
               <DocCard doc={item} onPress={() => router.push(`/document/${item.id}` as never)} />
             )}
+            ListFooterComponent={
+              <Card onPress={() => router.push('/document/issued' as never)}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing[3] }}>
+                  <RowIcon tone="info" icon={<Landmark size={iconSize.md} color={theme.colors.onInfoSubtle} />} />
+                  <View style={{ flex: 1, gap: 2, minWidth: 0 }}>
+                    <Typography variant="body" numberOfLines={1}>Issued to you</Typography>
+                    <Typography variant="body-sm" color="muted" numberOfLines={1}>
+                      Venue-issued credentials
+                    </Typography>
+                  </View>
+                  <ChevronRight size={iconSize.md} color={theme.colors.textMuted} />
+                </View>
+              </Card>
+            }
             refreshControl={
               <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={theme.colors.actionPrimary} />
             }

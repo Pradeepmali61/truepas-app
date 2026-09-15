@@ -1,8 +1,8 @@
 ﻿import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Camera as CameraIcon, Eye, ScanFace, X } from 'lucide-react-native';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Circle, Ellipse, Path } from 'react-native-svg';
 import {
     Camera,
     useCameraDevice,
@@ -17,12 +17,15 @@ import {
 import { runOnJS } from 'react-native-worklets';
 
 import { toApiError } from '@/api/errors';
-import { Icon } from '@/components/ui';
+import { Alert, Card, CardContent, ScreenHeader } from '@/components/composite';
+import { Blink, CoreButton, IconButton, Pulse, RowIcon, ScanLine, Typography } from '@/components/ui';
 import { Colors } from '@/constants/theme';
 import { useEnrollFace, useUpdateFace } from '@/features/auth/mutations';
 import { faceEnrollmentCompleted } from '@/features/auth/slice';
 import { useLivenessSession } from '@/features/liveness/useLivenessSession';
 import { useAppDispatch } from '@/store';
+import { useThemeTokens } from '@/theme';
+import { iconSize } from '@/theme/tokens';
 
 interface LivenessCameraProps {
   /** "enroll" for first-time enrollment, "update" for face update flow. */
@@ -65,19 +68,39 @@ const ACTION_UI: Record<string, { title: string; helper: string; icon: string; i
   },
 };
 
-/** Arc path along the camera ring (radius 154 inside the 316px ring box).
- *  Angle 0 = 12 o'clock, increasing clockwise. */
-function sideArcPath(startDeg: number, endDeg: number): string {
-  const r = 154;
-  const c = 158;
-  const polar = (deg: number) => {
-    const a = ((deg - 90) * Math.PI) / 180;
-    return { x: c + r * Math.cos(a), y: c + r * Math.sin(a) };
-  };
-  const s = polar(startDeg);
-  const e = polar(endDeg);
-  const largeArc = endDeg - startDeg > 180 ? 1 : 0;
-  return `M ${s.x.toFixed(2)} ${s.y.toFixed(2)} A ${r} ${r} 0 ${largeArc} 1 ${e.x.toFixed(2)} ${e.y.toFixed(2)}`;
+/** Step preview row for the intro screen — leading chip + title + step label. */
+function StepRow({ leading, title, subtitle }: { leading: ReactNode; title: string; subtitle: string }) {
+  const theme = useThemeTokens();
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing[3], paddingVertical: theme.spacing[2] }}>
+      {leading}
+      <View style={{ flex: 1, gap: 2, minWidth: 0 }}>
+        <Typography variant="body">{title}</Typography>
+        <Typography variant="body-sm" color="secondary">{subtitle}</Typography>
+      </View>
+    </View>
+  );
+}
+
+/** Step progress dots — completed + current steps are filled. */
+function StepDots({ total, current }: { total: number; current: number }) {
+  const theme = useThemeTokens();
+  return (
+    <View
+      style={{ flexDirection: 'row', gap: theme.spacing[1], justifyContent: 'center', paddingVertical: theme.spacing[2] }}
+      accessibilityLabel={`Step ${current + 1} of ${total}`}>
+      {Array.from({ length: total }, (_, i) => (
+        <View
+          key={i}
+          style={[
+            { width: 6, height: 6, borderRadius: theme.radii.full, backgroundColor: theme.colors.border },
+            i < current && { backgroundColor: theme.colors.actionPrimary },
+            i === current && { width: 18, backgroundColor: theme.colors.actionPrimary },
+          ]}
+        />
+      ))}
+    </View>
+  );
 }
 
 /**
@@ -96,7 +119,11 @@ function sideArcPath(startDeg: number, endDeg: number): string {
  */
 export function LivenessCamera({ mode, personId, onSuccess }: LivenessCameraProps) {
   const { hasPermission, requestPermission } = useCameraPermission();
+  const theme = useThemeTokens();
   const [capturing, setCapturing] = useState(false);
+  // Challenge is created on mount; the intro screen renders until the user
+  // taps "Start verification" — then the camera mounts and detection begins.
+  const [started, setStarted] = useState(false);
   // Camera preview is stopped briefly before navigating away â€” unmounting an
   // ACTIVE Camera on the new architecture (Fabric) can dispatch a
   // topCameraReady event after the JS view is gone, which crashes the app.
@@ -455,121 +482,186 @@ export function LivenessCamera({ mode, personId, onSuccess }: LivenessCameraProp
     );
   }
 
-  // Active challenge or finalizing â€” camera with frame processor, NO capture button
+  // Intro — challenge created. Render the server-provided challenge_sequence
+  // + ui_copy in returned order (never hard-coded); camera starts on tap.
+  if (liveness.phase === 'challenging' && !started) {
+    const sequence = liveness.challenge?.challenge_sequence ?? [];
+    return (
+      <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: theme.colors.background }}>
+        <ScreenHeader title="Face verification" onBack={() => router.back()} />
+        <View style={{ flex: 1, padding: theme.spacing[4], gap: theme.spacing[4] }}>
+          <View style={{ alignItems: 'center', gap: theme.spacing[2] }}>
+            <RowIcon tone="primary" icon={<ScanFace size={iconSize.xl} color={theme.colors.actionPrimary} />} />
+            <Typography variant="h3" center>Prove it&apos;s really you</Typography>
+            <Typography variant="body" color="secondary" center>
+              We&apos;ll ask you to do {sequence.length} quick {sequence.length === 1 ? 'action' : 'actions'} on camera. It takes about 10 seconds.
+            </Typography>
+          </View>
+          <Card>
+            <CardContent style={{ gap: 12 }}>
+              {sequence.map((step, i) => (
+                <StepRow
+                  key={`${step}-${i}`}
+                  leading={<RowIcon icon={<Eye size={iconSize.md} color={theme.colors.textSecondary} />} />}
+                  title={liveness.challenge?.ui_copy[step] ?? step}
+                  subtitle={`Step ${i + 1}`}
+                />
+              ))}
+            </CardContent>
+          </Card>
+          <Alert variant="info" title="Good conditions help">
+            Even lighting, hold the phone at eye level, remove hats and glasses.
+          </Alert>
+        </View>
+        <View
+          style={{
+            padding: theme.spacing[4],
+            paddingTop: theme.spacing[3],
+            paddingBottom: theme.spacing[4] + insets.bottom,
+            borderTopWidth: theme.sizes.fieldBorderWidth,
+            borderTopColor: theme.colors.borderSubtle,
+            backgroundColor: theme.colors.surface,
+          }}>
+          <CoreButton
+            fullWidth
+            size="lg"
+            accessibilityLabel="Start verification"
+            iconLeft={<CameraIcon size={iconSize.sm} color={theme.colors.onActionPrimary} />}
+            onPress={() => {
+              // Restart step timing — evidence duration must not include the
+              // time spent reading this intro.
+              beginStep();
+              setStarted(true);
+            }}>
+            Start verification
+          </CoreButton>
+        </View>
+      </SafeAreaView>
+    );
+  }
   const isFinalizing = liveness.phase === 'finalizing';
   const steps = liveness.challenge?.challenge_sequence ?? [];
   const action = liveness.currentChallenge;
   const actionUi = (action && ACTION_UI[action]) ?? null;
 
-  // Progress arcs on the LEFT + RIGHT sides of the camera circle only.
-  // Progress flows clockwise: the right arc fills first (topâ†’bottom), then
-  // the left arc (bottomâ†’top). Whole ring turns green once capturing.
-  const progress = steps.length
-    ? (isFinalizing ? 1 : Math.min(liveness.currentStepIndex / steps.length, 1))
-    : 0;
-  const rightFill = Math.min(progress * 2, 1);
-  const leftFill = Math.max(0, Math.min(progress * 2 - 1, 1));
-  const arcFillColor = isFinalizing ? '#34D399' : Colors.primary;
-
-  // Pill + helper copy per phase
-  const pillText = isFinalizing
+  // Chip copy per phase — server ui_copy (liveness.instruction) is the
+  // primary instruction text; ACTION_UI titles are the local fallback.
+  const chipText = isFinalizing
     ? 'Hold still'
     : stepDone
       ? 'Done!'
-      : actionUi
-        ? actionUi.title
-        : (liveness.instruction || 'Follow the instruction');
-  const helperText = isFinalizing
-    ? 'Capturing your photo'
-    : stepDone
-      ? null
-      : actionUi
-        ? actionUi.helper
-        : null;
+      : liveness.instruction || actionUi?.title || 'Follow the instruction';
+  const expiresIn = liveness.challenge?.expires_in_seconds;
+  const sessionLabel = expiresIn != null
+    ? `Session expires in ${Math.floor(expiresIn / 60)}:${String(expiresIn % 60).padStart(2, '0')}`
+    : 'Liveness session';
+
+  // Finalize — high-res frame upload + anti-spoof checks. The Camera stays
+  // mounted off-screen: photoOutput.capturePhotoToFile still needs it.
+  if (isFinalizing) {
+    return (
+      <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: theme.colors.background }}>
+        <ScreenHeader title="Face verification" />
+        <View style={{ flex: 1, padding: theme.spacing[4], gap: theme.spacing[4] }}>
+          <View style={{ alignItems: 'center', gap: theme.spacing[2], marginTop: theme.spacing[6] }}>
+            <Pulse to={1.08} ms={800}>
+              <RowIcon tone="primary" icon={<ScanFace size={iconSize.lg} color={theme.colors.actionPrimary} />} />
+            </Pulse>
+            <Typography variant="h3">Verifying…</Typography>
+            <Typography variant="body-sm" color="secondary" center>
+              Uploading your final frame and running anti-spoof checks. Don&apos;t close the app.
+            </Typography>
+          </View>
+          <CoreButton loading disabled fullWidth>
+            Verifying
+          </CoreButton>
+        </View>
+        <View style={{ position: 'absolute', top: -2000, left: -2000, width: 400, height: 533 }}>
+          <Camera
+            ref={cameraRef}
+            style={{ flex: 1 }}
+            device={device}
+            isActive={cameraActive}
+            outputs={[photoOutput, faceDetectorOutput]}
+            mirrorMode="auto"
+          />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
-    <SafeAreaView className="flex-1 bg-[#F8FBFF]" edges={['top', 'bottom']}>
-      {/* Close button â€” top right */}
-      <Pressable
-        onPress={() => router.back()}
-        accessibilityRole="button"
-        accessibilityLabel="Close liveness check"
-        style={{ position: 'absolute', top: insets.top + 14, right: 20, zIndex: 10, width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
-        <Icon name="cross" size={24} color="#111827" />
-      </Pressable>
-
-      <View className="flex-1 items-center justify-center px-6">
-        {/* Camera circle + progress arcs (Regula-style) */}
-        <View style={{ width: 316, height: 316, alignItems: 'center', justifyContent: 'center' }}>
-          {/* Progress ring â€” left + right side arcs only (gaps at 12 and 6
-              o'clock). Right arc fills first, then the left one. */}
-          <Svg width={316} height={316} style={{ position: 'absolute' }} pointerEvents="none">
-            {/* Gray tracks */}
-            <Path d={sideArcPath(8, 172)} stroke="rgba(17,24,39,0.10)" strokeWidth={4} strokeLinecap="round" fill="none" />
-            <Path d={sideArcPath(188, 352)} stroke="rgba(17,24,39,0.10)" strokeWidth={4} strokeLinecap="round" fill="none" />
-            {/* Filled progress */}
-            {rightFill > 0 && (
-              <Path d={sideArcPath(8, 8 + 164 * rightFill)} stroke={arcFillColor} strokeWidth={4} strokeLinecap="round" fill="none" />
-            )}
-            {leftFill > 0 && (
-              <Path d={sideArcPath(188, 188 + 164 * leftFill)} stroke={arcFillColor} strokeWidth={4} strokeLinecap="round" fill="none" />
-            )}
-          </Svg>
-          {/* Camera clipped inside the circle */}
-          <View style={{ width: 280, height: 280, borderRadius: 140, overflow: 'hidden', backgroundColor: '#E5E7EB' }}>
-            <Camera
-              ref={cameraRef}
-              style={{ width: '100%', height: '100%' }}
-              device={device}
-              isActive={cameraActive}
-              outputs={[photoOutput, faceDetectorOutput]}
-              mirrorMode="auto"
-            />
-            {/* Face guide overlay â€” head outline, eyes, nose, mouth so the
-                user knows exactly where to position their face */}
-            <Svg width={280} height={280} style={{ position: 'absolute', top: 0, left: 0 }} pointerEvents="none">
-              <Ellipse cx={140} cy={132} rx={66} ry={84} stroke="#FFFFFF" strokeWidth={5} fill="none" />
-              <Circle cx={112} cy={118} r={9} fill="#FFFFFF" />
-              <Circle cx={168} cy={118} r={9} fill="#FFFFFF" />
-              <Path d="M 140 118 L 140 168" stroke="#FFFFFF" strokeWidth={5} strokeLinecap="round" />
-              <Path d="M 112 190 Q 140 200 168 190" stroke="#FFFFFF" strokeWidth={5} strokeLinecap="round" fill="none" />
-            </Svg>
-          </View>
-        </View>
-
-        {/* Instruction pill */}
+    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: theme.colors.background }}>
+      <ScreenHeader
+        title="Face verification"
+        subtitle={liveness.sessionId ? `Session ${liveness.sessionId}` : undefined}
+        actions={
+          <IconButton
+            accessibilityLabel="Close liveness check"
+            icon={<X size={iconSize.md} color={theme.colors.textPrimary} />}
+            onPress={() => router.back()}
+          />
+        }
+      />
+      <View style={{ flex: 1, padding: theme.spacing[4], gap: theme.spacing[3] }}>
+        {/* Viewfinder — dark rounded frame, live camera behind overlays */}
         <View
           style={{
-            marginTop: 40,
-            maxWidth: '85%',
-            paddingHorizontal: 22, paddingVertical: 12,
-            borderRadius: 24,
-            backgroundColor: stepDone ? '#059669' : 'rgba(17,24,39,0.06)',
+            aspectRatio: 3 / 4,
+            borderRadius: theme.radii.xl,
+            backgroundColor: theme.colors.textPrimary,
+            overflow: 'hidden',
           }}>
-          <Text style={[styles.pillText, stepDone && { color: '#FFFFFF' }]}>
-            {isFinalizing ? 'Hold still' : stepDone ? 'Done!' : actionUi ? actionUi.title : (liveness.instruction || 'Follow the instruction')}
-          </Text>
+          <Camera
+            ref={cameraRef}
+            style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+            device={device}
+            isActive={cameraActive}
+            outputs={[photoOutput, faceDetectorOutput]}
+            mirrorMode="auto"
+          />
+          <ScanLine color={theme.colors.accent} />
+          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: theme.spacing[8] }}>
+            <Pulse to={1.04} ms={900}>
+              <View
+                style={{
+                  width: 168,
+                  height: 208,
+                  borderRadius: 104,
+                  borderWidth: 3,
+                  borderColor: theme.colors.actionPrimary,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}>
+                <ScanFace size={56} color={theme.colors.onActionPrimary} />
+              </View>
+            </Pulse>
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: theme.spacing[2],
+                paddingHorizontal: theme.spacing[4],
+                paddingVertical: theme.spacing[2],
+                borderRadius: theme.radii.full,
+                backgroundColor: stepDone ? theme.colors.success : theme.colors.actionPrimary,
+                maxWidth: '88%',
+              }}>
+              <Blink ms={650}>
+                <View style={{ width: 8, height: 8, borderRadius: theme.radii.full, backgroundColor: theme.colors.onActionPrimary }} />
+              </Blink>
+              <Text style={{ color: theme.colors.onActionPrimary, fontFamily: theme.fontFamily.sans.semibold, fontSize: theme.fontSize.base }}>
+                {chipText}
+              </Text>
+            </View>
+          </View>
         </View>
-        {!!helperText && !stepDone && (
-          <Text style={styles.helperText}>{helperText}</Text>
-        )}
+        <StepDots total={steps.length} current={liveness.currentStepIndex} />
+        <Typography variant="caption" color="muted" center>
+          {sessionLabel} · front camera
+        </Typography>
       </View>
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  pillText: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: '#111827',
-    textAlign: 'center',
-  },
-  helperText: {
-    marginTop: 10,
-    fontSize: 13,
-    color: '#6B7280',
-    textAlign: 'center',
-  },
-});
 

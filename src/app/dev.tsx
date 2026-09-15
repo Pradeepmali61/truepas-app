@@ -76,6 +76,7 @@ const GROUPS: { title: string; screens: ScreenEntry[] }[] = [
       { label: 'Processing / matching', route: '/document/processing', preset: 'auth-face' },
       { label: 'Details mismatch', route: '/document/mismatch', preset: 'auth-face' },
       { label: 'Verified success', route: '/document/verified', preset: 'auth-face' },
+      { label: 'Issued credentials', route: '/document/issued', preset: 'auth-face' },
     ],
   },
   {
