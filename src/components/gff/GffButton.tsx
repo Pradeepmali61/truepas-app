@@ -1,3 +1,4 @@
+/** @jsxImportSource react */
 import { LinearGradient } from 'expo-linear-gradient';
 import { ActivityIndicator, Pressable, StyleSheet, Text } from 'react-native';
 

@@ -1,7 +1,7 @@
-import type { ReactNode } from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
-import { Modal as RNModal } from "react-native";
+/** @jsxImportSource react */
 import { Check } from "lucide-react-native";
+import type { ReactNode } from "react";
+import { Pressable, Modal as RNModal, ScrollView, Text, View } from "react-native";
 import { makeStyles, useThemeTokens } from "../../theme";
 import { iconSize } from "../../theme/tokens";
 

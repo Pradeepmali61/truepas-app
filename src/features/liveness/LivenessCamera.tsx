@@ -1,7 +1,7 @@
 ﻿import { useRouter } from 'expo-router';
 import { Camera as CameraIcon, CircleCheck, Eye, ScanFace, TriangleAlert, X } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { ActivityIndicator, Linking, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
     Camera,
@@ -460,7 +460,6 @@ export function LivenessCamera({ mode, personId, onSuccess }: LivenessCameraProp
   // Brief "step done" flash when the step index advances
   const [stepDone, setStepDone] = useState(false);
   const prevStepRef = useRef(0);
-  prevStepRef.current = liveness.currentStepIndex;
   useEffect(() => {
     if (liveness.phase === 'challenging' && liveness.currentStepIndex > prevStepRef.current) {
       setStepDone(true);
@@ -545,7 +544,7 @@ export function LivenessCamera({ mode, personId, onSuccess }: LivenessCameraProp
             fullWidth
             variant="ghost"
             accessibilityLabel="Get help"
-            onPress={() => Linking.openURL('mailto:support@truepas.com')}>
+            onPress={() => router.push('/help' as never)}>
             Get help
           </CoreButton>
         </View>

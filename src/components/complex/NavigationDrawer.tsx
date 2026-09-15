@@ -1,5 +1,6 @@
+/** @jsxImportSource react */
 import type { ReactNode } from "react";
-import { Modal as RNModal, Pressable, ScrollView, Text, View, type StyleProp, type ViewStyle } from "react-native";
+import { Pressable, Modal as RNModal, ScrollView, Text, View, type StyleProp, type ViewStyle } from "react-native";
 import { makeStyles } from "../../theme";
 
 export interface NavItem {

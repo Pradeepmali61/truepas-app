@@ -1,3 +1,4 @@
+/** @jsxImportSource react */
 import type { ReactNode } from "react";
 import { Pressable, Text, View, type StyleProp, type ViewStyle } from "react-native";
 import { makeStyles } from "../../theme";

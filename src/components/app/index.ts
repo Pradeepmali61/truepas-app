@@ -1,4 +1,5 @@
 export { AnimatedCard } from "./AnimatedCard";
+export { AppChrome } from "./AppChrome";
 export { AppIcon, type IconName } from "./AppIcon";
 export { BrandMark } from "./BrandMark";
 export { CheckboxRow } from "./CheckboxRow";

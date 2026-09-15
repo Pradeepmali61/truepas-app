@@ -1,10 +1,10 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Baby, Camera, CircleCheck, EllipsisVertical, FileText, ScanFace, Trash2, UserRoundPen, Users } from 'lucide-react-native';
 import { useState, type ReactNode } from 'react';
-import { Alert as RNAlert, ScrollView, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { ActionSheet, Alert, Card, CardContent, ErrorState, ScreenHeader } from '@/components/composite';
+import { ActionSheet, Alert, Card, CardContent, ErrorState, Modal, ScreenHeader } from '@/components/composite';
 import {
     Avatar,
     Badge,
@@ -74,6 +74,7 @@ export default function FamilyMemberScreen() {
   const { data: memberDocs } = useDocuments(id);
   const removeMember = useRemoveFamilyMember();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [confirmRemove, setConfirmRemove] = useState(false);
 
   if (isPending) {
     return (
@@ -195,25 +196,14 @@ export default function FamilyMemberScreen() {
         }
       : null;
 
-  const handleRemove = () => {
-    RNAlert.alert(
-      'Remove family member?',
-      `${m.name} will no longer be available in your family. Their face and documents are deleted too.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Remove',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await removeMember.mutateAsync(id);
-            } finally {
-              router.back();
-            }
-          },
-        },
-      ],
-    );
+  const handleRemove = () => setConfirmRemove(true);
+
+  const confirmRemoveMember = async () => {
+    try {
+      await removeMember.mutateAsync(id);
+    } finally {
+      router.back();
+    }
   };
 
   return (
@@ -313,6 +303,30 @@ export default function FamilyMemberScreen() {
           },
         ]}
       />
+      <Modal
+        visible={confirmRemove}
+        onClose={() => setConfirmRemove(false)}
+        title="Remove family member?"
+        footer={
+          <>
+            <CoreButton variant="ghost" onPress={() => setConfirmRemove(false)}>
+              Cancel
+            </CoreButton>
+            <CoreButton
+              variant="destructive"
+              loading={removeMember.isPending}
+              onPress={() => {
+                setConfirmRemove(false);
+                confirmRemoveMember();
+              }}>
+              Remove
+            </CoreButton>
+          </>
+        }>
+        <Typography variant="body" color="secondary">
+          {m.name} will no longer be available in your family. Their face and documents are deleted too.
+        </Typography>
+      </Modal>
     </SafeAreaView>
   );
 }

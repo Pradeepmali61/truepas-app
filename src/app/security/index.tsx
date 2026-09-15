@@ -1,10 +1,11 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Pressable, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 
+import { Modal } from '@/components/composite';
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
 import { TopBar } from '@/components/layout/TopBar';
-import { Card, ListItem, Pill, SectionTitle, Toggle } from '@/components/ui';
+import { Card, CoreButton, ListItem, Pill, SectionTitle, Toggle, Typography } from '@/components/ui';
 
 /** Security settings — login/access, biometric toggles, consent management (PRD). */
 export default function SecurityScreen() {
@@ -12,6 +13,7 @@ export default function SecurityScreen() {
   const [faceIdLogin, setFaceIdLogin] = useState(true);
   const [smsVerification, setSmsVerification] = useState(false);
   const [consentGranted, setConsentGranted] = useState(true);
+  const [consentAction, setConsentAction] = useState<'withdraw' | 'give' | null>(null);
 
   return (
     <ScreenContainer>
@@ -62,20 +64,7 @@ export default function SecurityScreen() {
             accessibilityRole="button"
             accessibilityLabel="Withdraw consent"
             className="mt-2"
-            onPress={() => {
-              Alert.alert(
-                'Withdraw Consent?',
-                'Withdrawing biometric consent will disable face verification. You will need to re-enroll to use face-based features.',
-                [
-                  { text: 'Cancel', style: 'cancel' },
-                  {
-                    text: 'Withdraw',
-                    style: 'destructive',
-                    onPress: () => setConsentGranted(false),
-                  },
-                ],
-              );
-            }}>
+            onPress={() => setConsentAction('withdraw')}>
             <Text className="text-[14px] font-medium text-primary underline">Withdraw Consent</Text>
           </Pressable>
         ) : (
@@ -83,24 +72,37 @@ export default function SecurityScreen() {
             accessibilityRole="button"
             accessibilityLabel="Give consent"
             className="mt-2"
-            onPress={() => {
-              Alert.alert(
-                'Give Consent?',
-                'Giving biometric consent will enable face verification. You can withdraw at any time.',
-                [
-                  { text: 'Cancel', style: 'cancel' },
-                  {
-                    text: 'Give Consent',
-                    style: 'default',
-                    onPress: () => setConsentGranted(true),
-                  },
-                ],
-              );
-            }}>
+            onPress={() => setConsentAction('give')}>
             <Text className="text-[14px] font-medium text-primary underline">Give Consent</Text>
           </Pressable>
         )}
       </Card>
+
+      <Modal
+        visible={consentAction !== null}
+        onClose={() => setConsentAction(null)}
+        title={consentAction === 'withdraw' ? 'Withdraw Consent?' : 'Give Consent?'}
+        footer={
+          <>
+            <CoreButton variant="ghost" onPress={() => setConsentAction(null)}>
+              Cancel
+            </CoreButton>
+            <CoreButton
+              variant={consentAction === 'withdraw' ? 'destructive' : 'primary'}
+              onPress={() => {
+                setConsentGranted(consentAction !== 'withdraw');
+                setConsentAction(null);
+              }}>
+              {consentAction === 'withdraw' ? 'Withdraw' : 'Give Consent'}
+            </CoreButton>
+          </>
+        }>
+        <Typography variant="body" color="secondary">
+          {consentAction === 'withdraw'
+            ? 'Withdrawing biometric consent will disable face verification. You will need to re-enroll to use face-based features.'
+            : 'Giving biometric consent will enable face verification. You can withdraw at any time.'}
+        </Typography>
+      </Modal>
     </ScreenContainer>
   );
 }

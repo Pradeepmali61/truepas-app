@@ -1,10 +1,11 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Bell, Clock3 } from 'lucide-react-native';
+import { useState } from 'react';
 import { FlatList, RefreshControl, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { EmptyState, ErrorState, ScreenHeader } from '@/components/composite';
-import { Blink, CoreButton, Divider, RowIcon, Skeleton, Typography } from '@/components/ui';
+import { EmptyState, ErrorState, ScreenHeader, Tabs } from '@/components/composite';
+import { Badge, Blink, CoreButton, Divider, RowIcon, Skeleton, Typography } from '@/components/ui';
 import { useNotifications } from '@/features/notifications/hooks';
 import { useThemeTokens } from '@/theme';
 import { iconSize } from '@/theme/tokens';
@@ -16,7 +17,7 @@ export default function NotificationsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { filter } = useLocalSearchParams<{ filter?: string }>();
-  const unreadOnly = filter === 'unread';
+  const [unreadOnly, setUnreadOnly] = useState(filter === 'unread');
   const { data, isPending, isError, isRefetching, refetch, fetchNextPage, hasNextPage, isFetchingNextPage } =
     useNotifications(unreadOnly);
 
@@ -29,6 +30,23 @@ export default function NotificationsScreen() {
         title="Notifications"
         subtitle={unreadOnly ? 'Unread' : unread > 0 ? `${unread} unread` : 'Inbox'}
         onBack={() => router.back()}
+      />
+      <Tabs
+        variant="underline"
+        value={unreadOnly ? 'unread' : 'all'}
+        onValueChange={(v) => setUnreadOnly(v === 'unread')}
+        items={[
+          { value: 'all', label: 'All', content: null },
+          {
+            value: 'unread',
+            label: 'Unread',
+            content: null,
+            badge:
+              !unreadOnly && unread > 0 ? (
+                <Badge variant="info" size="sm">{unread}</Badge>
+              ) : undefined,
+          },
+        ]}
       />
       {isPending ? (
         <View style={{ padding: theme.spacing[4], gap: theme.spacing[3] }}>

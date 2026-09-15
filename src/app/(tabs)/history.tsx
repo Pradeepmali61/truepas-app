@@ -1,9 +1,10 @@
 import { useRouter } from 'expo-router';
 import { CalendarDays, Hotel, Ticket } from 'lucide-react-native';
-import { memo } from 'react';
-import { FlatList, RefreshControl, Alert as RNAlert, View } from 'react-native';
+import { memo, useState } from 'react';
+import { FlatList, RefreshControl, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { SearchAndFilterBar } from '@/components/complex/SearchAndFilterBar';
 import { Card, EmptyState, ErrorState, ScreenHeader } from '@/components/composite';
 import {
     Badge,
@@ -28,6 +29,13 @@ const STATUS: Record<string, { variant: BadgeVariant; label: string }> = {
   cancelled: { variant: 'neutral', label: 'Cancelled' },
   failed: { variant: 'error', label: 'Failed' },
 };
+
+const STATUS_OPTIONS = [
+  { value: 'upcoming', label: 'Upcoming' },
+  { value: 'completed', label: 'Completed' },
+  { value: 'cancelled', label: 'Cancelled' },
+  { value: 'failed', label: 'Failed' },
+];
 
 function formatDate(value: string): string {
   const d = new Date(value);
@@ -93,6 +101,27 @@ export default function HistoryScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { data: bookings, isPending, isError, isRefetching, refetch } = useBookings();
+  const [search, setSearch] = useState('');
+  const [filters, setFilters] = useState<Record<string, string | undefined>>({});
+
+  const hasBookings = (bookings?.length ?? 0) > 0;
+  const typeOptions = [...new Set((bookings ?? []).map((b) => b.type))].map((v) => ({
+    value: v,
+    label: v.charAt(0).toUpperCase() + v.slice(1),
+  }));
+  const filterDefs = [
+    { key: 'status', label: 'Status', options: STATUS_OPTIONS },
+    ...(typeOptions.length > 1 ? [{ key: 'type', label: 'Type', options: typeOptions }] : []),
+  ];
+
+  const filtered = (bookings ?? []).filter((b) => {
+    if (filters.status && b.status !== filters.status) return false;
+    if (filters.type && b.type !== filters.type) return false;
+    const q = search.trim().toLowerCase();
+    if (q && !`${b.venue} ${b.location} ${b.id}`.toLowerCase().includes(q)) return false;
+    return true;
+  });
+  const isFiltering = search.trim().length > 0 || Object.values(filters).some(Boolean);
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: theme.colors.background }}>
@@ -108,45 +137,69 @@ export default function HistoryScreen() {
           onRetry={refetch}
         />
       ) : (
-        <FlatList
-          data={bookings ?? []}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={{
-            padding: theme.spacing[4],
-            paddingBottom: TAB_BAR_HEIGHT + insets.bottom + theme.spacing[4],
-            flexGrow: 1,
-          }}
-          showsVerticalScrollIndicator={false}
-          renderItem={({ item, index }) => (
-            <FadeUp delay={index * 110}>
-              <BookingCard item={item} onPress={() => router.push(`/booking/${item.id}` as never)} />
-            </FadeUp>
-          )}
-          ListEmptyComponent={
-            <EmptyState
-              title="No bookings yet"
-              description="When you check in at a venue with Truepas, it shows up here."
-              icon={<CalendarDays size={iconSize.lg} color={theme.colors.textMuted} />}
-              action={
-                <CoreButton
-                  variant="outline"
-                  size="sm"
-                  accessibilityLabel="How check-in works"
-                  onPress={() =>
-                    RNAlert.alert(
-                      'How check-in works',
-                      'At a participating venue, open Truepas and glance at the kiosk — your enrolled face proves your identity, no documents needed.',
-                    )
-                  }>
-                  How check-in works
-                </CoreButton>
-              }
+        <>
+          {hasBookings ? (
+            <SearchAndFilterBar
+              search={search}
+              onSearchChange={setSearch}
+              searchPlaceholder="Search venue, location or ID…"
+              filters={filterDefs}
+              values={filters}
+              onFilterChange={(k, v) => setFilters((s) => ({ ...s, [k]: v }))}
+              onClearAll={() => {
+                setFilters({});
+                setSearch('');
+              }}
+              style={{
+                paddingHorizontal: theme.spacing[4],
+                marginTop: theme.spacing[2],
+              }}
             />
-          }
-          refreshControl={
-            <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={theme.colors.actionPrimary} />
-          }
-        />
+          ) : null}
+          <FlatList
+            data={filtered}
+            keyExtractor={(item) => item.id}
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={{
+              padding: theme.spacing[4],
+              paddingTop: hasBookings ? theme.spacing[2] : theme.spacing[4],
+              paddingBottom: TAB_BAR_HEIGHT + insets.bottom + theme.spacing[4],
+              flexGrow: 1,
+            }}
+            showsVerticalScrollIndicator={false}
+            renderItem={({ item, index }) => (
+              <FadeUp delay={index * 110}>
+                <BookingCard item={item} onPress={() => router.push(`/booking/${item.id}` as never)} />
+              </FadeUp>
+            )}
+            ListEmptyComponent={
+              isFiltering ? (
+                <EmptyState
+                  title="No matches"
+                  description="Try a different search or clear the filters."
+                />
+              ) : (
+                <EmptyState
+                  title="No bookings yet"
+                  description="When you check in at a venue with Truepas, it shows up here."
+                  icon={<CalendarDays size={iconSize.lg} color={theme.colors.textMuted} />}
+                  action={
+                    <CoreButton
+                      variant="outline"
+                      size="sm"
+                      accessibilityLabel="How check-in works"
+                      onPress={() => router.push('/help' as never)}>
+                      How check-in works
+                    </CoreButton>
+                  }
+                />
+              )
+            }
+            refreshControl={
+              <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={theme.colors.actionPrimary} />
+            }
+          />
+        </>
       )}
     </SafeAreaView>
   );

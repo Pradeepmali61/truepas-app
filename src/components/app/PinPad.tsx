@@ -1,6 +1,7 @@
-import { Pressable, Text, View } from "react-native";
-import { Delete } from "lucide-react-native";
+/** @jsxImportSource react */
 import { makeStyles, useThemeTokens } from "@/theme";
+import { Delete } from "lucide-react-native";
+import { Pressable, Text, View } from "react-native";
 
 interface PinDotsProps {
   length: number;

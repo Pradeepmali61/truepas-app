@@ -1,6 +1,7 @@
-import { Pressable, Text, View, type StyleProp, type ViewStyle } from "react-native";
-import { ChevronRight } from "lucide-react-native";
+/** @jsxImportSource react */
 import { makeStyles, useThemeTokens } from "@/theme";
+import { ChevronRight } from "lucide-react-native";
+import { Pressable, Text, View, type StyleProp, type ViewStyle } from "react-native";
 import { AppIcon, type IconName } from "./AppIcon";
 
 interface ListItemProps {

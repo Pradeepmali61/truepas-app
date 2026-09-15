@@ -1,16 +1,18 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Pressable, Switch, Text, View } from 'react-native';
+import { Pressable, Switch, Text, View } from 'react-native';
 
+import { Modal } from '@/components/composite';
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
 import { ScreenHeader } from '@/components/layout/ScreenHeader';
-import { Card, Icon, ListItem, SectionTitle } from '@/components/ui';
+import { Card, CoreButton, Icon, ListItem, SectionTitle, Typography } from '@/components/ui';
 import { Colors } from '@/constants/theme';
 
 export default function SettingsScreen() {
   const router = useRouter();
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [biometricEnabled, setBiometricEnabled] = useState(true);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   return (
     <ScreenContainer>
@@ -64,16 +66,7 @@ export default function SettingsScreen() {
       <SectionTitle>Danger Zone</SectionTitle>
       <Card>
         <Pressable
-          onPress={() => {
-            Alert.alert(
-              'Delete Account?',
-              'This action is permanent and cannot be undone. All your data will be deleted.',
-              [
-                { text: 'Cancel', style: 'cancel' },
-                { text: 'Delete', style: 'destructive', onPress: () => router.push('/account/delete' as never) },
-              ],
-            );
-          }}
+          onPress={() => setConfirmDelete(true)}
           accessibilityRole="button"
           accessibilityLabel="Delete account"
           style={{
@@ -86,6 +79,30 @@ export default function SettingsScreen() {
           <Text style={{ fontSize: 16, fontWeight: '500', color: '#EF4444' }}>Delete Account</Text>
         </Pressable>
       </Card>
+
+      <Modal
+        visible={confirmDelete}
+        onClose={() => setConfirmDelete(false)}
+        title="Delete Account?"
+        footer={
+          <>
+            <CoreButton variant="ghost" onPress={() => setConfirmDelete(false)}>
+              Cancel
+            </CoreButton>
+            <CoreButton
+              variant="destructive"
+              onPress={() => {
+                setConfirmDelete(false);
+                router.push('/account/delete' as never);
+              }}>
+              Delete
+            </CoreButton>
+          </>
+        }>
+        <Typography variant="body" color="secondary">
+          This action is permanent and cannot be undone. All your data will be deleted.
+        </Typography>
+      </Modal>
 
       <View style={{ height: 24 }} />
     </ScreenContainer>

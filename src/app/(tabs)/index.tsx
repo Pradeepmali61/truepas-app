@@ -1,9 +1,19 @@
 import { useRouter } from 'expo-router';
-import { Bell, FileText, ScanFace, ShieldCheck, User } from 'lucide-react-native';
+import { CircleCheck, FileText, ScanFace, ShieldCheck, TriangleAlert, User } from 'lucide-react-native';
 import type { ReactNode } from 'react';
 import { RefreshControl, ScrollView, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { AppChrome } from '@/components/app/AppChrome';
+import { ActivityFeed } from '@/components/complex/ActivityFeed';
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardFooter,
+    CardHeader,
+    CardTitle
+} from '@/components/composite';
 import {
     Badge,
     CoreButton,
@@ -12,12 +22,13 @@ import {
     Divider,
     EmptyState,
     ErrorState,
-    IconButton,
     LoadingState,
     Typography,
     type BadgeVariant
 } from '@/components/ui';
+import { useDocuments } from '@/features/documents/hooks';
 import { useIdentitySummary } from '@/features/identity/hooks';
+import { useAppSelector } from '@/store';
 import { makeStyles, useThemeTokens, type Theme } from '@/theme';
 import { iconSize } from '@/theme/tokens';
 import type { ActivityItem, VerificationStatus } from '@/types/domain';
@@ -51,22 +62,15 @@ function stepColors(t: Theme, status: VerificationStatus): { bg: string; fg: str
     }
 }
 
-function ActivityRow({ item }: { item: ActivityItem }) {
-    const t = useThemeTokens();
-    const styles = useStyles();
-    const dot =
-        item.tone === 'success' ? t.colors.success : item.tone === 'warning' ? t.colors.warning : t.colors.error;
-    return (
-        <View style={styles.activityRow}>
-            <View style={[styles.activityDot, { backgroundColor: dot }]} />
-            <View style={styles.activityText}>
-                <Typography variant="body-sm">{item.title}</Typography>
-                <Typography variant="caption" color="muted">
-                    {item.timestamp}
-                </Typography>
-            </View>
-        </View>
-    );
+function activityIcon(t: Theme, tone: ActivityItem['tone']): ReactNode {
+    switch (tone) {
+        case 'success':
+            return <CircleCheck size={iconSize.sm} color={t.colors.onSuccessSubtle} />;
+        case 'warning':
+            return <FileText size={iconSize.sm} color={t.colors.onWarningSubtle} />;
+        default:
+            return <TriangleAlert size={iconSize.sm} color={t.colors.onErrorSubtle} />;
+    }
 }
 
 /** Home tab — identity dashboard (GET /cb/identity/summary). */
@@ -76,10 +80,19 @@ export default function HomeScreen() {
     const t = useThemeTokens();
     const styles = useStyles();
     const { data: summary, isPending, isError, isRefetching, refetch } = useIdentitySummary();
+    const { data: documents } = useDocuments();
+    const faceEnrolled = useAppSelector((state) => state.auth.user?.faceEnrolled);
 
     const isVerified = summary?.status === 'verified';
-    const showCta = !!summary && !isVerified;
-    const ctaBottom = TAB_BAR_HEIGHT + insets.bottom + t.spacing[2];
+    const scrollBottom = TAB_BAR_HEIGHT + insets.bottom + t.spacing[4];
+
+    const docCount = documents?.length ?? 0;
+    const verifiedDocs = (documents ?? []).filter((d) => d.status === 'verified').map((d) => d.label);
+    const walletSummary = `${docCount} document${docCount === 1 ? '' : 's'} · ${faceEnrolled ? 'face enrolled' : 'face not enrolled'}`;
+    const walletDetail =
+        verifiedDocs.length === 0
+            ? 'No documents verified yet.'
+            : `${verifiedDocs.slice(0, 2).join(' and ')}${verifiedDocs.length > 2 ? ` and ${verifiedDocs.length - 2} more` : ''} verified.`;
 
     const headline = isVerified ? "You're verified" : 'Almost there';
     const subheadline = isVerified
@@ -90,29 +103,25 @@ export default function HomeScreen() {
     const headerTone = stepColors(t, isVerified ? 'verified' : 'pending');
 
     return (
-        <SafeAreaView edges={['top']} style={styles.screen}>
+        <View style={styles.screen}>
+            <SafeAreaView edges={['top']} style={styles.chromeWrap}>
+                <AppChrome />
+            </SafeAreaView>
             <ScrollView
                 style={styles.flex}
                 contentContainerStyle={[
                     styles.scroll,
-                    { paddingBottom: ctaBottom + (showCta ? t.sizes.heightLg : 0) + t.spacing[4] },
+                    { paddingBottom: scrollBottom },
                 ]}
                 showsVerticalScrollIndicator={false}
                 refreshControl={
                     <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={t.colors.actionPrimary} />
                 }>
                 <View style={styles.header}>
-                    <View style={styles.flex}>
-                        <Typography variant="h3">Your identity</Typography>
-                        <Typography variant="body-sm" color="secondary">
-                            Verification status
-                        </Typography>
-                    </View>
-                    <IconButton
-                        accessibilityLabel="Notifications"
-                        icon={<Bell size={iconSize.md} color={t.colors.textPrimary} />}
-                        onPress={() => router.push('/notification' as never)}
-                    />
+                    <Typography variant="h3">Your identity</Typography>
+                    <Typography variant="body-sm" color="secondary">
+                        Verification status
+                    </Typography>
                 </View>
 
                 {isPending ? (
@@ -170,51 +179,63 @@ export default function HomeScreen() {
                             })}
                         </CoreCard>
 
+                        <Card appearance="outlined" style={styles.card}>
+                            <CardHeader>
+                                <CardTitle>Identity wallet</CardTitle>
+                                <CardDescription>{walletSummary}</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <Typography variant="body-sm" color="secondary">
+                                    {walletDetail}
+                                </Typography>
+                            </CardContent>
+                            <CardFooter>
+                                <CoreButton size="sm" onPress={() => router.push('/documents' as never)}>
+                                    Manage
+                                </CoreButton>
+                                <CoreButton
+                                    size="sm"
+                                    variant="ghost"
+                                    onPress={() => router.push('/document/select-type' as never)}>
+                                    Add document
+                                </CoreButton>
+                            </CardFooter>
+                        </Card>
+
                         <CoreCard style={[styles.cardPad, styles.card]}>
                             <Typography variant="h4">Recent activity</Typography>
-                            {summary.activity.length === 0 ? (
-                                <EmptyState
-                                    compact
-                                    title="No activity yet"
-                                    description="Verification events will appear here."
-                                />
-                            ) : (
-                                <View style={styles.activityList}>
-                                    {summary.activity.map((item) => (
-                                        <ActivityRow key={item.id} item={item} />
-                                    ))}
-                                </View>
-                            )}
+                            <ActivityFeed
+                                style={styles.feed}
+                                events={summary.activity.map((item) => ({
+                                    key: item.id,
+                                    icon: activityIcon(t, item.tone),
+                                    title: item.title,
+                                    timestamp: item.timestamp,
+                                }))}
+                                emptyState={
+                                    <EmptyState
+                                        compact
+                                        title="No activity yet"
+                                        description="Verification events will appear here."
+                                    />
+                                }
+                            />
                         </CoreCard>
                     </>
                 )}
             </ScrollView>
-
-            {showCta ? (
-                <View style={[styles.cta, { bottom: ctaBottom }]}>
-                    <CoreButton
-                        variant="primary"
-                        size="lg"
-                        fullWidth
-                        onPress={() => router.push('/document/select-type' as never)}>
-                        Add a document
-                    </CoreButton>
-                </View>
-            ) : null}
-        </SafeAreaView>
+        </View>
     );
 }
 
 const useStyles = makeStyles((t) => ({
     screen: { flex: 1, backgroundColor: t.colors.background },
+    chromeWrap: { backgroundColor: t.colors.surface },
     flex: { flex: 1 },
     scroll: { paddingHorizontal: t.spacing[5], paddingTop: t.spacing[2] },
     header: {
         marginTop: t.spacing[2],
         marginBottom: t.spacing[4],
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: t.spacing[2],
     },
     card: { marginBottom: t.spacing[4] },
     cardPad: { padding: t.spacing[4] },
@@ -242,10 +263,6 @@ const useStyles = makeStyles((t) => ({
         justifyContent: 'center',
     },
     stepLabel: { flex: 1, minWidth: 0 },
-    activityList: { marginTop: t.spacing[3], gap: t.spacing[2] },
-    activityRow: { flexDirection: 'row', alignItems: 'flex-start', gap: t.spacing[3] },
-    activityDot: { width: 8, height: 8, borderRadius: t.radii.full, marginTop: 6 },
-    activityText: { flex: 1, minWidth: 0, gap: 2 },
-    cta: { position: 'absolute', left: t.spacing[5], right: t.spacing[5] },
+    feed: { marginTop: t.spacing[3] },
 }));
 

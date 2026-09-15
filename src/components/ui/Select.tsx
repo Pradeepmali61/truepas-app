@@ -1,14 +1,15 @@
+/** @jsxImportSource react */
+import { Check, ChevronDown } from "lucide-react-native";
 import { useState, type ReactNode } from "react";
 import {
-  FlatList,
-  Modal,
-  Pressable,
-  Text,
-  View,
-  type StyleProp,
-  type ViewStyle,
+    FlatList,
+    Modal,
+    Pressable,
+    Text,
+    View,
+    type StyleProp,
+    type ViewStyle,
 } from "react-native";
-import { Check, ChevronDown } from "lucide-react-native";
 import { makeStyles, useThemeTokens } from "../../theme";
 import { iconSize } from "../../theme/tokens";
 

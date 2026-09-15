@@ -1,10 +1,11 @@
+/** @jsxImportSource react */
+import { CreditCard, LogOut, Settings, User } from "lucide-react-native";
 import { useState } from "react";
 import { Pressable } from "react-native";
-import { CreditCard, LogOut, Settings, User } from "lucide-react-native";
 import { makeStyles, useThemeTokens } from "../../theme";
 import { iconSize } from "../../theme/tokens";
-import { Avatar } from "../ui/Avatar";
 import { ActionSheet, type ActionItem } from "../composite/ActionSheet";
+import { Avatar } from "../ui/Avatar";
 
 export interface UserMenuProps {
   name: string;

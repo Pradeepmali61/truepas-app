@@ -24,8 +24,12 @@ export function useDocuments(personId?: string) {
   });
 }
 
-export function useDocument(id: string) {
-  return useQuery({ queryKey: documentKeys.detail(id), queryFn: () => api.getDocument(id) });
+export function useDocument(id?: string) {
+  return useQuery({
+    queryKey: documentKeys.detail(id ?? ''),
+    queryFn: () => api.getDocument(id!),
+    enabled: !!id,
+  });
 }
 
 export function useIssuedDocuments() {

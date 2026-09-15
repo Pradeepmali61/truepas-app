@@ -1,6 +1,7 @@
+/** @jsxImportSource react */
+import { File, FileWarning, UploadCloud, X } from "lucide-react-native";
 import type { ReactNode } from "react";
 import { Pressable, Text, View, type StyleProp, type ViewStyle } from "react-native";
-import { File, FileWarning, UploadCloud, X } from "lucide-react-native";
 import { makeStyles, useThemeTokens } from "../../theme";
 import { iconSize } from "../../theme/tokens";
 import { IconButton } from "../ui/IconButton";

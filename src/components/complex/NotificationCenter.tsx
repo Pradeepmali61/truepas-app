@@ -1,14 +1,15 @@
+/** @jsxImportSource react */
+import { Bell, CheckCheck } from "lucide-react-native";
 import { useState, type ReactNode } from "react";
 import { FlatList, Pressable, Text, View } from "react-native";
-import { Bell, CheckCheck } from "lucide-react-native";
 import { makeStyles, useThemeTokens } from "../../theme";
 import { iconSize } from "../../theme/tokens";
+import { BottomSheet } from "../composite/BottomSheet";
+import { EmptyState } from "../composite/states";
 import { Avatar } from "../ui/Avatar";
 import { Badge } from "../ui/Badge";
 import { IconButton } from "../ui/IconButton";
 import { Skeleton } from "../ui/Skeleton";
-import { BottomSheet } from "../composite/BottomSheet";
-import { EmptyState } from "../composite/states";
 
 export interface AppNotification {
   key: string;

@@ -1,21 +1,22 @@
+/** @jsxImportSource react */
+import { ScreenHeader } from "@/components/composite/ScreenHeader";
+import { Select } from "@/components/ui/Select";
+import { Switch } from "@/components/ui/Switch";
+import { Typography } from "@/components/ui/Typography";
+import { makeStyles, useTheme, useThemeTokens, type DeepPartial, type Theme } from "@/theme";
+import { BRAND_PRESETS, type BrandPreset } from "@/theme/palette";
+import { iconSize } from "@/theme/tokens";
+import { ScanFace } from "lucide-react-native";
 import { useState } from "react";
 import { Pressable, ScrollView, StatusBar, View } from "react-native";
-import { ScanFace } from "lucide-react-native";
-import { makeStyles, useTheme, useThemeTokens, type DeepPartial, type Theme } from "@/theme";
-import { Typography } from "@/components/ui/Typography";
-import { Switch } from "@/components/ui/Switch";
-import { Select } from "@/components/ui/Select";
-import { ScreenHeader } from "@/components/composite/ScreenHeader";
-import { iconSize } from "@/theme/tokens";
-import { BRAND_PRESETS, type BrandPreset } from "@/theme/palette";
 
-import { FoundationsSection } from "./sections/FoundationsSection";
-import { ControlsSection } from "./sections/ControlsSection";
-import { FieldsSection } from "./sections/FieldsSection";
-import { FeedbackSection } from "./sections/FeedbackSection";
-import { OverlaysSection } from "./sections/OverlaysSection";
-import { DataSection } from "./sections/DataSection";
 import { ChromeSection } from "./sections/ChromeSection";
+import { ControlsSection } from "./sections/ControlsSection";
+import { DataSection } from "./sections/DataSection";
+import { FeedbackSection } from "./sections/FeedbackSection";
+import { FieldsSection } from "./sections/FieldsSection";
+import { FoundationsSection } from "./sections/FoundationsSection";
+import { OverlaysSection } from "./sections/OverlaysSection";
 import { ScreensSection } from "./sections/ScreensSection";
 
 const SECTIONS = [

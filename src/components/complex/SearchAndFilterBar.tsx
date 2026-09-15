@@ -1,11 +1,11 @@
-import { useState } from "react";
-import { ScrollView, Text, View, type StyleProp, type ViewStyle } from "react-native";
-import { Pressable } from "react-native";
+/** @jsxImportSource react */
 import { Check, X } from "lucide-react-native";
+import { useState } from "react";
+import { Pressable, ScrollView, Text, View, type StyleProp, type ViewStyle } from "react-native";
 import { makeStyles, useThemeTokens } from "../../theme";
 import { iconSize } from "../../theme/tokens";
-import { SearchBox } from "../composite/SearchBox";
 import { BottomSheet } from "../composite/BottomSheet";
+import { SearchBox } from "../composite/SearchBox";
 import { Badge } from "../ui/Badge";
 
 export interface FilterOption {

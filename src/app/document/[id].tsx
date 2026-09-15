@@ -1,18 +1,17 @@
-import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Animated, Image, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Baby, BookUser, Car, Contact, FileText, Globe, Landmark } from 'lucide-react-native';
+import { useEffect, useState, type ComponentType } from 'react';
+import { Image, Alert as RNAlert, ScrollView, View } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { api } from '@/api';
-import { AppBackground } from '@/components/layout/AppBackground';
-import { ScreenContainer } from '@/components/layout/ScreenContainer';
-import { ScreenHeader } from '@/components/layout/ScreenHeader';
-import { Icon, Skeleton } from '@/components/ui';
-import { Colors } from '@/constants/theme';
+import { Accordion, Alert, Card, CardContent, ErrorState, Modal, ScreenHeader } from '@/components/composite';
+import { Badge, CoreButton, Divider, RowIcon, Skeleton, Typography, type BadgeVariant } from '@/components/ui';
 import { useDocument, useRemoveDocument } from '@/features/documents/hooks';
 import { getDocumentImageUri } from '@/services/documentImageStore';
+import { useThemeTokens } from '@/theme';
+import { iconSize } from '@/theme/tokens';
 import type { IdentityDocument, IssuedDoc } from '@/types/domain';
-import { fontScale, scale } from '@/utils/responsive';
 
 type CombinedDoc = IssuedDoc | IdentityDocument;
 
@@ -20,510 +19,304 @@ function isIdentityDocument(doc: CombinedDoc): doc is IdentityDocument {
   return 'label' in doc;
 }
 
-function getIcon(doc: CombinedDoc): string {
-  return isIdentityDocument(doc) ? doc.type : doc.icon;
+const DOC_ICONS: Record<string, ComponentType<{ size?: number; color?: string }>> = {
+  passport: BookUser,
+  drivingLicense: Car,
+  idCard: Contact,
+  greenCard: Landmark,
+  usVisa: Globe,
+  birthCertificate: Baby,
+};
+
+function docIcon(doc: CombinedDoc, color: string) {
+  const type = isIdentityDocument(doc) ? doc.type : doc.icon;
+  const IconCmp = DOC_ICONS[type] ?? FileText;
+  return <RowIcon tone="primary" icon={<IconCmp size={iconSize.lg} color={color} />} />;
 }
 
-function getTitle(doc: CombinedDoc): string {
-  return isIdentityDocument(doc) ? doc.label : doc.name;
-}
-
-function formatDate(dateStr: string): string {
+function formatDate(dateStr: string | null | undefined): string {
+  if (!dateStr) return '—';
   const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return dateStr;
-  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  return Number.isNaN(d.getTime())
+    ? dateStr
+    : d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-/** Document detail — flip card design (ref: facepe-user-frontend verify.tsx).
- *  Front face: gradient header + status badge + doc icon + details grid.
- *  Back face: the captured document scan image.
- *  Flip button toggles between "View Scan" and "View Info". */
-export default function DocumentDetailScreen() {
-  const router = useRouter();
-  const { id } = useLocalSearchParams<{ id: string }>();
-  const { data: identityDoc, isPending } = useDocument(id ?? '');
-  const removeDocument = useRemoveDocument();
-  const [issuedDoc, setIssuedDoc] = useState<IssuedDoc | null>(null);
-  const [frontImageUri, setFrontImageUri] = useState<string | null>(null);
-  const [selfieImageUri, setSelfieImageUri] = useState<string | null>(null);
-  const [isFlipped, setIsFlipped] = useState(false);
-  const flipAnim = useRef(new Animated.Value(0)).current;
-
-  const handleRemove = () => {
-    if (!id) return;
-    Alert.alert(
-      'Remove Document',
-      'Are you sure you want to remove this document? This action cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Remove',
-          style: 'destructive',
-          onPress: () => {
-            removeDocument.mutate(id as string, {
-              onSuccess: () => router.back(),
-              onError: (err: any) => {
-                Alert.alert(
-                  'Remove Failed',
-                  err?.response?.data?.message ?? err?.message ?? 'Could not remove the document. Please try again.',
-                );
-              },
-            });
-          },
-        },
-      ],
-    );
-  };
-
-  useEffect(() => {
-    if (id) {
-      api.getIssuedDocuments().then((docs) => {
-        setIssuedDoc(docs.find((d) => d.id === id) ?? null);
-      });
-      // Load locally persisted captured images
-      getDocumentImageUri(id, 'front').then(setFrontImageUri).catch(() => setFrontImageUri(null));
-      getDocumentImageUri(id, 'selfie').then(setSelfieImageUri).catch(() => setSelfieImageUri(null));
-    }
-  }, [id]);
-
-  const toggleFlip = () => {
-    Animated.spring(flipAnim, {
-      toValue: isFlipped ? 0 : 1,
-      useNativeDriver: true,
-      friction: 8,
-      tension: 10,
-    }).start();
-    setIsFlipped(!isFlipped);
-  };
-
-  if (!issuedDoc && isPending) {
-    return (
-      <ScreenContainer scroll={false}>
-        <ScreenHeader title="Document" />
-        <View className="gap-3 px-5 pt-5">
-          <Skeleton height={260} radius={24} />
-        </View>
-      </ScreenContainer>
-    );
-  }
-
-  const doc: CombinedDoc | null | undefined = issuedDoc ?? identityDoc;
-  if (!doc) {
-    return (
-      <ScreenContainer scroll={false}>
-        <ScreenHeader title="Document" />
-        <View className="flex-1 items-center justify-center px-6">
-          <Text className="text-[14px] text-muted">Document not found.</Text>
-        </View>
-      </ScreenContainer>
-    );
-  }
-
-  const iconName = getIcon(doc);
-  const title = getTitle(doc);
-  const status = isIdentityDocument(doc) ? doc.status : doc.status;
-  const isVerified = status === 'verified' || status === 'Active';
-  const statusLabel = isVerified ? 'VERIFIED' : 'FAILED';
-  const statusColor = isVerified ? '#34D399' : '#F87171';
-  const docType = isIdentityDocument(doc) ? doc.type : doc.icon;
-  const isLicense = docType.toLowerCase().includes('license');
-
+function KV({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
+  const theme = useThemeTokens();
   return (
-    <ScreenContainer>
-      {Platform.OS === 'web' ? (
-        <View style={[StyleSheet.absoluteFill, { backgroundImage: 'linear-gradient(180deg, #F8FBFF, #EAF4FF)' } as any]} />
-      ) : (
-        <LinearGradient
-          colors={['#F8FBFF', '#EAF4FF']}
-          style={StyleSheet.absoluteFill}
-        />
-      )}
-      <AppBackground />
-      <ScreenHeader title={title} />
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 24, paddingTop: 12 }}>
-
-        {/* Flip card */}
-        <View style={styles.cardWrapper}>
-          {/* Front face — document info */}
-          <Animated.View
-            style={[
-              styles.docInfoCard,
-              {
-                transform: [
-                  { perspective: 1000 },
-                  {
-                    rotateY: flipAnim.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: ['0deg', '180deg'],
-                    }),
-                  },
-                ],
-                backfaceVisibility: 'hidden',
-                zIndex: isFlipped ? 0 : 1,
-              },
-            ]}>
-            <LinearGradient
-              colors={['#08B6FC', '#034965']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.docCardHeader}>
-              <Text style={styles.cardTitle}>{title}</Text>
-              <View style={styles.statusBadge}>
-                <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
-                <Text style={styles.statusText}>{statusLabel}</Text>
-              </View>
-            </LinearGradient>
-
-            <View style={styles.docMainInfo}>
-              {/* Portrait — from backend (portraitImageUrl, extracted by server-side Regula)
-               *  → selfie fallback → icon placeholder */}
-              <View style={styles.docAvatarContainer}>
-                {isIdentityDocument(doc) && doc.portraitImageUrl ? (
-                  <Image
-                    source={{ uri: doc.portraitImageUrl }}
-                    style={styles.docAvatar}
-                    resizeMode="cover"
-                  />
-                ) : selfieImageUri ? (
-                  <Image
-                    source={{ uri: selfieImageUri }}
-                    style={styles.docAvatar}
-                    resizeMode="cover"
-                  />
-                ) : (
-                  <View style={styles.docAvatarPlaceholder}>
-                    {iconName === 'drivingLicense' ? (
-                      <Image source={require('@/assets/images/car-3d-3.png')} style={{ width: 44, height: 44 }} resizeMode="contain" />
-                    ) : iconName === 'passport' ? (
-                      <Image source={require('@/assets/images/passport-3d.png')} style={{ width: 44, height: 44 }} resizeMode="contain" />
-                    ) : iconName === 'greenCard' ? (
-                      <Image source={require('@/assets/images/statue-of-liberty-3d.png')} style={{ width: 44, height: 44 }} resizeMode="contain" />
-                    ) : iconName === 'usVisa' ? (
-                      <Image source={require('@/assets/images/usa-flag-3d.png')} style={{ width: 44, height: 44 }} resizeMode="contain" />
-                    ) : iconName === 'birthCertificate' ? (
-                      <Image source={require('@/assets/images/baby-3d.png')} style={{ width: 48, height: 48 }} resizeMode="contain" />
-                    ) : (
-                      <Icon name={iconName as any} size={36} color="#A0A0A0" />
-                    )}
-                  </View>
-                )}
-              </View>
-
-              {/* Details grid — all key fields always visible; '—' when missing.
-                  Exception: DL expiry stays hidden when null (backend doesn't map it). */}
-              <View style={styles.docDetailsGrid}>
-                {isIdentityDocument(doc) ? (
-                  <>
-                    <View style={styles.docDetailItem}>
-                      <Text style={styles.docDetailLabel}>FULL NAME</Text>
-                      <Text style={styles.docDetailValue} numberOfLines={2}>{doc.extractedName || '—'}</Text>
-                    </View>
-                    <View style={styles.docDetailItem}>
-                      <Text style={styles.docDetailLabel}>DOCUMENT NO</Text>
-                      <Text style={styles.docDetailValue} numberOfLines={1}>{doc.number || '—'}</Text>
-                    </View>
-                    <View style={styles.docDetailItem}>
-                      <Text style={styles.docDetailLabel}>DATE OF BIRTH</Text>
-                      <Text style={styles.docDetailValue}>{doc.extractedDob ? formatDate(doc.extractedDob) : '—'}</Text>
-                    </View>
-                    {isLicense ? (
-                      doc.expiresAt ? (
-                        <View style={styles.docDetailItem}>
-                          <Text style={styles.docDetailLabel}>EXPIRES</Text>
-                          <Text style={styles.docDetailValue}>{formatDate(doc.expiresAt)}</Text>
-                        </View>
-                      ) : null
-                    ) : (
-                      <View style={styles.docDetailItem}>
-                        <Text style={styles.docDetailLabel}>EXPIRES</Text>
-                        <Text style={styles.docDetailValue}>{doc.expiresAt ? formatDate(doc.expiresAt) : '—'}</Text>
-                      </View>
-                    )}
-                    <View style={styles.docDetailItem}>
-                      <Text style={styles.docDetailLabel}>
-                        {isLicense ? 'STATE' : 'NATIONALITY'}
-                      </Text>
-                      <Text style={styles.docDetailValue} numberOfLines={1}>
-                        {isLicense ? (doc.issuingState || '—') : (doc.nationality || '—')}
-                      </Text>
-                    </View>
-                    <View style={styles.docDetailItem}>
-                      <Text style={styles.docDetailLabel}>STATUS</Text>
-                      <Text style={[styles.docDetailValue, { color: isVerified ? '#059669' : '#EF4444' }]}>
-                        {isVerified ? 'Verified' : 'Failed'}
-                      </Text>
-                    </View>
-                    <View style={styles.docDetailItem}>
-                      <Text style={styles.docDetailLabel}>ADDED</Text>
-                      <Text style={styles.docDetailValue}>{formatDate(doc.addedAt)}</Text>
-                    </View>
-                  </>
-                ) : (
-                  <>
-                    <View style={styles.docDetailItem}>
-                      <Text style={styles.docDetailLabel}>DOCUMENT NO</Text>
-                      <Text style={styles.docDetailValue} numberOfLines={1}>{doc.number}</Text>
-                    </View>
-                    <View style={styles.docDetailItem}>
-                      <Text style={styles.docDetailLabel}>ISSUED BY</Text>
-                      <Text style={styles.docDetailValue} numberOfLines={1}>{doc.issuer}</Text>
-                    </View>
-                    <View style={styles.docDetailItem}>
-                      <Text style={styles.docDetailLabel}>ISSUED ON</Text>
-                      <Text style={styles.docDetailValue}>{formatDate(doc.issuedAt)}</Text>
-                    </View>
-                    <View style={styles.docDetailItem}>
-                      <Text style={styles.docDetailLabel}>TYPE</Text>
-                      <Text style={styles.docDetailValue} numberOfLines={1}>{doc.name}</Text>
-                    </View>
-                  </>
-                )}
-              </View>
-            </View>
-          </Animated.View>
-
-          {/* Back face — captured document scan */}
-          <Animated.View
-            style={[
-              styles.docInfoCard,
-              styles.docCardBackFace,
-              {
-                transform: [
-                  { perspective: 1000 },
-                  {
-                    rotateY: flipAnim.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: ['180deg', '360deg'],
-                    }),
-                  },
-                ],
-                backfaceVisibility: 'hidden',
-                zIndex: isFlipped ? 1 : 0,
-              },
-            ]}>
-            <LinearGradient
-              colors={['#08B6FC', '#034965']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.docCardHeader}>
-              <Text style={styles.cardTitle}>DOCUMENT SCAN</Text>
-            </LinearGradient>
-            <View style={styles.docImageContainer}>
-              {frontImageUri ? (
-                <Image
-                  source={{ uri: frontImageUri }}
-                  style={styles.docFullImage}
-                  resizeMode="contain"
-                />
-              ) : (
-                <View style={styles.docAvatarPlaceholder}>
-                  <Icon name="documents" size={44} color="#A0A0A0" />
-                  <Text style={{ marginTop: 10, color: '#A0A0A0', fontSize: 12 }}>
-                    Original scan not available
-                  </Text>
-                </View>
-              )}
-            </View>
-          </Animated.View>
-        </View>
-
-        {/* Actions row — flip + remove side by side */}
-        <View style={styles.actionsRow}>
-          <Pressable
-            onPress={toggleFlip}
-            accessibilityRole="button"
-            accessibilityLabel={isFlipped ? 'View document info' : 'View document scan'}
-            style={styles.flipActionBtn}>
-            <Icon name={isFlipped ? 'documents' : 'camera'} size={16} color="#FFFFFF" />
-            <Text style={styles.flipActionText}>
-              {isFlipped ? 'View Info' : 'View Scan'}
-            </Text>
-          </Pressable>
-
-          {/* Remove document — subtle light-red pill, only for user-scanned IdentityDocuments */}
-          {isIdentityDocument(doc) && (
-            <Pressable
-              onPress={handleRemove}
-              disabled={removeDocument.isPending}
-              accessibilityRole="button"
-              accessibilityLabel="Remove document"
-              style={styles.removeActionBtn}>
-              {removeDocument.isPending ? (
-                <ActivityIndicator size="small" color={Colors.error} />
-              ) : (
-                <Icon name="trash" size={16} color={Colors.error} />
-              )}
-              <Text style={styles.removeActionText}>Remove</Text>
-            </Pressable>
-          )}
-        </View>
-      </ScrollView>
-    </ScreenContainer>
+    <View style={{ flex: 1, gap: 2, minWidth: 0 }}>
+      <Typography variant="caption" color="muted" style={{ textTransform: 'uppercase', letterSpacing: 0.5 }}>
+        {label}
+      </Typography>
+      <Typography
+        variant="body"
+        numberOfLines={2}
+        style={mono ? { fontFamily: theme.fontFamily.mono.semibold } : undefined}>
+        {value}
+      </Typography>
+    </View>
   );
 }
 
-const styles = StyleSheet.create({
-  cardWrapper: {
-    width: '100%',
-    height: scale(280, 240, 320),
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  docInfoCard: {
-    position: 'absolute',
-    width: '100%',
-    height: '100%',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15,
-    shadowRadius: 20,
-    elevation: 4,
-  },
-  docCardBackFace: {
-    backgroundColor: '#F9FAFB',
-  },
-  docCardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: scale(20),
-    paddingVertical: scale(16),
-  },
-  cardTitle: {
-    fontSize: fontScale(14),
-    fontWeight: '800',
-    color: '#FFFFFF',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    flex: 1,
-  },
-  statusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    paddingHorizontal: scale(10),
-    paddingVertical: scale(4),
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.4)',
-    minWidth: scale(80, 72),
-    flexShrink: 0,
-    marginLeft: 8,
-  },
-  statusDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    marginRight: 6,
-  },
-  statusText: {
-    fontSize: fontScale(10),
-    fontWeight: '700',
-    color: '#FFFFFF',
-    letterSpacing: 0.5,
-  },
-  docMainInfo: {
-    padding: scale(20),
-    flexDirection: 'row',
-  },
-  docAvatarContainer: {
-    width: scale(96, 84, 104),
-    height: scale(96, 84, 104),
-    borderRadius: 12,
-    overflow: 'hidden',
-    backgroundColor: '#F3F4F6',
-    marginRight: scale(16, 12),
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  docAvatar: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 12,
-  },
-  docAvatarPlaceholder: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  docImageContainer: {
-    flex: 1,
-    padding: scale(12),
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  docFullImage: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 8,
-  },
-  docDetailsGrid: {
-    flex: 1,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
-  docDetailItem: {
-    width: '50%',
-    marginBottom: scale(14, 12),
-  },
-  docDetailLabel: {
-    fontSize: fontScale(9, 8),
-    fontWeight: '700',
-    color: '#9CA3AF',
-    marginBottom: 2,
-    letterSpacing: 0.5,
-  },
-  docDetailValue: {
-    fontSize: fontScale(13),
-    fontWeight: '700',
-    color: '#111827',
-    lineHeight: fontScale(18),
-  },
-  actionsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexWrap: 'wrap',
-    gap: scale(12),
-    marginTop: scale(20, 16),
-  },
-  flipActionBtn: {
-    flexDirection: 'row',
-    backgroundColor: '#08B6FC',
-    paddingVertical: scale(12, 10),
-    paddingHorizontal: scale(20, 16),
-    borderRadius: 30,
-    alignItems: 'center',
-    gap: 8,
-    shadowColor: '#08B6FC',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  removeActionBtn: {
-    flexDirection: 'row',
-    backgroundColor: '#FEF2F2',
-    paddingVertical: scale(12, 10),
-    paddingHorizontal: scale(20, 16),
-    borderRadius: 30,
-    alignItems: 'center',
-    gap: 8,
-    borderWidth: 1,
-    borderColor: '#FECACA',
-  },
-  removeActionText: {
-    color: Colors.error,
-    fontSize: fontScale(14),
-    fontWeight: '600',
-  },
-  flipActionText: {
-    color: '#FFFFFF',
-    fontSize: fontScale(14),
-    fontWeight: '600',
-  },
-});
+const STATUS: Record<string, { variant: BadgeVariant; label: string }> = {
+  verified: { variant: 'success', label: 'Verified' },
+  pending: { variant: 'warning', label: 'Pending' },
+  failed: { variant: 'error', label: 'Failed' },
+  missing: { variant: 'neutral', label: 'Missing' },
+  Active: { variant: 'success', label: 'Active' },
+  Expired: { variant: 'neutral', label: 'Expired' },
+};
+
+/** Document detail — GET /cb/documents/{id} (or issued doc). Native card +
+ *  extracted-data accordion; document numbers render masked only. */
+export default function DocumentDetailScreen() {
+  const theme = useThemeTokens();
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const { data: identityDoc, isPending, isError, refetch } = useDocument(id);
+  const removeDocument = useRemoveDocument();
+  const [issuedDoc, setIssuedDoc] = useState<IssuedDoc | null>(null);
+  const [issuedLoaded, setIssuedLoaded] = useState(false);
+  const [frontImageUri, setFrontImageUri] = useState<string | null>(null);
+  const [confirmRemove, setConfirmRemove] = useState(false);
+
+  useEffect(() => {
+    if (!id) return;
+    api.getIssuedDocuments()
+      .then((docs) => setIssuedDoc(docs.find((d) => d.id === id) ?? null))
+      .finally(() => setIssuedLoaded(true));
+    getDocumentImageUri(id, 'front').then(setFrontImageUri).catch(() => setFrontImageUri(null));
+  }, [id]);
+
+  const handleRemove = () => {
+    if (!id) return;
+    setConfirmRemove(true);
+  };
+
+  const confirmRemoveDoc = () => {
+    if (!id) return;
+    removeDocument.mutate(id, {
+      onSuccess: () => router.back(),
+      onError: (err: any) => {
+        RNAlert.alert(
+          'Remove Failed',
+          err?.response?.data?.message ?? err?.message ?? 'Could not remove the document. Please try again.',
+        );
+      },
+    });
+  };
+
+  const doc: CombinedDoc | null | undefined = issuedDoc ?? identityDoc;
+  const loading = isPending || !issuedLoaded;
+
+  if (loading) {
+    return (
+      <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: theme.colors.background }}>
+        <ScreenHeader title="Document" onBack={() => router.back()} />
+        <View style={{ padding: theme.spacing[4], gap: theme.spacing[4] }}>
+          <Skeleton height={88} radius={theme.radii.xl} />
+          <Skeleton height={160} radius={theme.radii.xl} />
+          <Skeleton height={56} radius={theme.radii.xl} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!doc) {
+    return (
+      <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: theme.colors.background }}>
+        <ScreenHeader title="Document" onBack={() => router.back()} />
+        <ErrorState
+          title={isError ? "Couldn't load document" : 'Document not found'}
+          description={isError ? 'Please check your connection and try again.' : 'It may have been removed.'}
+          onRetry={isError ? refetch : undefined}
+        />
+      </SafeAreaView>
+    );
+  }
+
+  const title = isIdentityDocument(doc) ? doc.label : doc.name;
+  const type = isIdentityDocument(doc) ? doc.type : doc.icon;
+  const status = STATUS[doc.status] ?? { variant: 'neutral' as const, label: doc.status };
+  const failed = doc.status === 'failed';
+  const isIdentity = isIdentityDocument(doc);
+  const isLicense = type.toLowerCase().includes('license');
+  const portraitUri = isIdentity ? doc.portraitImageUrl ?? frontImageUri : null;
+  const scanUri = (isIdentity ? doc.documentImageUrl : null) ?? frontImageUri;
+
+  const extractedFields: { label: string; value: string; mono?: boolean }[] = isIdentity
+    ? [
+        { label: 'Extracted name', value: doc.extractedName || '—', mono: true },
+        { label: 'Date of birth', value: doc.extractedDob ? formatDate(doc.extractedDob) : '—', mono: true },
+        { label: 'Nationality', value: doc.nationality || '—' },
+        { label: 'Issuing state', value: doc.issuingState || '—' },
+        {
+          label: 'Match score',
+          value: doc.matchScore != null ? `${Math.round(doc.matchScore * 100)}%` : '—',
+          mono: true,
+        },
+      ]
+    : [];
+
+  const accordionItems = [
+    ...(extractedFields.length > 0
+      ? [
+          {
+            value: 'extracted',
+            title: 'Extracted data',
+            content: (
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', rowGap: theme.spacing[4] }}>
+                {extractedFields.map((f) => (
+                  <View key={f.label} style={{ width: '50%', paddingRight: theme.spacing[3] }}>
+                    <KV label={f.label} value={f.value} mono={f.mono} />
+                  </View>
+                ))}
+              </View>
+            ),
+          },
+        ]
+      : []),
+    ...(scanUri
+      ? [
+          {
+            value: 'scan',
+            title: 'Document scan',
+            content: (
+              <Image
+                source={{ uri: scanUri }}
+                style={{ width: '100%', aspectRatio: 4 / 3, borderRadius: theme.radii.md }}
+                resizeMode="contain"
+              />
+            ),
+          },
+        ]
+      : []),
+  ];
+
+  return (
+    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: theme.colors.background }}>
+      <ScreenHeader title={title} onBack={() => router.back()} />
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{
+          padding: theme.spacing[4],
+          gap: theme.spacing[4],
+          paddingBottom: theme.spacing[8] + insets.bottom + (isIdentity ? theme.sizes.heightLg : 0),
+        }}
+        showsVerticalScrollIndicator={false}>
+        {failed && (
+          <Alert variant="error" title="Verification failed">
+            The document could not be verified. Recapture it in better light and try again.
+          </Alert>
+        )}
+
+        <Card>
+          <CardContent>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing[3] }}>
+              {portraitUri ? (
+                <Image
+                  source={{ uri: portraitUri }}
+                  style={{ width: 56, height: 56, borderRadius: theme.radii.md }}
+                  resizeMode="cover"
+                />
+              ) : (
+                docIcon(doc, theme.colors.actionPrimary)
+              )}
+              <View style={{ flex: 1, gap: 2, minWidth: 0 }}>
+                <Typography variant="h4" numberOfLines={1}>{title}</Typography>
+                <Typography variant="body-sm" color="secondary" numberOfLines={1}>
+                  {isIdentity ? (doc.extractedName || 'Identity document') : doc.issuer}
+                </Typography>
+              </View>
+              <Badge variant={status.variant}>{status.label}</Badge>
+            </View>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent style={{ gap: theme.spacing[3] }}>
+            {isIdentity ? (
+              <>
+                <View style={{ flexDirection: 'row', gap: theme.spacing[3] }}>
+                  <KV label="Type" value={doc.label} />
+                  <KV label="Number" value={doc.number || '—'} mono />
+                </View>
+                <Divider />
+                <View style={{ flexDirection: 'row', gap: theme.spacing[3] }}>
+                  <KV label="Status" value={status.label} />
+                  <KV label="Added" value={formatDate(doc.addedAt)} />
+                </View>
+                <Divider />
+                <View style={{ flexDirection: 'row', gap: theme.spacing[3] }}>
+                  <KV label="Expires" value={formatDate(doc.expiresAt)} />
+                  <KV label={isLicense ? 'State' : 'Nationality'} value={(isLicense ? doc.issuingState : doc.nationality) || '—'} />
+                </View>
+              </>
+            ) : (
+              <>
+                <View style={{ flexDirection: 'row', gap: theme.spacing[3] }}>
+                  <KV label="Number" value={doc.number} mono />
+                  <KV label="Issued by" value={doc.issuer} />
+                </View>
+                <Divider />
+                <View style={{ flexDirection: 'row', gap: theme.spacing[3] }}>
+                  <KV label="Issued on" value={formatDate(doc.issuedAt)} />
+                  <KV label="Type" value={doc.name} />
+                </View>
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        {accordionItems.length > 0 && <Accordion items={accordionItems} multiple />}
+      </ScrollView>
+
+      {isIdentity && (
+        <View
+          style={{
+            paddingHorizontal: theme.spacing[4],
+            paddingTop: theme.spacing[2],
+            paddingBottom: insets.bottom + theme.spacing[3],
+          }}>
+          <CoreButton
+            variant="ghost"
+            fullWidth
+            loading={removeDocument.isPending}
+            accessibilityLabel="Remove document"
+            onPress={handleRemove}>
+            <Typography variant="body" style={{ color: theme.colors.error }}>
+              Remove document
+            </Typography>
+          </CoreButton>
+        </View>
+      )}
+
+      <Modal
+        visible={confirmRemove}
+        onClose={() => setConfirmRemove(false)}
+        title="Remove document?"
+        footer={
+          <>
+            <CoreButton variant="ghost" onPress={() => setConfirmRemove(false)}>
+              Cancel
+            </CoreButton>
+            <CoreButton
+              variant="destructive"
+              loading={removeDocument.isPending}
+              onPress={() => {
+                setConfirmRemove(false);
+                confirmRemoveDoc();
+              }}>
+              Remove
+            </CoreButton>
+          </>
+        }>
+        <Typography variant="body" color="secondary">
+          Are you sure you want to remove this document? This action cannot be undone.
+        </Typography>
+      </Modal>
+    </SafeAreaView>
+  );
+}
