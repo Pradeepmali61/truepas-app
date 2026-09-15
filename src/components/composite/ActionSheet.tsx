@@ -2,6 +2,7 @@
 import { Check } from "lucide-react-native";
 import type { ReactNode } from "react";
 import { Pressable, Modal as RNModal, ScrollView, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { makeStyles, useThemeTokens } from "../../theme";
 import { iconSize } from "../../theme/tokens";
 
@@ -36,11 +37,12 @@ export function ActionSheet({
 }: ActionSheetProps) {
   const styles = useStyles();
   const theme = useThemeTokens();
+  const insets = useSafeAreaInsets();
   return (
     <RNModal visible={visible} transparent animationType="slide" onRequestClose={onClose} accessibilityViewIsModal>
       <View style={styles.backdrop}>
         <Pressable style={styles.scrim} onPress={onClose} accessibilityLabel="Close menu" />
-        <View style={styles.sheet}>
+        <View style={[styles.sheet, { paddingBottom: theme.spacing[6] + insets.bottom }]}>
           <View style={styles.grabber} />
           {title != null && <Text style={styles.title}>{title}</Text>}
           <ScrollView style={styles.list}>
@@ -97,7 +99,6 @@ const useStyles = makeStyles((t) => ({
     borderTopLeftRadius: t.radii["2xl"],
     borderTopRightRadius: t.radii["2xl"],
     maxHeight: "75%",
-    paddingBottom: t.spacing[6],
     ...t.shadows.xl,
   },
   grabber: {

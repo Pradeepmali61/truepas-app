@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
-import { Modal as RNModal, Pressable, ScrollView, Text, View, type StyleProp, type ViewStyle } from "react-native";
-import { makeStyles } from "../../theme";
+import { Pressable, Modal as RNModal, ScrollView, Text, View, type StyleProp, type ViewStyle } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { makeStyles, useThemeTokens } from "../../theme";
 
 export interface BottomSheetProps {
   visible: boolean;
@@ -29,11 +30,13 @@ export function BottomSheet({
   style,
 }: BottomSheetProps) {
   const styles = useStyles();
+  const theme = useThemeTokens();
+  const insets = useSafeAreaInsets();
   return (
     <RNModal visible={visible} transparent animationType="slide" onRequestClose={onClose} accessibilityViewIsModal>
       <View style={styles.backdrop}>
         <Pressable style={styles.scrim} onPress={onClose} accessibilityLabel="Close sheet" />
-        <View style={[styles.sheet, { maxHeight: `${maxHeightRatio * 100}%` as const }, style]}>
+        <View style={[styles.sheet, { maxHeight: `${maxHeightRatio * 100}%` as const, paddingBottom: theme.spacing[8] + insets.bottom }, style]}>
           <View style={styles.grabber} />
           {title != null && <Text style={styles.title}>{title}</Text>}
           <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent}>
@@ -53,7 +56,6 @@ const useStyles = makeStyles((t) => ({
     backgroundColor: t.colors.surfaceRaised,
     borderTopLeftRadius: t.radii["2xl"],
     borderTopRightRadius: t.radii["2xl"],
-    paddingBottom: t.spacing[8],
     ...t.shadows.xl,
   },
   grabber: {

@@ -8,25 +8,11 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { Alert, FormField } from '@/components/composite';
 import { CoreButton, Input, Link, Select, Typography } from '@/components/ui';
+import { COUNTRIES } from '@/constants/countries';
 import { useRegister } from '@/features/auth/mutations';
 import { PhoneForm, phoneSchema } from '@/features/auth/schemas';
 import { makeStyles, useThemeTokens } from '@/theme';
 import { iconSize } from '@/theme/tokens';
-
-const COUNTRIES = [
-  { code: '+1', flag: '🇺🇸', name: 'United States' },
-  { code: '+44', flag: '🇬🇧', name: 'United Kingdom' },
-  { code: '+91', flag: '🇮🇳', name: 'India' },
-  { code: '+61', flag: '🇦🇺', name: 'Australia' },
-  { code: '+86', flag: '🇨🇳', name: 'China' },
-  { code: '+81', flag: '🇯🇵', name: 'Japan' },
-  { code: '+49', flag: '🇩🇪', name: 'Germany' },
-  { code: '+33', flag: '🇫🇷', name: 'France' },
-  { code: '+971', flag: '🇦🇪', name: 'UAE' },
-  { code: '+65', flag: '🇸🇬', name: 'Singapore' },
-  { code: '+92', flag: '🇵🇰', name: 'Pakistan' },
-  { code: '+880', flag: '🇧🇩', name: 'Bangladesh' },
-];
 
 function BrandMark() {
   const styles = useStyles();
@@ -113,7 +99,11 @@ export default function RegisterScreen() {
                 style={styles.ccSelect}
                 value={countryCode}
                 onValueChange={setCountryCode}
-                options={COUNTRIES.map((c) => ({ value: c.code, label: `${c.flag} ${c.code}` }))}
+                options={COUNTRIES.map((c) => ({
+                  value: c.code,
+                  label: `${c.flag} ${c.name} (${c.code})`,
+                  fieldLabel: `${c.flag} ${c.code}`,
+                }))}
               />
               <Controller
                 control={control}

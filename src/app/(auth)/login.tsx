@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'expo-router';
-import { Eye, EyeOff, Lock, Mail } from 'lucide-react-native';
+import { Eye, EyeOff, Lock, Mail, Phone } from 'lucide-react-native';
 import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { Pressable, View } from 'react-native';
@@ -10,7 +10,8 @@ import { toApiError } from '@/api/errors';
 import { BrandMark } from '@/components/app';
 import { FormField } from '@/components/composite';
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
-import { Button, Input, Link, Typography } from '@/components/ui';
+import { Button, Input, Link, Select, Typography } from '@/components/ui';
+import { COUNTRIES } from '@/constants/countries';
 import { LoginForm, loginSchema } from '@/features/auth/schemas';
 import { sessionStarted } from '@/features/auth/slice';
 import { secureStorage } from '@/services/secureStorage';
@@ -19,26 +20,40 @@ import { useThemeTokens } from '@/theme';
 import { iconSize } from '@/theme/tokens';
 
 const DEFAULT_COUNTRY_CODE = '+1';
+type LoginMethod = 'phone' | 'email';
 
 export default function LoginScreen() {
   const router = useRouter();
   const dispatch = useAppDispatch();
   const theme = useThemeTokens();
+  const [method, setMethod] = useState<LoginMethod>('phone');
+  const [countryCode, setCountryCode] = useState(DEFAULT_COUNTRY_CODE);
   const [submitting, setSubmitting] = useState(false);
   const [loginError, setLoginError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
-  const { control, handleSubmit } = useForm<LoginForm>({
+  const { control, handleSubmit, setValue } = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
     defaultValues: { identifier: '', password: '' },
   });
+
+  const switchMethod = (next: LoginMethod) => {
+    if (next === method) return;
+    setMethod(next);
+    setValue('identifier', '');
+    setLoginError('');
+  };
 
   const onSubmit = handleSubmit(async (values) => {
     setSubmitting(true);
     setLoginError('');
     try {
       let identifier = values.identifier.trim();
-      if (!identifier.includes('@')) {
+      if (method === 'phone') {
+        const digits = identifier.replace(/\D/g, '');
+        const cc = countryCode.slice(1);
+        identifier = digits.startsWith(cc) ? `+${digits}` : `${countryCode}${digits}`;
+      } else if (!identifier.includes('@')) {
         const digits = identifier.replace(/\D/g, '');
         if (digits.length === 10) {
           identifier = `${DEFAULT_COUNTRY_CODE}${digits}`;
@@ -75,28 +90,99 @@ export default function LoginScreen() {
         <View style={{ gap: theme.spacing[1] }}>
           <Typography variant="h2">Welcome back</Typography>
           <Typography variant="body-lg" color="secondary">
-            Sign in with your email or phone.
+            Sign in with your phone or email.
           </Typography>
         </View>
 
+        <View
+          accessibilityRole="tablist"
+          style={{
+            flexDirection: 'row',
+            backgroundColor: theme.colors.surfaceSunken,
+            borderRadius: theme.radii.lg,
+            padding: theme.spacing[1],
+          }}>
+          {(['phone', 'email'] as const).map((m) => {
+            const active = method === m;
+            return (
+              <Pressable
+                key={m}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: active }}
+                accessibilityLabel={`Sign in with ${m}`}
+                onPress={() => switchMethod(m)}
+                style={{
+                  flex: 1,
+                  height: theme.sizes.heightSm,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: theme.radii.md,
+                  backgroundColor: active ? theme.colors.actionPrimary : 'transparent',
+                }}>
+                <Typography
+                  variant="body"
+                  color={active ? 'inverse' : 'secondary'}
+                  style={{ fontWeight: active ? theme.fontWeight.semibold : theme.fontWeight.medium }}>
+                  {m === 'phone' ? 'Phone' : 'Email'}
+                </Typography>
+              </Pressable>
+            );
+          })}
+        </View>
+
         <View style={{ gap: theme.spacing[4] }}>
-          <Controller
-            control={control}
-            name="identifier"
-            render={({ field: { onChange, value }, fieldState }) => (
-              <FormField label="Email or phone" error={fieldState.error?.message}>
-                <Input
-                  value={value}
-                  onChangeText={onChange}
-                  placeholder="ada@example.com"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  keyboardType="email-address"
-                  iconLeft={<Mail size={iconSize.sm} color={theme.colors.textMuted} />}
-                />
-              </FormField>
-            )}
-          />
+          {method === 'phone' ? (
+            <Controller
+              control={control}
+              name="identifier"
+              render={({ field: { onChange, value }, fieldState }) => (
+                <FormField label="Mobile number" error={fieldState.error?.message}>
+                  <View style={{ flexDirection: 'row', gap: theme.spacing[2] }}>
+                    <Select
+                      size="md"
+                      title="Country code"
+                      accessibilityLabel="Country code"
+                      style={{ width: 108 }}
+                      value={countryCode}
+                      onValueChange={setCountryCode}
+                      options={COUNTRIES.map((c) => ({
+                        value: c.code,
+                        label: `${c.flag} ${c.name} (${c.code})`,
+                        fieldLabel: `${c.flag} ${c.code}`,
+                      }))}
+                    />
+                    <Input
+                      containerStyle={{ flex: 1 }}
+                      value={value}
+                      onChangeText={onChange}
+                      placeholder="98765 43210"
+                      keyboardType="phone-pad"
+                      autoCorrect={false}
+                      iconLeft={<Phone size={iconSize.sm} color={theme.colors.textMuted} />}
+                    />
+                  </View>
+                </FormField>
+              )}
+            />
+          ) : (
+            <Controller
+              control={control}
+              name="identifier"
+              render={({ field: { onChange, value }, fieldState }) => (
+                <FormField label="Email" error={fieldState.error?.message}>
+                  <Input
+                    value={value}
+                    onChangeText={onChange}
+                    placeholder="ada@example.com"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    keyboardType="email-address"
+                    iconLeft={<Mail size={iconSize.sm} color={theme.colors.textMuted} />}
+                  />
+                </FormField>
+              )}
+            />
+          )}
 
           <Controller
             control={control}

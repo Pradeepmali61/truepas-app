@@ -16,6 +16,8 @@ import { iconSize } from "../../theme/tokens";
 export interface SelectOption {
   value: string;
   label: string;
+  /** Compact label shown in the closed field; falls back to `label`. */
+  fieldLabel?: string;
   disabled?: boolean;
 }
 
@@ -87,7 +89,7 @@ export function Select({
           style={[styles.valueText, styles[`${size}Text`], !selected && styles.placeholder]}
           numberOfLines={1}
         >
-          {selected?.label ?? placeholder}
+          {selected ? (selected.fieldLabel ?? selected.label) : placeholder}
         </Text>
         <ChevronDown size={iconSize.sm} color={theme.colors.textMuted} />
       </Pressable>

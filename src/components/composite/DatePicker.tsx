@@ -1,10 +1,10 @@
+import { Calendar, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react-native";
 import { useState } from "react";
-import { Pressable, Text, View, type StyleProp, type ViewStyle } from "react-native";
-import { Calendar, ChevronLeft, ChevronRight } from "lucide-react-native";
+import { Pressable, ScrollView, Text, View, type StyleProp, type ViewStyle } from "react-native";
 import { makeStyles, useThemeTokens } from "../../theme";
 import { iconSize } from "../../theme/tokens";
-import { BottomSheet } from "./BottomSheet";
 import { Button } from "../ui/Button";
+import { BottomSheet } from "./BottomSheet";
 
 export interface DatePickerProps {
   /** ISO date string: "YYYY-MM-DD" */
@@ -52,11 +52,13 @@ export function DatePicker({
   const initial = value ? new Date(`${value}T00:00:00`) : new Date();
   const [view, setView] = useState({ year: initial.getFullYear(), month: initial.getMonth() });
   const [draft, setDraft] = useState<string | undefined>(value);
+  const [mode, setMode] = useState<"days" | "years">("days");
 
   const openPicker = () => {
     const base = value ? new Date(`${value}T00:00:00`) : new Date();
     setView({ year: base.getFullYear(), month: base.getMonth() });
     setDraft(value);
+    setMode("days");
     setOpen(true);
   };
 
@@ -76,6 +78,15 @@ export function DatePicker({
     ...Array.from({ length: daysInMonth }, (_, i) => toISO(new Date(view.year, view.month, i + 1))),
   ];
 
+  const currentYear = new Date().getFullYear();
+  const minYear = minDate ? parseInt(minDate.slice(0, 4), 10) : currentYear - 100;
+  const maxYear = maxDate ? parseInt(maxDate.slice(0, 4), 10) : currentYear + 50;
+  const years = Array.from({ length: maxYear - minYear + 1 }, (_, i) => maxYear - i);
+  const yearScrollOffset = Math.max(
+    0,
+    (Math.floor((maxYear - view.year) / 4) - 1) * theme.sizes.touchTarget,
+  );
+
   return (
     <>
       <Pressable
@@ -92,14 +103,58 @@ export function DatePicker({
 
       <BottomSheet visible={open} onClose={() => setOpen(false)} title="Select date">
         <View style={styles.calHeader}>
-          <Pressable accessibilityLabel="Previous month" onPress={() => navMonth(-1)} hitSlop={8} style={styles.navBtn}>
-            <ChevronLeft size={iconSize.md} color={theme.colors.textSecondary} />
-          </Pressable>
-          <Text style={styles.monthLabel}>{MONTHS[view.month]} {view.year}</Text>
-          <Pressable accessibilityLabel="Next month" onPress={() => navMonth(1)} hitSlop={8} style={styles.navBtn}>
-            <ChevronRight size={iconSize.md} color={theme.colors.textSecondary} />
-          </Pressable>
+          {mode === "years" ? (
+            <Text style={[styles.monthLabel, styles.yearTitle]}>Select year</Text>
+          ) : (
+            <>
+              <Pressable accessibilityLabel="Previous month" onPress={() => navMonth(-1)} hitSlop={8} style={styles.navBtn}>
+                <ChevronLeft size={iconSize.md} color={theme.colors.textSecondary} />
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Choose year"
+                onPress={() => setMode("years")}
+                hitSlop={8}
+                style={styles.monthBtn}
+              >
+                <Text style={styles.monthLabel}>{MONTHS[view.month]} {view.year}</Text>
+                <ChevronDown size={iconSize.sm} color={theme.colors.textSecondary} />
+              </Pressable>
+              <Pressable accessibilityLabel="Next month" onPress={() => navMonth(1)} hitSlop={8} style={styles.navBtn}>
+                <ChevronRight size={iconSize.md} color={theme.colors.textSecondary} />
+              </Pressable>
+            </>
+          )}
         </View>
+        {mode === "years" ? (
+          <ScrollView
+            style={styles.yearScroll}
+            nestedScrollEnabled
+            showsVerticalScrollIndicator={false}
+            contentOffset={{ x: 0, y: yearScrollOffset }}
+          >
+            <View style={styles.yearGrid}>
+              {years.map((y) => {
+                const selected = y === view.year;
+                return (
+                  <Pressable
+                    key={y}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Year ${y}`}
+                    accessibilityState={{ selected }}
+                    onPress={() => {
+                      setView({ year: y, month: view.month });
+                      setMode("days");
+                    }}
+                    style={[styles.yearCell, selected && styles.daySelected]}
+                  >
+                    <Text style={[styles.dayText, selected && styles.daySelectedText]}>{y}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </ScrollView>
+        ) : (
         <View style={styles.grid}>
           {DAYS.map((d) => (
             <Text key={d} style={styles.dayLabel}>{d}</Text>
@@ -138,6 +193,7 @@ export function DatePicker({
             );
           })}
         </View>
+        )}
         <View style={styles.calFooter}>
           <Button variant="ghost" size="sm" onPress={() => setOpen(false)}>Cancel</Button>
           <Button
@@ -181,6 +237,23 @@ const useStyles = makeStyles((t) => ({
   },
   navBtn: { width: t.sizes.touchTarget, height: t.sizes.touchTarget, alignItems: "center", justifyContent: "center" },
   monthLabel: { fontSize: t.fontSize.md, fontWeight: t.fontWeight.semibold, color: t.colors.textPrimary },
+  monthBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: t.spacing[1],
+    minHeight: t.sizes.touchTarget,
+    paddingHorizontal: t.spacing[2],
+  },
+  yearTitle: { flex: 1, textAlign: "center" },
+  yearScroll: { height: t.sizes.touchTarget * 6 },
+  yearGrid: { flexDirection: "row", flexWrap: "wrap", paddingHorizontal: t.spacing[2] },
+  yearCell: {
+    width: "25%",
+    height: t.sizes.touchTarget,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: t.radii.full,
+  },
   grid: { flexDirection: "row", flexWrap: "wrap", paddingHorizontal: t.spacing[2] },
   dayLabel: {
     width: `${100 / 7}%`,

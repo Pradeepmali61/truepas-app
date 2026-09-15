@@ -86,7 +86,7 @@ export default function FamilyMemberScreen() {
   if (isPending) {
     return (
       <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: theme.colors.background }}>
-        <ScreenHeader title="Family member" onBack={() => router.back()} />
+        <ScreenHeader title="Family member" onBack={() => router.dismissTo('/(tabs)/family')} />
         <View style={{ padding: theme.spacing[4], gap: theme.spacing[4] }}>
           <View style={{ alignItems: 'center', gap: theme.spacing[2] }}>
             <Skeleton width={64} height={64} radius={theme.radii.full} />
@@ -101,7 +101,7 @@ export default function FamilyMemberScreen() {
   if (isError || !member) {
     return (
       <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: theme.colors.background }}>
-        <ScreenHeader title="Family member" onBack={() => router.back()} />
+        <ScreenHeader title="Family member" onBack={() => router.dismissTo('/(tabs)/family')} />
         <ErrorState
           title="Couldn't load member"
           description="This member may have been removed, or your connection dropped."
@@ -211,7 +211,7 @@ export default function FamilyMemberScreen() {
     try {
       await removeMember.mutateAsync(id);
     } finally {
-      router.back();
+      router.dismissTo('/(tabs)/family');
     }
   };
 
@@ -220,7 +220,7 @@ export default function FamilyMemberScreen() {
       <ScreenHeader
         title={m.name}
         subtitle={`${m.relationship} · age ${m.age}`}
-        onBack={() => router.back()}
+        onBack={() => router.dismissTo('/(tabs)/family')}
         actions={
           <IconButton
             accessibilityLabel="Member options"
