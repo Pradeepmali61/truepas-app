@@ -7,7 +7,7 @@ import { Pressable, ScrollView, View } from 'react-native';
 import { toApiError } from '@/api/errors';
 import { FormField, Alert as InlineAlert, ScreenHeader } from '@/components/composite';
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
-import { Button, Input } from '@/components/ui';
+import { Button, Input, Typography } from '@/components/ui';
 import { useChangePassword } from '@/features/auth/mutations';
 import { sessionEnded } from '@/features/auth/slice';
 import { useToast } from '@/hooks/useToast';
@@ -56,6 +56,10 @@ export default function ChangePasswordScreen() {
       setError('New password must be at least 8 characters');
       return;
     }
+    if (newPassword === currentPassword) {
+      setError('New password must be different from the current one');
+      return;
+    }
     if (newPassword !== confirmPassword) {
       setError('Passwords do not match');
       return;
@@ -81,7 +85,12 @@ export default function ChangePasswordScreen() {
         contentContainerStyle={{ padding: theme.spacing[4], paddingTop: theme.spacing[6], gap: theme.spacing[4] }}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}>
-        <FormField label="Current password" required error={error || undefined}>
+        {error ? (
+          <Typography variant="body-sm" color="error">
+            {error}
+          </Typography>
+        ) : null}
+        <FormField label="Current password" required>
           <Input
             value={currentPassword}
             onChangeText={setCurrentPassword}
@@ -94,7 +103,7 @@ export default function ChangePasswordScreen() {
           />
         </FormField>
 
-        <FormField label="New password" required helperText="8+ characters, one number, one symbol.">
+        <FormField label="New password" required helperText="8+ characters.">
           <Input
             value={newPassword}
             onChangeText={setNewPassword}

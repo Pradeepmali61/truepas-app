@@ -1,45 +1,61 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ShieldCheck } from 'lucide-react-native';
-import { useState } from 'react';
-import { View } from 'react-native';
+import { Alert as RNAlert, View } from 'react-native';
 
 import { Alert, OtpInput, ScreenHeader } from '@/components/composite';
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
-import { Button, Typography } from '@/components/ui';
-import { useVerifyPin } from '@/features/auth/mutations';
+import { Button, Link, Typography } from '@/components/ui';
+import { sessionEnded } from '@/features/auth/slice';
+import { PIN_LENGTH, usePinVerification } from '@/features/auth/usePinVerification';
+import { formatCountdown } from '@/hooks/useCountdown';
+import { pinStore } from '@/services/pinStore';
+import { useAppDispatch } from '@/store';
 import { useThemeTokens } from '@/theme';
 import { iconSize } from '@/theme/tokens';
-
-const PIN_LENGTH = 4;
-const MAX_ATTEMPTS = 5;
 
 /**
  * Re-auth PIN gate shown before sensitive actions (change password / change
  * PIN / delete account). Verifies the PIN via POST /auth/verify-pin, then
- * replaces to the `next` route passed as a query param.
+ * replaces to the `next` route passed as a query param. The verified PIN is
+ * stashed in pinStore (not a route param — params can leak into logs) for
+ * change-pin's currentPin.
  */
 export default function ConfirmPinScreen() {
   const router = useRouter();
   const theme = useThemeTokens();
   const { next } = useLocalSearchParams<{ next?: string }>();
-  const [pin, setPin] = useState('');
-  const [attemptsLeft, setAttemptsLeft] = useState(MAX_ATTEMPTS);
-  const [hasError, setHasError] = useState(false);
-  const verifyPin = useVerifyPin();
+  const gate = usePinVerification();
+  const dispatch = useAppDispatch();
+  const queryClient = useQueryClient();
+
+  // PIN can't be recovered in-app — the only way back is an email password
+  // reset, which ends this session first.
+  const handleForgotPin = () => {
+    RNAlert.alert(
+      'Forgot PIN?',
+      "You'll be signed out. Reset your password via email to sign back in.",
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Sign out & reset',
+          style: 'destructive',
+          onPress: () => {
+            pinStore.clear();
+            queryClient.clear();
+            dispatch(sessionEnded());
+            router.replace('/(auth)/forgot-password' as never);
+          },
+        },
+      ],
+    );
+  };
 
   const submit = async (value?: string) => {
-    const code = typeof value === 'string' ? value : pin;
-    if (code.length !== PIN_LENGTH || verifyPin.isPending) return;
-    setHasError(false);
-    try {
-      await verifyPin.mutateAsync(code);
-      // Forward the verified PIN — change-pin needs it as `currentPin`.
-      router.replace(next ? ({ pathname: next, params: { currentPin: code } } as never) : ('/' as never));
-    } catch {
-      setAttemptsLeft((a) => Math.max(0, a - 1));
-      setHasError(true);
-      setPin('');
-    }
+    const code = await gate.submit(value);
+    if (!code) return;
+    pinStore.set(code);
+    router.replace(next ? ({ pathname: next } as never) : ('/' as never));
   };
 
   return (
@@ -73,19 +89,39 @@ export default function ConfirmPinScreen() {
 
         <OtpInput
           length={PIN_LENGTH}
-          value={pin}
-          onChange={setPin}
+          value={gate.pin}
+          onChange={gate.setPin}
           onComplete={submit}
-          state={hasError ? 'error' : 'default'}
+          state={gate.error ? 'error' : 'default'}
+          disabled={gate.locked}
           autoFocus
           accessibilityLabel="Account PIN"
         />
 
-        {hasError && (
-          <Alert variant="error" title={`${attemptsLeft} attempt${attemptsLeft === 1 ? '' : 's'} remaining`}>
-            Too many wrong tries locks the app for 5 minutes.
+        {gate.locked ? (
+          <Alert variant="error" title="PIN locked">
+            Too many incorrect attempts. Try again in {formatCountdown(gate.lockSecondsLeft)}.
           </Alert>
-        )}
+        ) : gate.error ? (
+          <Alert
+            variant="error"
+            title={
+              gate.attemptsLeft < gate.maxAttempts
+                ? `${gate.attemptsLeft} attempt${gate.attemptsLeft === 1 ? '' : 's'} remaining`
+                : 'Verification failed'
+            }>
+            {gate.error}
+            {gate.attemptsLeft < gate.maxAttempts
+              ? ' PIN entry locks for 15 minutes after 5 wrong tries.'
+              : ''}
+          </Alert>
+        ) : null}
+
+        <View style={{ alignItems: 'center' }}>
+          <Link onPress={handleForgotPin} accessibilityLabel="Forgot PIN">
+            Forgot PIN?
+          </Link>
+        </View>
       </View>
 
       <View
@@ -98,8 +134,8 @@ export default function ConfirmPinScreen() {
         <Button
           label="Continue"
           size="lg"
-          loading={verifyPin.isPending}
-          disabled={pin.length !== PIN_LENGTH}
+          loading={gate.isPending}
+          disabled={gate.pin.length !== PIN_LENGTH || gate.locked}
           onPress={() => void submit()}
         />
       </View>

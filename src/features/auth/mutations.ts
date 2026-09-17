@@ -1,6 +1,8 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { api } from '@/api';
+import { profileUpdated } from '@/features/auth/slice';
+import { useAppDispatch } from '@/store';
 import type {
     AccountDetailsRequest,
     BiometricConsentRequest,
@@ -91,9 +93,14 @@ export function useDeleteAccount() {
 
 export function useUpdateProfile() {
   const queryClient = useQueryClient();
+  const dispatch = useAppDispatch();
   return useMutation({
     mutationFn: (payload: UpdateProfileRequest) => api.updateProfile(payload),
-    onSuccess: () => {
+    onSuccess: (user) => {
+      // Screens read state.auth.user (Redux), not React Query — push the
+      // server-returned record into the store or the UI keeps showing the
+      // pre-edit profile until the next cold start.
+      dispatch(profileUpdated(user));
       queryClient.invalidateQueries({ queryKey: ['user'] });
     },
   });

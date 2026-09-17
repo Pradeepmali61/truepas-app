@@ -37,6 +37,14 @@ const authSlice = createSlice({
         });
       }
     },
+    /** Merge a server-returned User into the session (PUT /user/me response)
+     *  so every screen reading state.auth.user sees fresh data immediately —
+     *  without it, edits only surfaced on the next app boot. */
+    profileUpdated(state, action: PayloadAction<User>) {
+      if (state.user) {
+        state.user = { ...state.user, ...action.payload };
+      }
+    },
     biometricConsentGiven(state) {
       state.biometricConsent = true;
     },
@@ -55,6 +63,6 @@ const authSlice = createSlice({
   },
 });
 
-export const { sessionStarted, biometricConsentGiven, faceEnrollmentCompleted, sessionEnded } =
+export const { sessionStarted, profileUpdated, biometricConsentGiven, faceEnrollmentCompleted, sessionEnded } =
   authSlice.actions;
 export const authReducer = authSlice.reducer;

@@ -1,41 +1,30 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useState } from 'react';
 import { View } from 'react-native';
 
-import { toApiError } from '@/api/errors';
-import { FormField, OtpInput, ScreenHeader } from '@/components/composite';
+import { Alert, FormField, OtpInput, ScreenHeader } from '@/components/composite';
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
 import { Typography } from '@/components/ui';
-import { useVerifyPin } from '@/features/auth/mutations';
-import { useToast } from '@/hooks/useToast';
+import { PIN_LENGTH, usePinVerification } from '@/features/auth/usePinVerification';
+import { formatCountdown } from '@/hooks/useCountdown';
 import { useThemeTokens } from '@/theme';
-
-const PIN_LENGTH = 4;
 
 /** Update face — PIN verification (PRD FR-04: PIN required for face updates).
  *  Forwards `personId` (when present) so the face update targets the family
- *  member instead of the authenticated main user. */
+ *  member instead of the authenticated main user. Shares attempts/lockout
+ *  logic with confirm-pin via usePinVerification. */
 export default function FaceUpdatePinScreen() {
   const router = useRouter();
   const theme = useThemeTokens();
   const { personId } = useLocalSearchParams<{ personId?: string }>();
-  const [pin, setPin] = useState('');
-  const verifyPin = useVerifyPin();
-  const toast = useToast();
+  const gate = usePinVerification();
 
-  const handleComplete = async (next: string) => {
-    try {
-      await verifyPin.mutateAsync(next);
-      router.push({
-        pathname: '/face-update/camera',
-        params: personId ? { personId } : {},
-      });
-    } catch (err: any) {
-      // toApiError maps raw axios messages ("Request failed with status
-      // code 400") to user-presentable copy.
-      toast.show('error', toApiError(err).message ?? 'Incorrect PIN. Please try again.');
-      setPin('');
-    }
+  const handleComplete = async (value: string) => {
+    const code = await gate.submit(value);
+    if (!code) return;
+    router.push({
+      pathname: '/face-update/camera',
+      params: personId ? { personId } : {},
+    });
   };
 
   return (
@@ -59,12 +48,30 @@ export default function FaceUpdatePinScreen() {
         <FormField>
           <OtpInput
             length={PIN_LENGTH}
-            value={pin}
-            onChange={setPin}
+            value={gate.pin}
+            onChange={gate.setPin}
             onComplete={handleComplete}
+            state={gate.error ? 'error' : 'default'}
+            disabled={gate.locked}
             accessibilityLabel="Current PIN"
           />
         </FormField>
+
+        {gate.locked ? (
+          <Alert variant="error" title="PIN locked">
+            Too many incorrect attempts. Try again in {formatCountdown(gate.lockSecondsLeft)}.
+          </Alert>
+        ) : gate.error ? (
+          <Alert
+            variant="error"
+            title={
+              gate.attemptsLeft < gate.maxAttempts
+                ? `${gate.attemptsLeft} attempt${gate.attemptsLeft === 1 ? '' : 's'} remaining`
+                : 'Verification failed'
+            }>
+            {gate.error}
+          </Alert>
+        ) : null}
       </View>
     </ScreenContainer>
   );

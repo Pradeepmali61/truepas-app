@@ -6,6 +6,8 @@ export interface User {
   email: string;
   phone: string;
   dateOfBirth?: string;
+  /** Writable via PUT /user/me; absent on payloads that don't return it. */
+  address?: string;
   faceEnrolled: boolean;
   biometricConsentAt: string | null;
 }

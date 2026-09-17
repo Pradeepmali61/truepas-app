@@ -1,5 +1,5 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 
 import { toApiError } from '@/api/errors';
@@ -8,6 +8,7 @@ import { ScreenContainer } from '@/components/layout/ScreenContainer';
 import { Button, Typography } from '@/components/ui';
 import { useChangePin } from '@/features/auth/mutations';
 import { useToast } from '@/hooks/useToast';
+import { pinStore } from '@/services/pinStore';
 import { useThemeTokens } from '@/theme';
 
 const PIN_LENGTH = 4;
@@ -34,20 +35,40 @@ function StepDots({ total, current }: { total: number; current: number }) {
   );
 }
 
+/** Weak PINs — all-same digit (0000) or a 4-digit run on the keypad
+ *  (1234 ascending, 4321 descending). */
+function isWeakPin(pin: string): boolean {
+  return /^(\d)\1{3}$/.test(pin) || '0123456789'.includes(pin) || '9876543210'.includes(pin);
+}
+
 /**
- * Change PIN — create step. The current PIN is collected/verified by the
- * confirm-pin gate and forwarded as `currentPin`; this screen only asks for
- * the new PIN + confirmation, then calls POST /auth/change-pin.
+ * Change PIN — create step. The current PIN is verified by the confirm-pin
+ * gate and stashed in pinStore; this screen only asks for the new PIN +
+ * confirmation, then calls POST /auth/change-pin.
  */
 export default function ChangePinScreen() {
   const router = useRouter();
   const theme = useThemeTokens();
-  const { currentPin } = useLocalSearchParams<{ currentPin?: string }>();
+  const currentPin = pinStore.get();
   const [newPin, setNewPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
   const [error, setError] = useState('');
   const changePin = useChangePin();
   const toast = useToast();
+
+  useEffect(() => {
+    if (!currentPin) {
+      // Direct entry without the PIN gate — send the user back to security.
+      router.replace('/security' as never);
+    }
+    // Release the stashed PIN when leaving — success clears it too, this
+    // covers back-out so a stale PIN can't be replayed later.
+    return () => pinStore.clear();
+  }, [currentPin, router]);
+
+  if (!currentPin) {
+    return null;
+  }
 
   const canSubmit =
     newPin.length === PIN_LENGTH && confirmPin.length === PIN_LENGTH && newPin === confirmPin;
@@ -58,9 +79,14 @@ export default function ChangePinScreen() {
       return;
     }
     if (newPin !== confirmPin) { setError('PINs do not match'); return; }
+    if (isWeakPin(newPin)) {
+      setError('Choose a stronger PIN — avoid repeated or sequential digits');
+      return;
+    }
     setError('');
     try {
-      await changePin.mutateAsync({ currentPin: currentPin ?? '', newPin });
+      await changePin.mutateAsync({ currentPin, newPin });
+      pinStore.clear();
       toast.show('success', 'Your PIN has been updated.');
       router.back();
     } catch (err: any) {

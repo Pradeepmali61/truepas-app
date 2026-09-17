@@ -5,24 +5,32 @@ import { Pressable, Text, View } from 'react-native';
 
 import { toApiError } from '@/api/errors';
 import { BrandMark } from '@/components/app';
-import { FormField, Alert as InlineAlert, OtpInput, ScreenHeader } from '@/components/composite';
+import { FormField, Alert as InlineAlert, ScreenHeader } from '@/components/composite';
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
 import { Field, SoftCard, useKitStyles } from '@/components/truepas';
-import { Button, Input, Link, Typography } from '@/components/ui';
+import { Button, Input, Typography } from '@/components/ui';
+import { OtpVerification } from '@/features/auth/components/OtpVerification';
 import { useForgotPassword, useResetPassword } from '@/features/auth/mutations';
 import { useToast } from '@/hooks/useToast';
 import { useThemeTokens } from '@/theme';
 import { iconSize } from '@/theme/tokens';
 
+type Step = 'email' | 'otp' | 'reset';
+
+/** Forgot password — contract §7 three-step recovery:
+ *  1. POST /auth/forgot-password {email} → OTP emailed (always 202)
+ *  2. POST /auth/verify-otp {email, otp, purpose:'password_reset'} → OTP validated
+ *     before the user types a new password (attempts counted here)
+ *  3. POST /auth/reset-password {email, otp, newPassword} → resets, revokes sessions */
 export default function ForgotPasswordScreen() {
   const router = useRouter();
   const theme = useThemeTokens();
   const kit = useKitStyles();
-  // `?step=reset` lets the dev screen jump straight to the reset form.
+  // `?step=reset` lets the dev screen jump straight to the password form.
   const { step: stepParam } = useLocalSearchParams<{ step?: string }>();
-  const [step, setStep] = useState<'email' | 'reset'>(stepParam === 'reset' ? 'reset' : 'email');
+  const [step, setStep] = useState<Step>(stepParam === 'reset' ? 'reset' : 'email');
   const [email, setEmail] = useState('');
-  const [otp, setOtp] = useState('');
+  const [verifiedOtp, setVerifiedOtp] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showNew, setShowNew] = useState(false);
@@ -33,33 +41,33 @@ export default function ForgotPasswordScreen() {
   const resetPassword = useResetPassword();
   const toast = useToast();
 
+  // The OTP step needs the email for both verify and resend — a direct
+  // navigation without one falls back to the email step.
+  const effectiveStep: Step = step === 'otp' && !email ? 'email' : step;
+
   const handleSendOtp = async () => {
-    if (!email) { setError('Enter your email'); return; }
+    const trimmed = email.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) { setError('Enter a valid email address'); return; }
     setError('');
+    setEmail(trimmed);
     try {
-      await forgotPassword.mutateAsync({ email });
-      setStep('reset');
+      await forgotPassword.mutateAsync({ email: trimmed });
+      setStep('otp');
     } catch (err: any) {
       setError(toApiError(err).message || 'Could not send code. Please try again.');
     }
   };
 
-  const handleResend = () => {
-    // Resend issues a NEW code and expires the previous one — clear the
-    // stale digits so the user enters the fresh code.
-    setOtp('');
-    setError('');
-    void handleSendOtp();
-  };
-
   const handleReset = async () => {
-    if (otp.length !== 6) { setError('Enter the 6-digit code from your email'); return; }
+    // The OTP is verified on the previous step — landing here without it
+    // (dev `?step=reset` jump) means the session is incomplete.
+    if (!email || !verifiedOtp) { setError('Your reset session is incomplete — request a new code.'); return; }
     if (!newPassword || !confirmPassword) { setError('All fields are required'); return; }
     if (newPassword.length < 8) { setError('Password must be at least 8 characters'); return; }
     if (newPassword !== confirmPassword) { setError('Passwords do not match'); return; }
     setError('');
     try {
-      await resetPassword.mutateAsync({ email, otp, newPassword });
+      await resetPassword.mutateAsync({ email, otp: verifiedOtp, newPassword });
       toast.show('success', 'Your password has been reset successfully.');
       router.replace('/(auth)/login');
     } catch (err: any) {
@@ -67,10 +75,33 @@ export default function ForgotPasswordScreen() {
     }
   };
 
+  // The OTP step is a full screen — it renders its own container/header.
+  if (effectiveStep === 'otp') {
+    return (
+      <OtpVerification
+        title="Reset password"
+        heading="Enter reset code"
+        sentTo={`Code sent to ${email}`}
+        icon={<Mail size={iconSize.lg} color={theme.colors.actionPrimary} />}
+        purpose="password_reset"
+        identifier={{ email }}
+        onBack={() => setStep('email')}
+        onResend={async () => {
+          await forgotPassword.mutateAsync({ email });
+        }}
+        onVerified={(_response, code) => {
+          setVerifiedOtp(code);
+          setError('');
+          setStep('reset');
+        }}
+      />
+    );
+  }
+
   return (
     <ScreenContainer scroll background={false}>
       <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
-        {step === 'email' && (
+        {effectiveStep === 'email' && (
           <View style={{ flex: 1, justifyContent: 'center', padding: theme.spacing[4] }}>
             <SoftCard style={[kit.loginCard, { width: '100%', maxWidth: 380, alignSelf: 'center' }]}>
               <View style={kit.loginHead}>
@@ -102,7 +133,7 @@ export default function ForgotPasswordScreen() {
               </Field>
 
               <Button
-                label="Send reset link"
+                label="Send code"
                 size="lg"
                 loading={forgotPassword.isPending}
                 onPress={handleSendOtp}
@@ -118,19 +149,16 @@ export default function ForgotPasswordScreen() {
           </View>
         )}
 
-        {step === 'reset' && (
+        {effectiveStep === 'reset' && (
           <>
             <ScreenHeader title="Choose a new password" onBack={router.back} />
             <View style={{ padding: theme.spacing[4], paddingTop: theme.spacing[6], gap: theme.spacing[4] }}>
-              <FormField label="Reset code" required error={error || undefined} helperText={error ? undefined : "6-digit code emailed to you."}>
-                <OtpInput value={otp} onChange={setOtp} />
-              </FormField>
-              <View style={{ alignItems: 'center' }}>
-                <Link onPress={handleResend} accessibilityLabel="Resend code">
-                  {forgotPassword.isPending ? 'Sending…' : 'Resend code'}
-                </Link>
-              </View>
-              <FormField label="New password" required>
+              {error ? (
+                <Typography variant="body-sm" color="error">
+                  {error}
+                </Typography>
+              ) : null}
+              <FormField label="New password" required helperText="8+ characters.">
                 <Input
                   value={newPassword}
                   onChangeText={setNewPassword}

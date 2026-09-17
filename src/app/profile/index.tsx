@@ -1,9 +1,11 @@
 import { useRouter } from 'expo-router';
 import {
+    Calendar,
     Camera,
     ChevronRight,
     Fingerprint,
     Mail,
+    MapPin,
     PenLine,
     Phone
 } from 'lucide-react-native';
@@ -53,6 +55,14 @@ function InfoRow({ icon, value, label }: { icon: ReactNode; value: string; label
       </View>
     </View>
   );
+}
+
+function formatDob(dob?: string): string {
+  if (!dob) return '—';
+  const d = new Date(dob);
+  return Number.isNaN(d.getTime())
+    ? dob
+    : d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
 /** Tappable label + chevron row used for the actions card. */
@@ -241,6 +251,22 @@ export default function ProfileScreen() {
             value={user?.phone ?? '—'}
             label="Mobile"
           />
+          <Divider style={{ marginLeft: 40 + theme.spacing[3] + theme.spacing[4] }} />
+          <InfoRow
+            icon={<Calendar size={iconSize.sm} color={theme.colors.textSecondary} />}
+            value={formatDob(user?.dateOfBirth)}
+            label="Date of birth"
+          />
+          {user?.address ? (
+            <>
+              <Divider style={{ marginLeft: 40 + theme.spacing[3] + theme.spacing[4] }} />
+              <InfoRow
+                icon={<MapPin size={iconSize.sm} color={theme.colors.textSecondary} />}
+                value={user.address}
+                label="Address"
+              />
+            </>
+          ) : null}
           <Divider style={{ marginLeft: 40 + theme.spacing[3] + theme.spacing[4] }} />
           <InfoRow
             icon={<Fingerprint size={iconSize.sm} color={theme.colors.textSecondary} />}

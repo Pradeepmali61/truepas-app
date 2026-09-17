@@ -13,6 +13,11 @@ import { useAppSelector } from '@/store';
 import { useThemeTokens } from '@/theme';
 import { iconSize } from '@/theme/tokens';
 
+function todayIso(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 /**
  * Edit profile — PUT /user/me only accepts { fullName, dateOfBirth, address }.
  * Email & phone are server-locked (409 until re-verification), so they render
@@ -26,8 +31,15 @@ export default function EditProfileScreen() {
   const updateProfile = useUpdateProfile();
 
   const [fullName, setFullName] = useState(user?.fullName ?? '');
-  const [dateOfBirth, setDateOfBirth] = useState(user?.dateOfBirth ?? '');
-  const [address, setAddress] = useState('');
+  // Registration stores DOB as MM/DD/YYYY while the picker speaks ISO —
+  // normalize on the way in so an existing value renders instead of "Invalid Date".
+  const [dateOfBirth, setDateOfBirth] = useState(() => {
+    const raw = user?.dateOfBirth ?? '';
+    return /^\d{2}\/\d{2}\/\d{4}$/.test(raw)
+      ? `${raw.slice(6)}-${raw.slice(0, 2)}-${raw.slice(3, 5)}`
+      : raw;
+  });
+  const [address, setAddress] = useState(user?.address ?? '');
   const [error, setError] = useState('');
 
   const handleSave = async () => {
@@ -42,7 +54,14 @@ export default function EditProfileScreen() {
       toast.show('success', 'Profile updated');
       router.back();
     } catch (err: any) {
-      setError(toApiError(err).message || 'Could not save changes. Please try again.');
+      const apiErr = toApiError(err);
+      // A 409 here means a locked field (email/phone) was rejected — the shared
+      // mapper's fallback ("account already exists") is written for register.
+      setError(
+        apiErr.code === 'CONFLICT'
+          ? 'Email and phone are locked to your account — contact support to change them.'
+          : apiErr.message || 'Could not save changes. Please try again.',
+      );
     }
   };
 
@@ -67,6 +86,7 @@ export default function EditProfileScreen() {
             value={dateOfBirth}
             onValueChange={setDateOfBirth}
             placeholder="Jan 2, 1990"
+            maxDate={todayIso()}
             accessibilityLabel="Date of birth"
           />
         </FormField>

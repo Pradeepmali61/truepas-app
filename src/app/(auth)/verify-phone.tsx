@@ -47,7 +47,7 @@ export default function VerifyPhoneScreen() {
       icon={<Smartphone size={iconSize.lg} color={theme.colors.actionPrimary} />}
       progress={25}
       purpose="phone"
-      identifier={{ registrationId: activeRegistrationId, phone, countryCode: countryCode ?? '' }}
+      identifier={{ registrationId: activeRegistrationId, phone, countryCode: countryCode ?? DEFAULT_COUNTRY_CODE }}
       onResend={async () => {
         const res = await api.register({
           phone,

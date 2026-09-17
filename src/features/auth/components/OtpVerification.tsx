@@ -7,7 +7,7 @@ import Animated, { useSharedValue, withSequence, withTiming } from 'react-native
 
 import { setRegistrationToken } from '@/api/client';
 import { toApiError } from '@/api/errors';
-import { OtpInput, ScreenHeader } from '@/components/composite';
+import { Alert, OtpInput, ScreenHeader } from '@/components/composite';
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
 import { CoreButton, Link, Progress, RowIcon, Typography } from '@/components/ui';
 import { useVerifyOtp } from '@/features/auth/mutations';
@@ -21,16 +21,18 @@ interface OtpVerificationProps {
   heading: string;
   sentTo: string;
   icon: ReactNode;
-  progress: number;
+  /** Optional — omitted for flows outside the registration progress (e.g. password reset). */
+  progress?: number;
   purpose: OtpPurpose;
   /** Identifier fields to send with the OTP verification. */
   identifier?: { registrationId?: string; phone?: string; countryCode?: string; email?: string };
   /**
-   * Called after successful verification. Receives the full response
-   * so the caller can decide what to do (e.g., dispatch sessionStarted
-   * for email purpose, or store registrationToken for phone purpose).
+   * Called after successful verification. Receives the full response and the
+   * verified code (password-reset needs it for /auth/reset-password) so the
+   * caller can decide what to do (e.g., dispatch sessionStarted for email
+   * purpose, or store registrationToken for phone purpose).
    */
-  onVerified: (response: VerifyOtpResponse) => void;
+  onVerified: (response: VerifyOtpResponse, code: string) => void;
   /**
    * Actually re-sends the OTP (backend has no generic resend endpoint, so each
    * screen re-calls the endpoint that originally triggered the code — e.g.
@@ -38,10 +40,22 @@ interface OtpVerificationProps {
    * button is hidden instead of pretending to resend.
    */
   onResend?: () => Promise<void>;
+  /** Overrides the header back action (e.g. returning to a previous in-screen step). */
+  onBack?: () => void;
 }
 
 const OTP_LENGTH = 6;
 const RESEND_SECONDS = 30;
+/** Backend contract: max 5 wrong attempts, OTP expires after 10 minutes. */
+const MAX_OTP_ATTEMPTS = 5;
+const OTP_TTL_SECONDS = 10 * 60;
+
+/** Reads a server-provided attempts-remaining count if the backend sends one. */
+function attemptsRemainingFrom(err: unknown): number | null {
+  const data = (err as { response?: { data?: Record<string, unknown> } })?.response?.data;
+  const value = data?.attemptsRemaining ?? data?.attempts_remaining ?? data?.remainingAttempts;
+  return typeof value === 'number' && value >= 0 ? value : null;
+}
 
 type VerifyState = 'idle' | 'loading' | 'error' | 'success';
 
@@ -55,6 +69,7 @@ export function OtpVerification({
   identifier,
   onVerified,
   onResend,
+  onBack,
 }: OtpVerificationProps) {
   const router = useRouter();
   const theme = useThemeTokens();
@@ -62,7 +77,11 @@ export function OtpVerification({
   const [verifyState, setVerifyState] = useState<VerifyState>('idle');
   const [errorMsg, setErrorMsg] = useState('');
   const [resending, setResending] = useState(false);
-  const { seconds, reset } = useCountdown(RESEND_SECONDS);
+  const [attemptsLeft, setAttemptsLeft] = useState(MAX_OTP_ATTEMPTS);
+  const { seconds: resendSeconds, reset: resetResendCooldown } = useCountdown(RESEND_SECONDS);
+  const { seconds: otpSecondsLeft, reset: resetOtpTtl } = useCountdown(OTP_TTL_SECONDS);
+  const locked = attemptsLeft <= 0;
+  const expired = otpSecondsLeft === 0;
   const shakeX = useSharedValue(0);
   const verifyOtp = useVerifyOtp();
 
@@ -74,16 +93,17 @@ export function OtpVerification({
     }
   };
 
-  const handleVerify = async () => {
-    if (code.length !== OTP_LENGTH) return;
+  const handleVerify = async (submitted?: string) => {
+    const otp = submitted ?? code;
+    if (otp.length !== OTP_LENGTH || verifyState === 'loading' || verifyState === 'success' || locked || expired) return;
     setVerifyState('loading');
     try {
       const payload: VerifyOtpRequest = {
-        otp: code,
+        otp,
         purpose,
         ...identifier,
       };
-      console.log('[OTP] Verifying:', { purpose, registrationId: identifier?.registrationId, otpLength: code.length, payload: JSON.stringify(payload) });
+      console.log('[OTP] Verifying:', { purpose, registrationId: identifier?.registrationId, otpLength: otp.length, payload: JSON.stringify(payload) });
       if (purpose === 'phone' && !identifier?.registrationId) {
         console.error('[OTP] Missing registrationId for phone verification — backend will return 404');
       }
@@ -97,7 +117,7 @@ export function OtpVerification({
 
       setVerifyState('success');
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      setTimeout(() => onVerified(response), 600);
+      setTimeout(() => onVerified(response, otp), 600);
     } catch (err: any) {
       console.error('[OTP] Error:', {
         message: err?.message,
@@ -105,8 +125,20 @@ export function OtpVerification({
         url: err?.config?.url,
         data: JSON.stringify(err?.response?.data),
       });
+      const apiErr = toApiError(err);
       setVerifyState('error');
-      setErrorMsg(toApiError(err).message || 'Invalid verification code. Please try again.');
+      if (apiErr.status === 429) {
+        // 429 on verify means the code is burned — waiting won't help, resend will.
+        setAttemptsLeft(0);
+        setErrorMsg('Too many incorrect attempts. This code is no longer valid — request a new one.');
+      } else {
+        setErrorMsg(apiErr.message || 'Invalid verification code. Please try again.');
+        // Count only real rejections (4xx), not network/5xx failures or a stale
+        // registration session (404). Prefer a server-provided remaining count.
+        if (apiErr.status !== null && apiErr.status >= 400 && apiErr.status < 500 && apiErr.status !== 404) {
+          setAttemptsLeft((prev) => attemptsRemainingFrom(err) ?? Math.max(0, prev - 1));
+        }
+      }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       shakeX.value = withSequence(
         withTiming(-10, { duration: 50 }),
@@ -126,8 +158,10 @@ export function OtpVerification({
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     try {
       await onResend();
-      // Fresh code sent — restart the cooldown and clear any partial entry.
-      reset();
+      // Fresh code sent — restart both timers, restore attempts and clear entry.
+      resetResendCooldown();
+      resetOtpTtl();
+      setAttemptsLeft(MAX_OTP_ATTEMPTS);
       setCode('');
       setVerifyState('idle');
     } catch (err: any) {
@@ -143,10 +177,12 @@ export function OtpVerification({
   return (
     <ScreenContainer scroll={false} background={false}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-        <ScreenHeader title={title} onBack={router.back} />
-        <View style={{ paddingHorizontal: theme.spacing[4] }}>
-          <Progress value={progress} accessibilityLabel="Verification progress" />
-        </View>
+        <ScreenHeader title={title} onBack={onBack ?? router.back} />
+        {progress != null ? (
+          <View style={{ paddingHorizontal: theme.spacing[4] }}>
+            <Progress value={progress} accessibilityLabel="Verification progress" />
+          </View>
+        ) : null}
         <ScrollView
           style={{ flex: 1 }}
           showsVerticalScrollIndicator={false}
@@ -189,6 +225,7 @@ export function OtpVerification({
                     onChange={handleChange}
                     onComplete={handleVerify}
                     autoFocus
+                    disabled={locked || expired || verifyState === 'loading'}
                     state={verifyState === 'error' ? 'error' : 'default'}
                     accessibilityLabel="One time password"
                   />
@@ -200,9 +237,27 @@ export function OtpVerification({
                   </Typography>
                 ) : null}
 
-                {seconds > 0 ? (
+                {expired ? (
+                  <Alert variant="warning" title="Code expired">
+                    This code is no longer valid — request a new one.
+                  </Alert>
+                ) : locked ? (
+                  <Alert variant="error" title="Code locked">
+                    Too many incorrect attempts — request a new code.
+                  </Alert>
+                ) : attemptsLeft <= 2 ? (
+                  <Alert variant="warning" title={`${attemptsLeft} attempt${attemptsLeft === 1 ? '' : 's'} remaining`} />
+                ) : null}
+
+                {!expired ? (
                   <Typography variant="body-sm" color="muted">
-                    Resend code in {formatCountdown(seconds)}
+                    Code expires in {formatCountdown(otpSecondsLeft)}
+                  </Typography>
+                ) : null}
+
+                {resendSeconds > 0 ? (
+                  <Typography variant="body-sm" color="muted">
+                    Resend code in {formatCountdown(resendSeconds)}
                   </Typography>
                 ) : onResend ? (
                   <Link onPress={handleResend} accessibilityLabel="Resend code" disabled={resending}>
@@ -224,9 +279,9 @@ export function OtpVerification({
             fullWidth
             size="lg"
             loading={verifyState === 'loading'}
-            disabled={code.length !== OTP_LENGTH || verifyState === 'loading' || verifyState === 'success'}
+            disabled={code.length !== OTP_LENGTH || verifyState === 'loading' || verifyState === 'success' || locked || expired}
             accessibilityLabel="Verify code"
-            onPress={handleVerify}>
+            onPress={() => handleVerify()}>
             {verifyState === 'success' ? 'Verified' : 'Verify'}
           </CoreButton>
         </View>
