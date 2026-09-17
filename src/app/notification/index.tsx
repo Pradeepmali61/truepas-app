@@ -1,11 +1,12 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Bell, Clock3 } from 'lucide-react-native';
+import { Clock3 } from 'lucide-react-native';
 import { useState } from 'react';
 import { FlatList, RefreshControl, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { EmptyState, ErrorState, ScreenHeader, Tabs } from '@/components/composite';
-import { Badge, Blink, CoreButton, Divider, RowIcon, Skeleton, Typography } from '@/components/ui';
+import { NotificationRow } from '@/components/truepas';
+import { Badge, CoreButton, Divider, Skeleton } from '@/components/ui';
 import { useNotifications } from '@/features/notifications/hooks';
 import { useThemeTokens } from '@/theme';
 import { iconSize } from '@/theme/tokens';
@@ -69,56 +70,20 @@ export default function NotificationsScreen() {
           }}
           showsVerticalScrollIndicator={false}
           renderItem={({ item }) => (
-            <View
-              style={{ flexDirection: 'row', gap: theme.spacing[3], paddingVertical: theme.spacing[1] }}
-              accessibilityRole="button">
-              {item.read ? (
-                <View
-                  style={{
-                    width: 8,
-                    height: 8,
-                    borderRadius: theme.radii.full,
-                    marginTop: theme.spacing[2],
-                    backgroundColor: 'transparent',
-                  }}
-                />
-              ) : (
-                <Blink ms={1400} min={0.4} style={{ marginTop: theme.spacing[2] }}>
-                  <View
-                    style={{
-                      width: 8,
-                      height: 8,
-                      borderRadius: theme.radii.full,
-                      backgroundColor: theme.colors.actionPrimary,
-                    }}
-                  />
-                </Blink>
-              )}
-              <View style={{ flex: 1, gap: 2, minWidth: 0 }}>
-                <Typography
-                  variant="body"
-                  style={{ fontWeight: item.read ? theme.fontWeight.regular : theme.fontWeight.semibold }}>
-                  {item.title}
-                </Typography>
-                <Typography variant="body-sm" color="secondary">
-                  {item.body}
-                </Typography>
-                <Typography variant="caption" color="muted">
-                  {(() => {
-                    const d = new Date(item.createdAt);
-                    return Number.isNaN(d.getTime())
-                      ? ''
-                      : d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-                  })()}
-                </Typography>
-              </View>
-              <RowIcon
-                tone={item.read ? 'neutral' : 'primary'}
-                icon={
-                  <Bell size={iconSize.sm} color={item.read ? theme.colors.textMuted : theme.colors.actionPrimary} />
-                }
-              />
-            </View>
+            <NotificationRow
+              item={{
+                title: item.title,
+                body: item.body,
+                read: item.read,
+                meta: (() => {
+                  const d = new Date(item.createdAt);
+                  return Number.isNaN(d.getTime())
+                    ? ''
+                    : d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+                })(),
+              }}
+              style={{ paddingVertical: theme.spacing[2] }}
+            />
           )}
           ListEmptyComponent={
             <EmptyState

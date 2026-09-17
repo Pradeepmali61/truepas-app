@@ -68,6 +68,8 @@ export interface FamilyMember {
   faceEnrolled: boolean;
   /** 'photo' under 5, 'liveness' 5+ — absent on older payloads. */
   faceCaptureMode?: 'photo' | 'liveness';
+  /** Sent at creation; absent on older payloads. */
+  dateOfBirth?: string;
   /** Capture cameras allowed; 'back' is added for members under 10. */
   allowedCameras?: ('front' | 'back')[];
 }

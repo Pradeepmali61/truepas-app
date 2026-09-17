@@ -1,19 +1,16 @@
 import { useRouter } from 'expo-router';
-import { CalendarDays, Hotel, Ticket } from 'lucide-react-native';
+import { CalendarDays } from 'lucide-react-native';
 import { memo, useState } from 'react';
 import { FlatList, RefreshControl, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { SearchAndFilterBar } from '@/components/complex/SearchAndFilterBar';
 import { Card, EmptyState, ErrorState, ScreenHeader } from '@/components/composite';
+import { BookingCard } from '@/components/truepas';
 import {
-    Badge,
     CoreButton,
     FadeUp,
-    RowIcon,
-    Skeleton,
-    Typography,
-    type BadgeVariant,
+    Skeleton
 } from '@/components/ui';
 import { useBookings } from '@/features/history/hooks';
 import { useThemeTokens } from '@/theme';
@@ -21,14 +18,7 @@ import { iconSize } from '@/theme/tokens';
 import type { Booking } from '@/types/domain';
 
 /** Height of the custom bottom tab bar (see (tabs)/_layout.tsx). */
-const TAB_BAR_HEIGHT = 64;
-
-const STATUS: Record<string, { variant: BadgeVariant; label: string }> = {
-  completed: { variant: 'success', label: 'Completed' },
-  upcoming: { variant: 'info', label: 'Upcoming' },
-  cancelled: { variant: 'neutral', label: 'Cancelled' },
-  failed: { variant: 'error', label: 'Failed' },
-};
+const TAB_BAR_HEIGHT = 88;
 
 const STATUS_OPTIONS = [
   { value: 'upcoming', label: 'Upcoming' },
@@ -44,37 +34,22 @@ function formatDate(value: string): string {
     : d.toLocaleDateString(undefined, { year: 'numeric', month: 'numeric', day: 'numeric' });
 }
 
-const BookingCard = memo(function BookingCard({ item, onPress }: { item: Booking; onPress: () => void }) {
+const BookingCardItem = memo(function BookingCardItem({ item, onPress }: { item: Booking; onPress: () => void }) {
   const theme = useThemeTokens();
-  const status = STATUS[item.status] ?? { variant: 'neutral' as const, label: item.status };
-  const isHotel = item.type === 'hotel';
   return (
-    <Card onPress={onPress} style={{ marginBottom: theme.spacing[4] }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing[3] }}>
-        <RowIcon
-          tone={isHotel ? 'primary' : 'info'}
-          icon={
-            isHotel ? (
-              <Hotel size={iconSize.md} color={theme.colors.actionPrimary} />
-            ) : (
-              <Ticket size={iconSize.md} color={theme.colors.onInfoSubtle} />
-            )
-          }
-        />
-        <View style={{ flex: 1, gap: 2, minWidth: 0 }}>
-          <Typography variant="body" numberOfLines={1}>{item.venue}</Typography>
-          <Typography variant="body-sm" color="muted" numberOfLines={1}>
-            {item.location} · {formatDate(item.checkIn)} → {formatDate(item.checkOut)}
-          </Typography>
-        </View>
-        <View style={{ alignItems: 'flex-end', gap: theme.spacing[1] }}>
-          <Badge variant={status.variant}>{status.label}</Badge>
-          <Typography variant="body-sm" style={{ fontFamily: theme.fontFamily.mono.semibold }}>
-            ${item.amount.toFixed(2)}
-          </Typography>
-        </View>
-      </View>
-    </Card>
+    <BookingCard
+      booking={{
+        venue: item.venue,
+        location: item.location,
+        status: item.status,
+        checkIn: formatDate(item.checkIn),
+        guests: item.guests,
+        amount: item.amount,
+        checkedInMembers: item.checkedInMembers ?? [],
+      }}
+      onPress={onPress}
+      style={{ width: '100%', marginBottom: theme.spacing[4] }}
+    />
   );
 });
 
@@ -169,7 +144,7 @@ export default function HistoryScreen() {
             showsVerticalScrollIndicator={false}
             renderItem={({ item, index }) => (
               <FadeUp delay={index * 110}>
-                <BookingCard item={item} onPress={() => router.push(`/booking/${item.id}` as never)} />
+                <BookingCardItem item={item} onPress={() => router.push(`/booking/${item.id}` as never)} />
               </FadeUp>
             )}
             ListEmptyComponent={

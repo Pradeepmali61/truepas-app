@@ -5,14 +5,11 @@ import { FlatList, RefreshControl, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Card, EmptyState, ErrorState, ScreenHeader } from '@/components/composite';
+import { FamilyCard } from '@/components/truepas';
 import {
-    Avatar,
-    Badge,
     CoreButton,
     FadeUp,
     Skeleton,
-    Typography,
-    type BadgeVariant,
 } from '@/components/ui';
 import { useFamily } from '@/features/family/hooks';
 import { useThemeTokens } from '@/theme';
@@ -20,41 +17,22 @@ import { iconSize } from '@/theme/tokens';
 import type { FamilyMember } from '@/types/domain';
 
 /** Height of the custom bottom tab bar (see (tabs)/_layout.tsx). */
-const TAB_BAR_HEIGHT = 64;
-
-const VERIFICATION: Record<string, { variant: BadgeVariant; label: string }> = {
-  verified: { variant: 'success', label: 'Verified' },
-  pending_document: { variant: 'warning', label: 'Needs document' },
-  pending_face: { variant: 'warning', label: 'Needs face' },
-  failed: { variant: 'error', label: 'Failed' },
-};
-
-function verificationBadge(verification: string) {
-  const meta = VERIFICATION[verification] ?? { variant: 'neutral' as const, label: verification };
-  return <Badge variant={meta.variant}>{meta.label}</Badge>;
-}
-
-/** 'photo' under 5, 'liveness' 5+ — falls back to ageBand when the field is absent. */
-function captureModeLabel(m: FamilyMember): string {
-  const mode = m.faceCaptureMode ?? (m.ageBand === '0-4' ? 'photo' : 'liveness');
-  return mode === 'photo' ? 'photo capture' : 'liveness';
-}
+const TAB_BAR_HEIGHT = 88;
 
 const MemberCard = memo(function MemberCard({ member, onPress }: { member: FamilyMember; onPress: () => void }) {
   const theme = useThemeTokens();
   return (
-    <Card onPress={onPress} style={{ marginBottom: theme.spacing[4] }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing[3] }}>
-        <Avatar name={member.name} size="lg" />
-        <View style={{ flex: 1, gap: 2, minWidth: 0 }}>
-          <Typography variant="body" numberOfLines={1}>{member.name}</Typography>
-          <Typography variant="body-sm" color="muted" numberOfLines={1}>
-            {member.relationship} · age {member.age} · {captureModeLabel(member)}
-          </Typography>
-        </View>
-        {verificationBadge(member.verification)}
-      </View>
-    </Card>
+    <FamilyCard
+      member={{
+        name: member.name,
+        relationship: member.relationship,
+        age: member.age,
+        verification: member.verification,
+        faceCaptureMode: member.faceCaptureMode ?? (member.ageBand === '0-4' ? 'photo' : 'liveness'),
+      }}
+      onPress={onPress}
+      style={{ width: '100%', marginBottom: theme.spacing[4] }}
+    />
   );
 });
 

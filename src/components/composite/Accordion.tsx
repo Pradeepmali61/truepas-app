@@ -1,5 +1,5 @@
 /** @jsxImportSource react */
-import { ChevronDown } from "lucide-react-native";
+import { ChevronDown, ChevronUp } from "lucide-react-native";
 import { useState, type ReactNode } from "react";
 import { Pressable, Text, View, type StyleProp, type ViewStyle } from "react-native";
 import { makeStyles, useThemeTokens } from "../../theme";
@@ -46,11 +46,11 @@ export function Accordion({ items, multiple, defaultValue, style }: AccordionPro
               <Text style={[styles.triggerText, item.disabled && styles.triggerDisabled]}>
                 {item.title}
               </Text>
-              <ChevronDown
-                size={iconSize.sm}
-                color={theme.colors.textMuted}
-                style={{ transform: [{ rotate: isOpen ? "180deg" : "0deg" }] }}
-              />
+              {isOpen ? (
+                <ChevronUp size={iconSize.sm} color={theme.colors.textMuted} />
+              ) : (
+                <ChevronDown size={iconSize.sm} color={theme.colors.textMuted} />
+              )}
             </Pressable>
             {isOpen && <View style={styles.content}>{item.content}</View>}
           </View>

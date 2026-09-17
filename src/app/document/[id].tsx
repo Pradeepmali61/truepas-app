@@ -1,12 +1,12 @@
-import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Baby, BookUser, Camera, Car, Contact, FileText, Globe, Landmark, ScanFace } from 'lucide-react-native';
+import { Baby, BookUser, Camera, Car, Contact, FileText, Globe, Landmark, ScanFace, Trash2 } from 'lucide-react-native';
 import { useEffect, useRef, useState, type ComponentType } from 'react';
 import { Animated, Image, ScrollView, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Alert, ErrorState, Modal, ScreenHeader } from '@/components/composite';
-import { CoreButton, RowIcon, Skeleton, Typography, type BadgeVariant } from '@/components/ui';
+import { Accordion, Alert, ErrorState, Modal, ScreenHeader } from '@/components/composite';
+import { ConfidenceRing, DocumentIdCard, useKitStyles } from '@/components/truepas';
+import { CoreButton, RowIcon, Skeleton, Typography } from '@/components/ui';
 import { useDocument, useRemoveDocument } from '@/features/documents/hooks';
 import { useToast } from '@/hooks/useToast';
 import { getDocumentImageUri } from '@/services/documentImageStore';
@@ -30,30 +30,19 @@ function formatDate(dateStr: string | null | undefined): string {
     : d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-const STATUS: Record<string, { variant: BadgeVariant; label: string }> = {
-  verified: { variant: 'success', label: 'Verified' },
-  pending: { variant: 'warning', label: 'Pending' },
-  failed: { variant: 'error', label: 'Failed' },
-  missing: { variant: 'neutral', label: 'Missing' },
-  Active: { variant: 'success', label: 'Active' },
-  Expired: { variant: 'neutral', label: 'Expired' },
-};
-
 function DetailItem({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
   const theme = useThemeTokens();
+  const kit = useKitStyles();
   return (
-    <View style={{ width: '50%', marginBottom: theme.spacing[2], minWidth: 0, paddingRight: theme.spacing[2] }}>
-      <Typography
-        variant="caption"
-        color="muted"
-        style={{ fontWeight: theme.fontWeight.bold, letterSpacing: theme.letterSpacing.caps, marginBottom: theme.spacing[0.5] }}>
+    <View style={kit.kvItem}>
+      <Typography variant="caption" color="muted">
         {label}
       </Typography>
       <Typography
         variant="body-sm"
         numberOfLines={2}
         style={{
-          fontWeight: theme.fontWeight.bold,
+          fontWeight: theme.fontWeight.semibold,
           ...(mono ? { fontFamily: theme.fontFamily.mono.semibold } : null),
         }}>
         {value}
@@ -67,6 +56,7 @@ function DetailItem({ label, value, mono = false }: { label: string; value: stri
  *  Same interaction as the post-verify screen (ref: facepe verify.tsx). */
 export default function DocumentDetailScreen() {
   const theme = useThemeTokens();
+  const kit = useKitStyles();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const styles = useStyles();
@@ -141,7 +131,6 @@ export default function DocumentDetailScreen() {
   }
 
   const title = doc.label;
-  const status = STATUS[doc.status] ?? { variant: 'neutral' as const, label: doc.status };
   const failed = doc.status === 'failed';
   const isLicense = doc.type.toLowerCase().includes('license');
   const portraitUri = doc.portraitImageUrl ?? selfieImageUri;
@@ -165,12 +154,12 @@ export default function DocumentDetailScreen() {
           </Alert>
         )}
 
-        {/* Flip card — front: info / back: captured scan */}
+        {/* Flip card — front: TruePas credential card / back: captured scan */}
         <View style={styles.cardWrapper}>
-          {/* Front face */}
+          {/* Front face — the physical-card presentation (truepas DocumentIdCard). */}
           <Animated.View
             style={[
-              styles.docInfoCard,
+              styles.docInfoCardFront,
               {
                 transform: [
                   { perspective: 1000 },
@@ -180,54 +169,18 @@ export default function DocumentDetailScreen() {
                 zIndex: isFlipped ? 0 : 1,
               },
             ]}>
-            <LinearGradient
-              colors={['#08B6FC', '#034965']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.docCardHeader}>
-              <Typography variant="body-sm" style={styles.cardTitle}>
-                {title}
-              </Typography>
-              <View style={styles.idCardStatusBadge}>
-                <View
-                  style={[
-                    styles.idCardStatusDot,
-                    { backgroundColor: failed ? theme.colors.error : theme.colors.success },
-                  ]}
-                />
-                <Typography variant="caption" style={styles.idCardStatusText}>
-                  {status.label.toUpperCase()}
-                </Typography>
-              </View>
-            </LinearGradient>
-
-            <View style={styles.docMainInfo}>
-              <View style={styles.docAvatarContainer}>
-                {portraitUri ? (
-                  <Image source={{ uri: portraitUri }} style={styles.docAvatar} resizeMode="cover" />
-                ) : (
-                  <View style={styles.docAvatarPlaceholder}>
-                    <ScanFace size={iconSize.lg} color={theme.colors.textMuted} />
-                  </View>
-                )}
-              </View>
-
-              <View style={styles.docDetailsGrid}>
-                <DetailItem label="Full name" value={doc.extractedName || '—'} />
-                <DetailItem label="Document no" value={doc.number || '—'} mono />
-                <DetailItem label="Date of birth" value={formatDate(doc.extractedDob)} />
-                <DetailItem label="Expires" value={formatDate(doc.expiresAt)} />
-                <DetailItem
-                  label={isLicense ? 'State' : 'Nationality'}
-                  value={(isLicense ? doc.issuingState : doc.nationality) || '—'}
-                />
-                <DetailItem
-                  label="Match score"
-                  value={doc.matchScore != null ? `${Math.round(doc.matchScore * 100)}%` : '—'}
-                  mono
-                />
-              </View>
-            </View>
+            <DocumentIdCard
+              doc={{
+                label: doc.label,
+                number: doc.number,
+                status: doc.status,
+                expiresAt: doc.expiresAt ? doc.expiresAt.split('T')[0] : null,
+                matchScore: doc.matchScore,
+                type: doc.type,
+                extractedName: doc.extractedName,
+              }}
+              style={styles.idCardFace}
+            />
           </Animated.View>
 
           {/* Back face — captured document scan */}
@@ -244,18 +197,9 @@ export default function DocumentDetailScreen() {
                 zIndex: isFlipped ? 1 : 0,
               },
             ]}>
-            <LinearGradient
-              colors={['#08B6FC', '#034965']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.docCardHeader}>
-              <Typography variant="body-sm" style={styles.cardTitle}>
-                Document Scan
-              </Typography>
-            </LinearGradient>
             <View style={styles.docImageContainer}>
               {scanUri ? (
-                <Image source={{ uri: scanUri }} style={styles.docFullImage} resizeMode="contain" />
+                <Image source={{ uri: scanUri }} style={styles.docFullImage} resizeMode="cover" />
               ) : (
                 <View style={styles.docAvatarPlaceholder}>
                   <IconCmp size={iconSize.xl} color={theme.colors.textMuted} />
@@ -269,7 +213,7 @@ export default function DocumentDetailScreen() {
         </View>
 
         {/* Flip action */}
-        <View style={{ alignItems: 'center' }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'center', gap: theme.spacing[3] }}>
           <CoreButton
             size="sm"
             onPress={toggleFlip}
@@ -283,6 +227,17 @@ export default function DocumentDetailScreen() {
             }>
             {isFlipped ? 'View Info' : 'View Scan'}
           </CoreButton>
+          <CoreButton
+            size="sm"
+            variant="ghost"
+            onPress={handleRemove}
+            accessibilityLabel="Remove document"
+            style={{ borderColor: theme.colors.error }}
+            iconLeft={<Trash2 size={iconSize.sm} color={theme.colors.error} />}>
+            <Typography variant="body-sm" style={{ color: theme.colors.error }}>
+              Remove
+            </Typography>
+          </CoreButton>
         </View>
 
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing[2] }}>
@@ -294,25 +249,53 @@ export default function DocumentDetailScreen() {
               Added {formatDate(doc.addedAt)}
             </Typography>
         </View>
-      </ScrollView>
 
-      <View
-          style={{
-            paddingHorizontal: theme.spacing[4],
-            paddingTop: theme.spacing[2],
-            paddingBottom: insets.bottom + theme.spacing[3],
-          }}>
-          <CoreButton
-            variant="ghost"
-            fullWidth
-            loading={removeDocument.isPending}
-            accessibilityLabel="Remove document"
-            onPress={handleRemove}>
-            <Typography variant="body" style={{ color: theme.colors.error }}>
-              Remove document
-            </Typography>
-          </CoreButton>
-      </View>
+        {/* Extracted fields — portrait + captured data behind an "Extracted
+            details" disclosure (ref: design-repo Accordion / DocumentDetailCard variant C) */}
+        <Accordion
+          items={[
+            {
+              value: 'more',
+              title: 'Extracted details',
+              content: (
+                <View style={{ flexDirection: 'row' }}>
+                  <View style={styles.docAvatarContainer}>
+                    {portraitUri ? (
+                      <Image source={{ uri: portraitUri }} style={styles.docAvatar} resizeMode="cover" />
+                    ) : (
+                      <View style={styles.docAvatarPlaceholder}>
+                        <ScanFace size={iconSize.lg} color={theme.colors.textMuted} />
+                      </View>
+                    )}
+                  </View>
+
+                  <View style={[kit.kvGrid, { flex: 1 }]}>
+                    <DetailItem label="Full name" value={doc.extractedName || '—'} />
+                    <DetailItem label="Document no" value={doc.number || '—'} mono />
+                    <DetailItem label="Date of birth" value={formatDate(doc.extractedDob)} />
+                    <DetailItem label="Expires" value={formatDate(doc.expiresAt)} />
+                    <DetailItem
+                      label={isLicense ? 'State' : 'Nationality'}
+                      value={(isLicense ? doc.issuingState : doc.nationality) || '—'}
+                    />
+                  </View>
+                </View>
+              ),
+            },
+          ]}
+        />
+
+        {/* Match confidence ring — the score moves out of the card grid into
+            the design's hero gauge (verification frame #8). */}
+        {doc.matchScore != null && doc.status === 'verified' && (
+          <View style={{ alignItems: 'center' }}>
+            <ConfidenceRing
+              value={Math.round(doc.matchScore <= 1 ? doc.matchScore * 100 : doc.matchScore)}
+              style={{ width: '100%', alignItems: 'center' }}
+            />
+          </View>
+        )}
+      </ScrollView>
 
       <Modal
         visible={confirmRemove}
@@ -345,9 +328,7 @@ export default function DocumentDetailScreen() {
 const useStyles = makeStyles((t: Theme) => ({
   cardWrapper: {
     width: '100%',
-    height: 340,
-    alignItems: 'center',
-    justifyContent: 'center',
+    height: 260,
   },
   docInfoCard: {
     position: 'absolute',
@@ -358,51 +339,22 @@ const useStyles = makeStyles((t: Theme) => ({
     overflow: 'hidden',
     ...t.shadows.xl,
   },
+  docInfoCardFront: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: t.colors.surfaceRaised,
+    borderRadius: t.radii['2xl'],
+    overflow: 'hidden',
+    ...t.shadows.xl,
+  },
   docCardBackFace: {
     backgroundColor: t.colors.surfaceSunken,
   },
-  docCardHeader: {
-    flexDirection: 'row',
+  idCardFace: {
+    width: '100%',
+    height: '100%',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: t.spacing[5],
-    paddingVertical: t.spacing[4],
-  },
-  cardTitle: {
-    fontWeight: t.fontWeight.bold,
-    color: '#FFFFFF',
-    textTransform: 'uppercase',
-    letterSpacing: t.letterSpacing.caps,
-    flex: 1,
-  },
-  idCardStatusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    paddingHorizontal: t.spacing[3],
-    paddingVertical: t.spacing[1],
-    borderRadius: t.radii.md,
-    borderWidth: t.sizes.fieldBorderWidth,
-    borderColor: 'rgba(255,255,255,0.4)',
-    minWidth: 80,
-    flexShrink: 0,
-    marginLeft: t.spacing[2],
-  },
-  idCardStatusDot: {
-    width: 6,
-    height: 6,
-    borderRadius: t.radii.full,
-    marginRight: t.spacing[2],
-  },
-  idCardStatusText: {
-    fontWeight: t.fontWeight.bold,
-    color: '#FFFFFF',
-    letterSpacing: t.letterSpacing.caps,
-  },
-  docMainInfo: {
-    padding: t.spacing[5],
-    flexDirection: 'row',
+    borderRadius: t.radii['2xl'],
   },
   docAvatarContainer: {
     width: 88,
@@ -426,18 +378,11 @@ const useStyles = makeStyles((t: Theme) => ({
   },
   docImageContainer: {
     flex: 1,
-    padding: t.spacing[3],
     alignItems: 'center',
     justifyContent: 'center',
   },
   docFullImage: {
     width: '100%',
     height: '100%',
-    borderRadius: t.radii.sm,
-  },
-  docDetailsGrid: {
-    flex: 1,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
   },
 }));

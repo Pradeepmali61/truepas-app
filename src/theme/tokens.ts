@@ -37,6 +37,17 @@ export const radii: Record<"none" | "sm" | "md" | "lg" | "xl" | "2xl" | "full", 
   full: 9999,
 };
 
+/** Softer scale used by combo palettes (soft-UI — cards land in 16–24px). */
+export const roundedRadii: typeof radii = {
+  none: 0,
+  sm: 8,
+  md: 12,
+  lg: 16,
+  xl: 22,
+  "2xl": 28,
+  full: 9999,
+};
+
 export const fontSize: Record<
   "xs" | "sm" | "base" | "md" | "lg" | "xl" | "2xl" | "3xl" | "4xl",
   number
@@ -176,6 +187,29 @@ export const darkShadows: Record<ShadowKey, ViewStyle> = {
   md: { shadowColor: "#000", shadowOpacity: 0.5, shadowRadius: 4, shadowOffset: { width: 0, height: 2 }, elevation: 3 },
   lg: { shadowColor: "#000", shadowOpacity: 0.55, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 8 },
   xl: { shadowColor: "#000", shadowOpacity: 0.6, shadowRadius: 24, shadowOffset: { width: 0, height: 12 }, elevation: 16 },
+};
+
+/**
+ * Soft-UI shadows — long, diffuse, tinted with the palette's neutral shadow
+ * hue (the neumorphic look from the design references). `tint` should be a
+ * deep desaturated relative of the brand hue, e.g. NeutralTints.shadow.
+ */
+export function softShadows(tint: string): Record<ShadowKey, ViewStyle> {
+  return {
+    none: {},
+    sm: { shadowColor: tint, shadowOpacity: 0.08, shadowRadius: 3, shadowOffset: { width: 0, height: 1 }, elevation: 1 },
+    md: { shadowColor: tint, shadowOpacity: 0.11, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 3 },
+    lg: { shadowColor: tint, shadowOpacity: 0.14, shadowRadius: 16, shadowOffset: { width: 0, height: 8 }, elevation: 7 },
+    xl: { shadowColor: tint, shadowOpacity: 0.18, shadowRadius: 28, shadowOffset: { width: 0, height: 14 }, elevation: 14 },
+  };
+}
+
+export const softDarkShadows: Record<ShadowKey, ViewStyle> = {
+  none: {},
+  sm: { shadowColor: "#000", shadowOpacity: 0.45, shadowRadius: 6, shadowOffset: { width: 0, height: 3 }, elevation: 2 },
+  md: { shadowColor: "#000", shadowOpacity: 0.5, shadowRadius: 14, shadowOffset: { width: 0, height: 7 }, elevation: 4 },
+  lg: { shadowColor: "#000", shadowOpacity: 0.55, shadowRadius: 26, shadowOffset: { width: 0, height: 13 }, elevation: 9 },
+  xl: { shadowColor: "#000", shadowOpacity: 0.6, shadowRadius: 40, shadowOffset: { width: 0, height: 20 }, elevation: 16 },
 };
 
 export const duration: Record<"instant" | "fast" | "normal" | "slow", number> = {

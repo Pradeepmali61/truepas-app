@@ -1,12 +1,12 @@
-﻿import { useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Check, Hourglass, TriangleAlert } from 'lucide-react-native';
+import { TriangleAlert } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { api } from '@/api';
-import { Alert } from '@/components/composite';
+import { Alert, StagedFlow } from '@/components/composite';
 import { CoreButton, RowIcon, Spinner, Typography } from '@/components/ui';
 import { documentKeys, useAddDocument } from '@/features/documents/hooks';
 import { clearDocumentImages, saveDocumentImages } from '@/services/documentImageStore';
@@ -26,6 +26,15 @@ const DOC_LABELS: Record<DocumentType, string> = {
 };
 
 type ProcessingStatus = 'adding' | 'creating_session' | 'verifying' | 'done' | 'error';
+
+const STEP_LABELS = ['Document scanned', 'Adding to account', 'Creating session', 'Verifying document'];
+const STEP_INDEX: Record<ProcessingStatus, number> = {
+  adding: 1,
+  creating_session: 2,
+  verifying: 3,
+  done: 4,
+  error: -1,
+};
 
 /** Extract a readable message from any thrown error. */
 const msg0 = (err: any): string =>
@@ -65,6 +74,10 @@ export default function DocumentProcessingScreen() {
   const profileName = useAppSelector((state) => state.auth.user?.fullName ?? 'User');
   const profileDob = useAppSelector((state) => state.auth.user?.dateOfBirth ?? '');
 
+  // Staged flow — index tracks the real API step; on error it stays at the
+  // last active step so that step renders as the failed one.
+  const [stepIndex, setStepIndex] = useState(STEP_INDEX.adding);
+
   // Refresh document lists + identity summary AFTER verification completes â€”
   // the addDocument invalidation fires while the doc is still `pending`, so
   // without this the list shows a stale pre-verify status (e.g. "Failed").
@@ -98,6 +111,7 @@ export default function DocumentProcessingScreen() {
         let doc = createdDocRef.current;
         if (!doc) {
           setStatus('adding');
+          setStepIndex(STEP_INDEX.adding);
           doc = await addDocument.mutateAsync({
             type: docType,
             label: docLabel,
@@ -123,6 +137,7 @@ export default function DocumentProcessingScreen() {
         // they are reserved for the future signed-upload pipeline and the BFF
         // rejects keys not starting with customers/{customerId}/.
         setStatus('creating_session');
+        setStepIndex(STEP_INDEX.creating_session);
         const session = await api.createVerificationSession(doc.id, {
           requestId: `req-${Date.now()}`,
         });
@@ -130,6 +145,7 @@ export default function DocumentProcessingScreen() {
         // Step 3: Verify â€” SYNCHRONOUS result with images as base64
         // Per guide Â§6.3: frontImageBase64 is required, selfieImageBase64 for face match
         setStatus('verifying');
+        setStepIndex(STEP_INDEX.verifying);
         const result = await api.startVerificationWithImages(
           session.id,
           {
@@ -169,6 +185,7 @@ export default function DocumentProcessingScreen() {
 
           refreshDocumentCaches();
           setStatus('done');
+          setStepIndex(STEP_INDEX.done);
           // Pass backend-returned extracted data to the verified screen.
           // docNumber comes from the POST-VERIFY document (real masked number),
           // not the pre-verify placeholder.
@@ -224,7 +241,7 @@ export default function DocumentProcessingScreen() {
         }
       } catch (err: any) {
         clearScanResult();
-        const msg = err?.response?.data?.message ?? err?.message ?? 'Verification failed';
+        const msg = msg0(err);
         console.error('[DocProcessing] Failed at step:', status, '|', msg, JSON.stringify(err?.response?.data));
         setError(msg);
         setStatus('error');
@@ -238,25 +255,6 @@ export default function DocumentProcessingScreen() {
     process();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [docType]);
-
-  const step = (active: boolean, done: boolean, text: string) => (
-    <View
-      style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: theme.spacing[2],
-        paddingVertical: theme.spacing[1.5],
-      }}>
-      {done ? (
-        <Check size={iconSize.sm} color={theme.colors.success} />
-      ) : (
-        <Hourglass size={iconSize.sm} color={active ? theme.colors.actionPrimary : theme.colors.textMuted} />
-      )}
-      <Typography variant="body-sm" color="secondary">
-        {text}
-      </Typography>
-    </View>
-  );
 
   return (
     <SafeAreaView edges={['top', 'bottom']} style={{ flex: 1, backgroundColor: theme.colors.background }}>
@@ -293,18 +291,11 @@ export default function DocumentProcessingScreen() {
           </Typography>
         </View>
 
-        <View>
-          {step(false, true, 'Document scanned')}
-          {step(status === 'adding', status !== 'adding', status === 'adding' ? 'Adding to accountâ€¦' : 'Document added')}
-          {step(
-            status === 'creating_session' || status === 'verifying',
-            status === 'done',
-            status === 'creating_session' ? 'Creating sessionâ€¦' :
-            status === 'verifying' ? 'Matching facesâ€¦' :
-            status === 'done' ? 'Verified' :
-            status === 'error' ? 'Failed' : 'Pending',
-          )}
-        </View>
+        <StagedFlow
+          steps={STEP_LABELS}
+          index={stepIndex}
+          status={status === 'error' ? 'failed' : 'active'}
+        />
 
         {error ? <Alert variant="error">{error}</Alert> : null}
 
@@ -317,6 +308,7 @@ export default function DocumentProcessingScreen() {
                 hasStarted.current = false;
                 setError(null);
                 setStatus('adding');
+                setStepIndex(STEP_INDEX.adding);
                 processRef.current?.();
               }}>
               Retry Verification

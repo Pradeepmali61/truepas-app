@@ -42,7 +42,7 @@ export default function RootLayout() {
     <Provider store={store}>
       <QueryClientProvider client={queryClient}>
         <SafeAreaProvider>
-          <ThemeProvider scheme="system" brand="blue">
+          <ThemeProvider scheme="system" palette="violetLedger">
             <ToastProvider>
               <RootShell>
                 <Stack

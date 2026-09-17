@@ -1,23 +1,25 @@
 import { useQueryClient, type InfiniteData } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
-import { Calendar, CircleHelp, FileText, Home, ScanFace, Users } from 'lucide-react-native';
+import { CircleHelp, Clock, FileText, Home, ScanFace, Users } from 'lucide-react-native';
 import { useState } from 'react';
 import { Text, View } from 'react-native';
 
-import { AppHeader } from '@/components/complex/AppHeader';
-import { NavigationDrawer } from '@/components/complex/NavigationDrawer';
-import { NotificationCenter, type AppNotification } from '@/components/complex/NotificationCenter';
-import { UserMenu } from '@/components/complex/UserMenu';
-import { Badge } from '@/components/ui/Badge';
+import {
+    AppHeader,
+    NavigationDrawer,
+    NotificationCenter,
+    UserMenu,
+    type AppNotification,
+    type NavSection,
+} from '@/components/complex';
 import { useLogout } from '@/features/auth/mutations';
 import { sessionEnded } from '@/features/auth/slice';
-import { useBookings } from '@/features/history/hooks';
 import { useNotifications } from '@/features/notifications/hooks';
 import { useProfilePicture } from '@/features/profile/hooks';
 import { useToast } from '@/hooks/useToast';
 import { secureStorage } from '@/services/secureStorage';
 import { useAppDispatch, useAppSelector } from '@/store';
-import { makeStyles, useThemeTokens } from '@/theme';
+import { useThemeTokens } from '@/theme';
 import { iconSize } from '@/theme/tokens';
 import type { Notification } from '@/types/domain';
 
@@ -35,12 +37,13 @@ function toAppNotification(n: Notification, onPress: () => void): AppNotificatio
     };
 }
 
-/** App chrome for the home screen — brand header (menu/bell/avatar) + navigation drawer. */
+/** Home chrome — repo AppHeader composition (design-repo ChromeSection):
+ *  hamburger → navigation drawer, brand lockup, bell with unread badge,
+ *  account avatar chip. */
 export function AppChrome() {
-    const styles = useStyles();
     const theme = useThemeTokens();
     const router = useRouter();
-    const [drawer, setDrawer] = useState(false);
+    const [drawerOpen, setDrawerOpen] = useState(false);
 
     const user = useAppSelector((state) => state.auth.user);
     const dispatch = useAppDispatch();
@@ -49,13 +52,10 @@ export function AppChrome() {
     const logout = useLogout();
     const { url: avatarUri } = useProfilePicture();
     const { data: notifData, isPending: notifLoading } = useNotifications();
-    const { data: bookings } = useBookings();
 
     const notifications = (notifData?.pages.flat() ?? []).map((n) =>
         toAppNotification(n, () => router.push('/notification' as never)),
     );
-    const upcomingCount = bookings?.filter((b) => b.status === 'upcoming').length ?? 0;
-    const muted = theme.colors.textSecondary;
 
     // No mark-read endpoint on the BFF — update the inbox cache locally.
     const markAllRead = () => {
@@ -81,10 +81,42 @@ export function AppChrome() {
         toast.show('success', 'Logged out successfully');
     };
 
+    const drawerSections: NavSection[] = [
+        {
+            items: [
+                { key: 'home', label: 'Home', icon: <Home size={iconSize.sm} color={theme.colors.textSecondary} />, active: true },
+                {
+                    key: 'docs',
+                    label: 'Documents',
+                    icon: <FileText size={iconSize.sm} color={theme.colors.textSecondary} />,
+                    onPress: () => router.push('/(tabs)/documents' as never),
+                },
+                {
+                    key: 'family',
+                    label: 'Family',
+                    icon: <Users size={iconSize.sm} color={theme.colors.textSecondary} />,
+                    onPress: () => router.push('/(tabs)/family' as never),
+                },
+                {
+                    key: 'history',
+                    label: 'History',
+                    icon: <Clock size={iconSize.sm} color={theme.colors.textSecondary} />,
+                    onPress: () => router.push('/(tabs)/history' as never),
+                },
+                {
+                    key: 'help',
+                    label: 'Help & FAQ',
+                    icon: <CircleHelp size={iconSize.sm} color={theme.colors.textSecondary} />,
+                    onPress: () => router.push('/help' as never),
+                },
+            ],
+        },
+    ];
+
     return (
         <>
             <AppHeader
-                onMenuPress={() => setDrawer(true)}
+                onMenuPress={() => setDrawerOpen(true)}
                 left={<ScanFace size={iconSize.lg} color={theme.colors.actionPrimary} />}
                 title="Truepas"
                 actions={
@@ -106,76 +138,18 @@ export function AppChrome() {
                 }
             />
             <NavigationDrawer
-                visible={drawer}
-                onClose={() => setDrawer(false)}
+                visible={drawerOpen}
+                onClose={() => setDrawerOpen(false)}
                 header={
-                    <View style={styles.drawerBrand}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing[2] }}>
                         <ScanFace size={iconSize.md} color={theme.colors.actionPrimary} />
-                        <Text style={styles.drawerBrandText}>Truepas</Text>
+                        <Text style={{ fontWeight: theme.fontWeight.semibold, color: theme.colors.textPrimary }}>
+                            Truepas
+                        </Text>
                     </View>
                 }
-                sections={[
-                    {
-                        items: [
-                            {
-                                key: 'home',
-                                label: 'Home',
-                                icon: <Home size={iconSize.sm} color={muted} />,
-                                active: true,
-                            },
-                            {
-                                key: 'book',
-                                label: 'Bookings',
-                                icon: <Calendar size={iconSize.sm} color={muted} />,
-                                badge:
-                                    upcomingCount > 0 ? (
-                                        <Badge size="sm" variant="primary">
-                                            {upcomingCount}
-                                        </Badge>
-                                    ) : undefined,
-                                onPress: () => router.push('/history' as never),
-                            },
-                        ],
-                    },
-                    {
-                        heading: 'Identity',
-                        items: [
-                            {
-                                key: 'docs',
-                                label: 'Documents',
-                                icon: <FileText size={iconSize.sm} color={muted} />,
-                                onPress: () => router.push('/documents' as never),
-                            },
-                            {
-                                key: 'family',
-                                label: 'Family',
-                                icon: <Users size={iconSize.sm} color={muted} />,
-                                onPress: () => router.push('/family' as never),
-                            },
-                        ],
-                    },
-                    {
-                        heading: 'Support',
-                        items: [
-                            {
-                                key: 'help',
-                                label: 'Help & FAQ',
-                                icon: <CircleHelp size={iconSize.sm} color={muted} />,
-                                onPress: () => router.push('/help' as never),
-                            },
-                        ],
-                    },
-                ]}
+                sections={drawerSections}
             />
         </>
     );
 }
-
-const useStyles = makeStyles((t) => ({
-    drawerBrand: { flexDirection: 'row', gap: t.spacing[2], alignItems: 'center' },
-    drawerBrandText: {
-        fontFamily: t.fontFamily.sans.semibold,
-        fontWeight: '600',
-        color: t.colors.textPrimary,
-    },
-}));

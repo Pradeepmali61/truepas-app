@@ -6,7 +6,8 @@ import { Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Card, CardContent, Modal, ScreenHeader } from '@/components/composite';
-import { Badge, CoreButton, Divider, Link, RowIcon, Switch, Typography } from '@/components/ui';
+import { ConsentCard } from '@/components/truepas';
+import { CoreButton, Divider, RowIcon, Switch, Typography } from '@/components/ui';
 import { useThemeTokens } from '@/theme';
 import { iconSize } from '@/theme/tokens';
 
@@ -128,28 +129,13 @@ export default function SecurityScreen() {
 
         <View style={{ gap: theme.spacing[2] }}>
           {sectionLabel('BIOMETRIC CONSENT')}
-          <Card>
-            <CardContent style={{ gap: theme.spacing[2] }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Typography variant="body-sm" color="secondary">
-                  Consent Status
-                </Typography>
-                <Badge variant={consentGranted ? 'success' : 'neutral'}>
-                  {consentGranted ? 'Granted' : 'Withdrawn'}
-                </Badge>
-              </View>
-              <Typography variant="body-sm" color="secondary">
-                {consentGranted
-                  ? 'You consented to biometric enrollment on Jul 29, 2026 at 9:10 AM'
-                  : 'Biometric consent withdrawn. Face verification is disabled until you re-consent.'}
-              </Typography>
-              <Link
-                onPress={() => setConsentAction(consentGranted ? 'withdraw' : 'give')}
-                accessibilityLabel={consentGranted ? 'Withdraw consent' : 'Give consent'}>
-                {consentGranted ? 'Withdraw Consent' : 'Give Consent'}
-              </Link>
-            </CardContent>
-          </Card>
+          {/* Design-repo ConsentCard, controlled — the toggle opens the
+              confirm modal first; the value only commits on confirm. */}
+          <ConsentCard
+            value={consentGranted}
+            onValueChange={(v) => setConsentAction(v ? 'give' : 'withdraw')}
+            style={{ width: '100%' }}
+          />
         </View>
       </ScrollView>
 

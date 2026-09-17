@@ -1,5 +1,9 @@
 export { TRUEPAS_FONT_SOURCES, useTruepasFonts } from "./fonts";
-export { BRAND_PRESETS, palette, type BrandPreset, type BrandRamp } from "./palette";
+export {
+    BRAND_PRESETS, COMBO_PRESETS, palette, type BrandPreset, type BrandRamp,
+    type ColorRatio, type ComboPreset, type ComboPresetName, type FeedbackOverrides,
+    type NeutralTints, type PaletteChoice
+} from "./palette";
 export {
     makeStyles, ThemeProvider,
     useTheme,

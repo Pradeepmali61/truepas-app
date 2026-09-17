@@ -2,7 +2,6 @@ import { useRouter } from 'expo-router';
 import {
     Camera,
     ChevronRight,
-    CircleCheck,
     Fingerprint,
     Mail,
     PenLine,
@@ -13,6 +12,7 @@ import { Platform, Pressable, View } from 'react-native';
 
 import { Card, ScreenHeader } from '@/components/composite';
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
+import { ProfileHeader } from '@/components/truepas';
 import { Avatar, Divider, Spinner, Typography } from '@/components/ui';
 import { useLogout } from '@/features/auth/mutations';
 import { sessionEnded } from '@/features/auth/slice';
@@ -171,64 +171,64 @@ export default function ProfileScreen() {
         }
       />
 
-      {/* Hero */}
-      <View style={{ alignItems: 'center', paddingVertical: theme.spacing[5], gap: theme.spacing[2] }}>
-        <View>
-          <Avatar
-            uri={profilePictureUrl ?? undefined}
-            name={user?.fullName}
-            size="xl"
-            style={{ width: 84, height: 84 }}
-          />
-          {isUploading && (
-            <View
-              style={{
-                position: 'absolute',
-                inset: 0,
-                borderRadius: theme.radii.full,
-                backgroundColor: 'rgba(0,0,0,0.45)',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}>
-              <Spinner size="md" color="#FFFFFF" label="Uploading photo" />
+      {/* Hero — design-repo ProfileHeader; the avatar slot carries the real
+          photo-upload affordance (preview, spinner, camera badge). */}
+      <View style={{ paddingHorizontal: theme.spacing[4], paddingTop: theme.spacing[4] }}>
+        <ProfileHeader
+          user={{
+            fullName: user?.fullName ?? 'User',
+            email: user?.email ?? '—',
+            faceEnrolled: user?.faceEnrolled ?? false,
+          }}
+          avatar={
+            <View>
+              <Avatar
+                uri={profilePictureUrl ?? undefined}
+                name={user?.fullName}
+                size="xl"
+                style={{ width: 72, height: 72 }}
+              />
+              {isUploading && (
+                <View
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    borderRadius: theme.radii.full,
+                    backgroundColor: 'rgba(0,0,0,0.45)',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}>
+                  <Spinner size="md" color="#FFFFFF" label="Uploading photo" />
+                </View>
+              )}
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Change profile picture"
+                onPress={handlePickProfilePicture}
+                disabled={isUploading}
+                style={{
+                  position: 'absolute',
+                  bottom: -2,
+                  right: -2,
+                  width: 28,
+                  height: 28,
+                  borderRadius: 14,
+                  backgroundColor: theme.colors.actionPrimary,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderWidth: 2,
+                  borderColor: theme.colors.surface,
+                }}>
+                <Camera size={14} color={theme.colors.onActionPrimary} />
+              </Pressable>
             </View>
-          )}
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Change profile picture"
-            onPress={handlePickProfilePicture}
-            disabled={isUploading}
-            style={{
-              position: 'absolute',
-              bottom: -2,
-              right: -2,
-              width: 28,
-              height: 28,
-              borderRadius: 14,
-              backgroundColor: theme.colors.actionPrimary,
-              alignItems: 'center',
-              justifyContent: 'center',
-              borderWidth: 2,
-              borderColor: theme.colors.surface,
-            }}>
-            <Camera size={14} color={theme.colors.onActionPrimary} />
-          </Pressable>
-        </View>
-        <Typography variant="h3" center>
-          {user?.fullName ?? 'User'}
-        </Typography>
-        {user?.faceEnrolled && (
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing[1.5] }}>
-            <CircleCheck size={iconSize.sm} color={theme.colors.success} />
-            <Typography variant="body-sm" color="success">
-              Face ID enrolled
-            </Typography>
-          </View>
-        )}
+          }
+          style={{ width: '100%' }}
+        />
       </View>
 
       {/* Contact / consent card */}
-      <View style={{ paddingHorizontal: theme.spacing[4], gap: theme.spacing[4] }}>
+      <View style={{ paddingHorizontal: theme.spacing[4], paddingTop: theme.spacing[4], gap: theme.spacing[4] }}>
         <Card noPadding>
           <InfoRow
             icon={<Mail size={iconSize.sm} color={theme.colors.textSecondary} />}

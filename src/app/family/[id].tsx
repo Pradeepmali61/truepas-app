@@ -1,10 +1,11 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Baby, Camera, CircleCheck, EllipsisVertical, FileText, ScanFace, Trash2, UserRoundPen, Users } from 'lucide-react-native';
-import { useState, type ReactNode } from 'react';
+import { Baby, Camera, EllipsisVertical, FileText, Trash2, UserRoundPen, Users } from 'lucide-react-native';
+import { useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ActionSheet, Alert, Card, CardContent, ErrorState, Modal, ScreenHeader } from '@/components/composite';
+import { LivenessStepsCard } from '@/components/truepas';
 import {
     Avatar,
     Badge,
@@ -16,20 +17,12 @@ import {
     Skeleton,
     Typography,
     type BadgeVariant,
-    type RowIconTone,
 } from '@/components/ui';
 import { useDocuments } from '@/features/documents/hooks';
 import { useFamilyMember, useRemoveFamilyMember } from '@/features/family/hooks';
 import { useThemeTokens } from '@/theme';
 import { iconSize } from '@/theme/tokens';
 import type { FamilyMember } from '@/types/domain';
-
-const VERIFICATION: Record<string, { variant: BadgeVariant; label: string }> = {
-  verified: { variant: 'success', label: 'Verified' },
-  pending_document: { variant: 'warning', label: 'Needs document' },
-  pending_face: { variant: 'warning', label: 'Needs face' },
-  failed: { variant: 'error', label: 'Failed' },
-};
 
 const DOC_STATUS: Record<string, { variant: BadgeVariant; label: string }> = {
   verified: { variant: 'success', label: 'Verified' },
@@ -38,33 +31,22 @@ const DOC_STATUS: Record<string, { variant: BadgeVariant; label: string }> = {
   missing: { variant: 'neutral', label: 'Missing' },
 };
 
-function verificationBadge(verification: string) {
-  const meta = VERIFICATION[verification] ?? { variant: 'neutral' as const, label: verification };
-  return <Badge variant={meta.variant}>{meta.label}</Badge>;
+function formatDob(dob?: string): string {
+  if (!dob) return '—';
+  const d = new Date(dob);
+  return Number.isNaN(d.getTime())
+    ? dob
+    : d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-function StepRow({
-  icon,
-  tone = 'neutral',
-  title,
-  subtitle,
-  trailing,
-}: {
-  icon: ReactNode;
-  tone?: RowIconTone;
-  title: string;
-  subtitle: string;
-  trailing?: ReactNode;
-}) {
+function DetailRow({ label, value }: { label: string; value: string }) {
   const theme = useThemeTokens();
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing[3] }}>
-      <RowIcon tone={tone} icon={icon} />
-      <View style={{ flex: 1, gap: 2, minWidth: 0 }}>
-        <Typography variant="body">{title}</Typography>
-        <Typography variant="body-sm" color="muted">{subtitle}</Typography>
-      </View>
-      {trailing}
+    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: theme.spacing[3] }}>
+      <Typography variant="body-sm" color="muted">{label}</Typography>
+      <Typography variant="body-sm" numberOfLines={1} style={{ flexShrink: 1, fontWeight: theme.fontWeight.bold }}>
+        {value}
+      </Typography>
     </View>
   );
 }
@@ -133,58 +115,6 @@ export default function FamilyMemberScreen() {
     </Badge>
   );
 
-  const docRow = (
-    <StepRow
-      tone={docDone ? 'success' : 'warning'}
-      icon={<FileText size={iconSize.md} color={docDone ? theme.colors.onSuccessSubtle : theme.colors.onWarningSubtle} />}
-      title={isPhoto ? 'Document' : '1 · Verify a document'}
-      subtitle={docDone ? `${doneDoc?.label ?? 'Document'} added.` : 'Birth certificate or passport.'}
-      trailing={docDone ? <Badge variant="success">Done</Badge> : <Badge variant="warning">Next</Badge>}
-    />
-  );
-
-  const faceRow = isPhoto ? (
-    <StepRow
-      tone={faceDone ? 'success' : faceNext ? 'warning' : 'neutral'}
-      icon={
-        <Camera
-          size={iconSize.md}
-          color={faceDone ? theme.colors.onSuccessSubtle : faceNext ? theme.colors.onWarningSubtle : theme.colors.textSecondary}
-        />
-      }
-      title="Photo captured"
-      subtitle="No liveness needed under 5 — one clear photo enrolls the face."
-      trailing={
-        faceDone ? <Badge variant="success">Done</Badge> : faceNext ? <Badge variant="warning">Next</Badge> : undefined
-      }
-    />
-  ) : (
-    <>
-      <StepRow
-        tone={faceDone ? 'success' : faceNext ? 'warning' : 'neutral'}
-        icon={
-          <ScanFace
-            size={iconSize.md}
-            color={faceDone ? theme.colors.onSuccessSubtle : faceNext ? theme.colors.onWarningSubtle : theme.colors.textSecondary}
-          />
-        }
-        title="2 · Liveness check"
-        subtitle={anyCamera ? 'Front or back camera, challenge prompts.' : 'Front camera, challenge prompts.'}
-        trailing={
-          faceDone ? <Badge variant="success">Done</Badge> : faceNext ? <Badge variant="warning">Next</Badge> : undefined
-        }
-      />
-      <Divider />
-      <StepRow
-        icon={<CircleCheck size={iconSize.md} color={faceDone ? theme.colors.onSuccessSubtle : theme.colors.textSecondary} />}
-        tone={faceDone ? 'success' : 'neutral'}
-        title="3 · Face enrollment"
-        subtitle="Automatic after liveness passes."
-        trailing={faceDone ? <Badge variant="success">Done</Badge> : undefined}
-      />
-    </>
-  );
-
   const cta = docNext
     ? {
         label: `Add ${first}'s document`,
@@ -238,17 +168,31 @@ export default function FamilyMemberScreen() {
             <Avatar name={m.name} size="xl" />
           </PopIn>
           <View style={{ flexDirection: 'row', gap: theme.spacing[2], flexWrap: 'wrap', justifyContent: 'center' }}>
-            {verificationBadge(m.verification)}
             {cameraBadge}
           </View>
         </View>
         <Card>
           <CardContent style={{ gap: theme.spacing[3] }}>
-            {docRow}
+            <DetailRow label="Name" value={m.name} />
             <Divider />
-            {faceRow}
+            <DetailRow label="Date of birth" value={formatDob(m.dateOfBirth)} />
+            <Divider />
+            <DetailRow label="Relationship" value={m.relationship} />
           </CardContent>
         </Card>
+        <LivenessStepsCard
+          title="Verification"
+          total={2}
+          current={docDone ? 1 : 0}
+          style={{ width: '100%', elevation: 0, shadowOpacity: 0 }}
+          steps={[
+            { label: 'Document upload', state: docDone ? 'done' : 'active' },
+            {
+              label: isPhoto ? 'Photo captured' : 'Face scanned',
+              state: faceDone ? 'done' : docDone ? 'active' : 'pending',
+            },
+          ]}
+        />
 
         {/* Member's scanned documents — tap to open the flip-card detail */}
         {memberDocs && memberDocs.length > 0 ? (
@@ -280,11 +224,6 @@ export default function FamilyMemberScreen() {
             })}
           </View>
         ) : null}
-        {m.verification === 'verified' && (
-          <Alert variant="success" title="Ready for check-in">
-            {first} can be added to venue check-ins with you.
-          </Alert>
-        )}
         {m.turning18Soon && (
           <Alert variant="info" title="Eligible for independent account">
             {first} is turning 18 soon and can create their own Truepas account.

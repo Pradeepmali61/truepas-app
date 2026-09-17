@@ -17,7 +17,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Typography } from '@/components/ui';
-import { makeStyles, useThemeTokens } from '@/theme';
+import { makeStyles } from '@/theme';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const CARD_HEIGHT = SCREEN_HEIGHT * 0.42;
@@ -56,14 +56,13 @@ const SLIDES: Slide[] = [
 
 export default function WelcomeScreen() {
   const router = useRouter();
-  const theme = useThemeTokens();
   const styles = useStyles();
   const listRef = useRef<FlatList<Slide>>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const insets = useSafeAreaInsets();
 
-  // Brand gradient — accent → primary → pressed (was Gradients.welcome)
-  const cardGradient = [theme.colors.accent, theme.colors.actionPrimary, theme.colors.actionPrimaryPressed] as const;
+  // Solid login violet — same as the login "Sign in" button (actionPrimary)
+  const cardGradient = ['#5b2ff4', '#5b2ff4'] as const;
 
   const handleFinish = useCallback(() => {
     router.push('/(auth)/login');
@@ -135,7 +134,7 @@ export default function WelcomeScreen() {
 
   return (
     <LinearGradient
-      colors={[theme.colors.infoSubtle, theme.colors.accent]}
+      colors={['#f0f0ff', '#e8e3ff']}
       start={{ x: 0, y: 0 }}
       end={{ x: 0, y: 1 }}
       style={styles.container}>
@@ -180,7 +179,7 @@ const useStyles = makeStyles((t) => ({
   container: { flex: 1 },
   skipWrapper: { position: 'absolute', right: t.spacing[5], zIndex: 30 },
   skipText: {
-    color: t.colors.actionPrimary,
+    color: 'rgba(91, 47, 244, 0.75)',
     fontSize: t.fontSize.md,
     fontWeight: t.fontWeight.bold,
     textDecorationLine: 'underline',
@@ -242,10 +241,10 @@ const useStyles = makeStyles((t) => ({
     ...t.shadows.lg,
   },
   ctaText: {
-    color: t.colors.actionPrimary,
+    color: '#5b2ff4',
     fontSize: t.fontSize.md,
     fontWeight: t.fontWeight.bold,
     letterSpacing: t.letterSpacing.wide,
   },
-  bottomBar: { backgroundColor: t.colors.actionPrimaryPressed },
+  bottomBar: { backgroundColor: '#5b2ff4' },
 }));

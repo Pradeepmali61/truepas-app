@@ -1,10 +1,10 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { CircleCheck, Hotel, MapPin, Ticket } from 'lucide-react-native';
-import type { ReactNode } from 'react';
+import { Hotel, MapPin, Ticket } from 'lucide-react-native';
 import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Card, CardContent, CardHeader, CardTitle, ErrorState, ScreenHeader } from '@/components/composite';
+import { HistoryRow } from '@/components/truepas';
 import {
     Badge,
     Divider,
@@ -39,22 +39,6 @@ function KV({ label, value, mono = true }: { label: string; value: string; mono?
         style={mono ? { fontFamily: theme.fontFamily.mono.semibold } : undefined}>
         {value}
       </Typography>
-    </View>
-  );
-}
-
-function Row({ leading, title, subtitle, trailing }: { leading: ReactNode; title: string; subtitle?: string; trailing?: ReactNode }) {
-  const theme = useThemeTokens();
-  return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing[3] }}>
-      {leading}
-      <View style={{ flex: 1, gap: 2, minWidth: 0 }}>
-        <Typography variant="body" numberOfLines={1}>{title}</Typography>
-        {subtitle ? (
-          <Typography variant="body-sm" color="muted" numberOfLines={1}>{subtitle}</Typography>
-        ) : null}
-      </View>
-      {trailing}
     </View>
   );
 }
@@ -170,16 +154,11 @@ export default function BookingDetailScreen() {
               {memberIds.map((personId, i) => (
                 <View key={personId}>
                   {i > 0 && <Divider style={{ marginBottom: theme.spacing[3] }} />}
-                  <Row
-                    leading={
-                      <RowIcon
-                        tone="success"
-                        icon={<CircleCheck size={iconSize.md} color={theme.colors.onSuccessSubtle} />}
-                      />
-                    }
+                  <HistoryRow
                     title={resolveName(personId)}
-                    subtitle={`Face check-in · ${formatDateTime(booking.checkIn)}`}
-                    trailing={<Badge variant="success">Checked in</Badge>}
+                    meta="Face check-in"
+                    outcome="success"
+                    when={formatDateTime(booking.checkIn)}
                   />
                 </View>
               ))}

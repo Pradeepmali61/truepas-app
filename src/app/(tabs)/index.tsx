@@ -1,40 +1,31 @@
 import { useRouter } from 'expo-router';
-import { CircleCheck, FileText, ScanFace, ShieldCheck, TriangleAlert, User } from 'lucide-react-native';
+import { Clock, FileText, ScanFace, Ticket, User, Users } from 'lucide-react-native';
 import type { ReactNode } from 'react';
-import { RefreshControl, ScrollView, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppChrome } from '@/components/app/AppChrome';
-import { ActivityFeed } from '@/components/complex/ActivityFeed';
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardFooter,
-    CardHeader,
-    CardTitle
-} from '@/components/composite';
+import { useKitStyles } from '@/components/truepas';
 import {
     Badge,
-    CoreButton,
     CoreCard,
     CoreIcon,
     Divider,
-    EmptyState,
     ErrorState,
     LoadingState,
-    Typography,
+    Progress,
     type BadgeVariant
 } from '@/components/ui';
 import { useDocuments } from '@/features/documents/hooks';
+import { useFamily } from '@/features/family/hooks';
+import { useBookings } from '@/features/history/hooks';
 import { useIdentitySummary } from '@/features/identity/hooks';
-import { useAppSelector } from '@/store';
 import { makeStyles, useThemeTokens, type Theme } from '@/theme';
 import { iconSize } from '@/theme/tokens';
-import type { ActivityItem, VerificationStatus } from '@/types/domain';
+import type { VerificationStatus } from '@/types/domain';
 
 /** Height of the custom bottom tab bar (see (tabs)/_layout.tsx). */
-const TAB_BAR_HEIGHT = 64;
+const TAB_BAR_HEIGHT = 88;
 
 const STEP_STATUS: Record<VerificationStatus, { label: string; variant: BadgeVariant }> = {
     verified: { label: 'Verified', variant: 'success' },
@@ -62,49 +53,69 @@ function stepColors(t: Theme, status: VerificationStatus): { bg: string; fg: str
     }
 }
 
-function activityIcon(t: Theme, tone: ActivityItem['tone']): ReactNode {
-    switch (tone) {
-        case 'success':
-            return <CircleCheck size={iconSize.sm} color={t.colors.onSuccessSubtle} />;
-        case 'warning':
-            return <FileText size={iconSize.sm} color={t.colors.onWarningSubtle} />;
-        default:
-            return <TriangleAlert size={iconSize.sm} color={t.colors.onErrorSubtle} />;
-    }
-}
-
-/** Home tab — identity dashboard (GET /cb/identity/summary). */
+/** Home tab — V2 Dashboard composition (design-repo truepas/home.tsx):
+ *  greeting chrome → status panel with confidence → 2×2 quick tiles →
+ *  steps checklist (while incomplete).
+ *  Data: GET /cb/identity/summary + documents + family + bookings. */
 export default function HomeScreen() {
     const router = useRouter();
     const insets = useSafeAreaInsets();
     const t = useThemeTokens();
+    const kit = useKitStyles();
     const styles = useStyles();
     const { data: summary, isPending, isError, isRefetching, refetch } = useIdentitySummary();
     const { data: documents } = useDocuments();
-    const faceEnrolled = useAppSelector((state) => state.auth.user?.faceEnrolled);
+    const { data: members } = useFamily();
+    const { data: bookings } = useBookings();
 
     const isVerified = summary?.status === 'verified';
     const scrollBottom = TAB_BAR_HEIGHT + insets.bottom + t.spacing[4];
 
     const docCount = documents?.length ?? 0;
-    const verifiedDocs = (documents ?? []).filter((d) => d.status === 'verified').map((d) => d.label);
-    const walletSummary = `${docCount} document${docCount === 1 ? '' : 's'} · ${faceEnrolled ? 'face enrolled' : 'face not enrolled'}`;
-    const walletDetail =
-        verifiedDocs.length === 0
-            ? 'No documents verified yet.'
-            : `${verifiedDocs.slice(0, 2).join(' and ')}${verifiedDocs.length > 2 ? ` and ${verifiedDocs.length - 2} more` : ''} verified.`;
+    const memberCount = members?.length ?? 0;
+    const upcomingBookings = (bookings ?? []).filter((b) => b.status === 'upcoming').length;
+    const activityCount = summary?.activity.length ?? 0;
 
-    const headline = isVerified ? "You're verified" : 'Almost there';
-    const subheadline = isVerified
-        ? 'Your identity is fully verified.'
-        : summary?.document === 'missing'
-          ? 'Add a document to finish verification.'
-          : 'Complete the remaining steps to finish verification.';
-    const headerTone = stepColors(t, isVerified ? 'verified' : 'pending');
+    // Confidence = best verified document match score; when nothing was scored
+    // yet, fall back to the share of completed verification steps.
+    const scored = (documents ?? [])
+        .map((d) => d.matchScore)
+        .filter((s): s is number => s != null);
+    const stepsDone = STEPS.filter((s) => summary?.[s.key] === 'verified').length;
+    const confidence = scored.length
+        ? Math.round(Math.max(...scored) * 100)
+        : Math.round((stepsDone / STEPS.length) * 100);
+
+    const tiles = [
+        {
+            label: 'Documents',
+            sub: `${docCount} stored`,
+            Icon: FileText,
+            onPress: () => router.push('/(tabs)/documents' as never),
+        },
+        {
+            label: 'Family',
+            sub: `${memberCount} member${memberCount === 1 ? '' : 's'}`,
+            Icon: Users,
+            onPress: () => router.push('/(tabs)/family' as never),
+        },
+        {
+            label: 'Check-ins',
+            sub: `${upcomingBookings} upcoming`,
+            Icon: Ticket,
+            onPress: () => router.push('/(tabs)/history' as never),
+        },
+        {
+            label: 'History',
+            sub: `${activityCount} events`,
+            Icon: Clock,
+            onPress: () => router.push('/(tabs)/history' as never),
+        },
+    ];
 
     return (
         <View style={styles.screen}>
-            <SafeAreaView edges={['top']} style={styles.chromeWrap}>
+            <SafeAreaView edges={['top']}>
                 <AppChrome />
             </SafeAreaView>
             <ScrollView
@@ -117,13 +128,6 @@ export default function HomeScreen() {
                 refreshControl={
                     <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={t.colors.actionPrimary} />
                 }>
-                <View style={styles.header}>
-                    <Typography variant="h3">Your identity</Typography>
-                    <Typography variant="body-sm" color="secondary">
-                        Verification status
-                    </Typography>
-                </View>
-
                 {isPending ? (
                     <LoadingState fullPage label="Loading identity…" />
                 ) : isError || !summary ? (
@@ -134,93 +138,75 @@ export default function HomeScreen() {
                     />
                 ) : (
                     <>
-                        <CoreCard style={[styles.cardPad, styles.card]}>
-                            <View style={styles.statusRow}>
-                                <View style={[styles.statusIconWrap, { backgroundColor: headerTone.bg }]}>
-                                    <CoreIcon size="lg" color={headerTone.fg}>
-                                        <ShieldCheck />
-                                    </CoreIcon>
-                                </View>
-                                <View style={styles.statusText}>
-                                    <Typography variant="h4">{headline}</Typography>
-                                    <Typography variant="body-sm" color="secondary">
-                                        {subheadline}
-                                    </Typography>
-                                </View>
-                                <Badge variant={isVerified ? 'success' : 'warning'} size="sm">
+                        {/* V2 status panel — sunken surface, confidence metric, progress */}
+                        <View style={kit.homePanel}>
+                            <View style={kit.rowBetween}>
+                                <Text style={kit.cardTitle}>
+                                    {isVerified ? 'Identity verified' : 'Finish verification'}
+                                </Text>
+                                <Badge variant={isVerified ? 'success' : 'warning'}>
                                     {isVerified ? 'Verified' : 'Incomplete'}
                                 </Badge>
                             </View>
-                        </CoreCard>
+                            <View style={kit.rowBetween}>
+                                <Text style={kit.metric}>{confidence}%</Text>
+                                <Text style={kit.helper}>
+                                    {scored.length ? 'match confidence' : 'steps complete'}
+                                </Text>
+                            </View>
+                            <Progress value={confidence} variant={isVerified ? 'success' : 'primary'} />
+                        </View>
 
-                        <CoreCard noPadding style={styles.card}>
-                            {STEPS.map((step, index) => {
-                                const status = summary[step.key];
-                                const meta = STEP_STATUS[status];
-                                const tone = stepColors(t, status);
-                                return (
-                                    <View key={step.key}>
-                                        {index > 0 ? <Divider /> : null}
-                                        <View style={styles.stepRow}>
-                                            <View style={[styles.stepIconWrap, { backgroundColor: tone.bg }]}>
-                                                <CoreIcon size="md" color={tone.fg}>
-                                                    {step.icon}
-                                                </CoreIcon>
+                        {/* V2 quick tiles — 2×2 nav grid */}
+                        <View style={styles.tileGrid}>
+                            {[tiles.slice(0, 2), tiles.slice(2, 4)].map((row, rowIndex) => (
+                                <View key={rowIndex} style={styles.tileRow}>
+                                    {row.map((tile) => (
+                                        <Pressable
+                                            key={tile.label}
+                                            accessibilityRole="button"
+                                            accessibilityLabel={`${tile.label}, ${tile.sub}`}
+                                            onPress={tile.onPress}
+                                            style={({ pressed }) => [styles.tile, pressed && kit.pressed]}>
+                                            <View style={[styles.tileIcon, { backgroundColor: t.colors.brandSubtle }]}>
+                                                <tile.Icon size={iconSize.md} color={t.colors.onBrandSubtle} />
                                             </View>
-                                            <Typography variant="body" style={styles.stepLabel}>
-                                                {step.label}
-                                            </Typography>
-                                            <Badge variant={meta.variant} size="sm">
-                                                {meta.label}
-                                            </Badge>
+                                            <Text style={kit.cardTitle}>{tile.label}</Text>
+                                            <Text style={kit.helper}>{tile.sub}</Text>
+                                        </Pressable>
+                                    ))}
+                                </View>
+                            ))}
+                        </View>
+
+                        {/* Steps checklist — only while verification is incomplete */}
+                        {!isVerified && (
+                            <CoreCard noPadding>
+                                {STEPS.map((step, index) => {
+                                    const status = summary[step.key];
+                                    const meta = STEP_STATUS[status];
+                                    const tone = stepColors(t, status);
+                                    return (
+                                        <View key={step.key}>
+                                            {index > 0 ? <Divider /> : null}
+                                            <View style={styles.stepRow}>
+                                                <View style={[styles.stepIconWrap, { backgroundColor: tone.bg }]}>
+                                                    <CoreIcon size="md" color={tone.fg}>
+                                                        {step.icon}
+                                                    </CoreIcon>
+                                                </View>
+                                                <Text style={[kit.cardTitle, styles.stepLabel]}>
+                                                    {step.label}
+                                                </Text>
+                                                <Badge variant={meta.variant} size="sm">
+                                                    {meta.label}
+                                                </Badge>
+                                            </View>
                                         </View>
-                                    </View>
-                                );
-                            })}
-                        </CoreCard>
-
-                        <Card appearance="outlined" style={styles.card}>
-                            <CardHeader>
-                                <CardTitle>Identity wallet</CardTitle>
-                                <CardDescription>{walletSummary}</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <Typography variant="body-sm" color="secondary">
-                                    {walletDetail}
-                                </Typography>
-                            </CardContent>
-                            <CardFooter>
-                                <CoreButton size="sm" onPress={() => router.push('/documents' as never)}>
-                                    Manage
-                                </CoreButton>
-                                <CoreButton
-                                    size="sm"
-                                    variant="ghost"
-                                    onPress={() => router.push('/document/select-type' as never)}>
-                                    Add document
-                                </CoreButton>
-                            </CardFooter>
-                        </Card>
-
-                        <CoreCard style={[styles.cardPad, styles.card]}>
-                            <Typography variant="h4">Recent activity</Typography>
-                            <ActivityFeed
-                                style={styles.feed}
-                                events={summary.activity.map((item) => ({
-                                    key: item.id,
-                                    icon: activityIcon(t, item.tone),
-                                    title: item.title,
-                                    timestamp: item.timestamp,
-                                }))}
-                                emptyState={
-                                    <EmptyState
-                                        compact
-                                        title="No activity yet"
-                                        description="Verification events will appear here."
-                                    />
-                                }
-                            />
-                        </CoreCard>
+                                    );
+                                })}
+                            </CoreCard>
+                        )}
                     </>
                 )}
             </ScrollView>
@@ -229,25 +215,30 @@ export default function HomeScreen() {
 }
 
 const useStyles = makeStyles((t) => ({
-    screen: { flex: 1, backgroundColor: t.colors.background },
-    chromeWrap: { backgroundColor: t.colors.surface },
+    screen: { flex: 1, backgroundColor: t.colors.surface },
     flex: { flex: 1 },
-    scroll: { paddingHorizontal: t.spacing[5], paddingTop: t.spacing[2] },
-    header: {
-        marginTop: t.spacing[2],
-        marginBottom: t.spacing[4],
+    scroll: {
+        paddingHorizontal: t.spacing[5],
+        paddingTop: t.spacing[2],
+        gap: t.spacing[4],
     },
-    card: { marginBottom: t.spacing[4] },
-    cardPad: { padding: t.spacing[4] },
-    statusRow: { flexDirection: 'row', alignItems: 'center', gap: t.spacing[3] },
-    statusIconWrap: {
+    /* 2×2 quick tiles — two explicit rows, tiles flex to half width */
+    tileGrid: { gap: t.spacing[3] },
+    tileRow: { flexDirection: 'row', gap: t.spacing[3] },
+    tile: {
+        flex: 1,
+        backgroundColor: t.colors.surfaceSunken,
+        borderRadius: t.radii.lg,
+        padding: t.spacing[3],
+        gap: t.spacing[2],
+    },
+    tileIcon: {
         width: 44,
         height: 44,
-        borderRadius: t.radii.xl,
+        borderRadius: t.radii.full,
         alignItems: 'center',
         justifyContent: 'center',
     },
-    statusText: { flex: 1, minWidth: 0, gap: 2 },
     stepRow: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -263,6 +254,4 @@ const useStyles = makeStyles((t) => ({
         justifyContent: 'center',
     },
     stepLabel: { flex: 1, minWidth: 0 },
-    feed: { marginTop: t.spacing[3] },
 }));
-

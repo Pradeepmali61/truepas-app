@@ -1,54 +1,35 @@
 import { useRouter } from 'expo-router';
-import { CreditCard, FileText } from 'lucide-react-native';
 import { memo } from 'react';
 import { FlatList, RefreshControl, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Card, EmptyState, ErrorState, ScreenHeader } from '@/components/composite';
-import { Badge, CoreButton, RowIcon, Skeleton, Typography, type BadgeVariant } from '@/components/ui';
+import { DocumentRow } from '@/components/truepas';
+import { CoreButton, Skeleton } from '@/components/ui';
 import { useDocuments } from '@/features/documents/hooks';
 import { useThemeTokens } from '@/theme';
-import { iconSize } from '@/theme/tokens';
-import type { DocumentType, IdentityDocument } from '@/types/domain';
+import type { IdentityDocument } from '@/types/domain';
 
-const DOC_ICON: Record<DocumentType, { kind: 'file' | 'card'; tone: 'primary' | 'neutral' }> = {
-  passport:         { kind: 'file', tone: 'primary' },
-  drivingLicense:   { kind: 'card', tone: 'neutral' },
-  idCard:           { kind: 'card', tone: 'neutral' },
-  greenCard:        { kind: 'card', tone: 'neutral' },
-  birthCertificate: { kind: 'file', tone: 'neutral' },
-  usVisa:           { kind: 'file', tone: 'neutral' },
-};
-
-const STATUS_BADGE: Record<string, { variant: BadgeVariant; label: string }> = {
-  verified: { variant: 'success', label: 'Verified' },
-  pending:  { variant: 'warning', label: 'Pending' },
-  failed:   { variant: 'error',   label: 'Failed' },
-  missing:  { variant: 'neutral', label: 'Missing' },
-};
+/** Height of the custom bottom tab bar (see (tabs)/_layout.tsx). */
+const TAB_BAR_HEIGHT = 88;
 
 const DocCard = memo(function DocCard({ doc, onPress }: { doc: IdentityDocument; onPress: () => void }) {
   const theme = useThemeTokens();
-  const meta = DOC_ICON[doc.type] ?? { kind: 'file' as const, tone: 'neutral' as const };
-  const status = STATUS_BADGE[doc.status] ?? { variant: 'neutral' as const, label: doc.status };
-  const IconComp = meta.kind === 'card' ? CreditCard : FileText;
-  const iconColor = meta.tone === 'primary' ? theme.colors.actionPrimary : theme.colors.textSecondary;
   // Numbers arrive masked from the BFF — render verbatim, never unmask.
   const expiry = doc.expiresAt ? doc.expiresAt.split('T')[0] : null;
-  const subtitle = expiry ? `${doc.number} · exp ${expiry}` : doc.number;
   return (
-    <Card onPress={onPress} style={{ marginBottom: theme.spacing[4] }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing[3] }}>
-        <RowIcon tone={meta.tone} icon={<IconComp size={iconSize.md} color={iconColor} />} />
-        <View style={{ flex: 1, gap: 2, minWidth: 0 }}>
-          <Typography variant="body" numberOfLines={1}>{doc.label}</Typography>
-          <Typography variant="body-sm" color="muted" numberOfLines={1} style={{ fontFamily: theme.fontFamily.mono.regular }}>
-            {subtitle}
-          </Typography>
-        </View>
-        <Badge variant={status.variant}>{status.label}</Badge>
-      </View>
-    </Card>
+    <DocumentRow
+      doc={{
+        label: doc.label,
+        number: doc.number,
+        status: doc.status,
+        expiresAt: expiry,
+        matchScore: doc.matchScore,
+        type: doc.type,
+      }}
+      onPress={onPress}
+      style={{ width: '100%', marginBottom: theme.spacing[4] }}
+    />
   );
 });
 
@@ -117,9 +98,9 @@ export default function DocumentsScreen() {
         style={{
           padding: theme.spacing[4],
           paddingTop: theme.spacing[3],
-          // Tab bar is absolute-positioned (64 + bottom inset) — lift the
+          // Tab bar is absolute-positioned (88 + bottom inset) — lift the
           // footer above it.
-          marginBottom: 64 + insets.bottom,
+          marginBottom: TAB_BAR_HEIGHT + insets.bottom,
           borderTopWidth: theme.sizes.fieldBorderWidth,
           borderTopColor: theme.colors.borderSubtle,
           backgroundColor: theme.colors.surface,

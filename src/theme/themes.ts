@@ -1,19 +1,34 @@
-import { palette, type BrandRamp, BRAND_PRESETS } from "./palette";
 import {
-  darkShadows,
-  duration,
-  fontFamily,
-  fontSize,
-  fontWeight,
-  iconSize,
-  letterSpacing,
-  lineHeight,
-  opacity,
-  radii,
-  shadows,
-  sizes,
-  spacing,
-  zIndex,
+    BRAND_PRESETS,
+    COMBO_PRESETS,
+    palette,
+    type BrandPreset,
+    type BrandRamp,
+    type ColorRatio,
+    type ComboPreset,
+    type ComboPresetName,
+    type FeedbackOverrides,
+    type NeutralTints,
+    type PaletteChoice
+} from "./palette";
+import {
+    darkShadows,
+    duration,
+    fontFamily,
+    fontSize,
+    fontWeight,
+    iconSize,
+    letterSpacing,
+    lineHeight,
+    opacity,
+    radii,
+    roundedRadii,
+    shadows,
+    sizes,
+    softDarkShadows,
+    softShadows,
+    spacing,
+    zIndex
 } from "./tokens";
 
 /** Simple color mix (srgb) — the RN equivalent of CSS color-mix(). */
@@ -62,6 +77,17 @@ export interface SemanticColors {
   surfaceSunken: string;
   overlay: string;
   scrim: string;
+  /** Structural surface — app header, nav drawer (the 20% in the ratio rule) */
+  chrome: string;
+  onChrome: string;
+  /** Translucent surface for floating overlays — subtle glass effect */
+  glass: string;
+  glassBorder: string;
+  // secondary (brand) layer — the "30"/"20" in the ratio rule
+  brandSubtle: string;
+  onBrandSubtle: string;
+  accentSubtle: string;
+  onAccentSubtle: string;
   // text
   textPrimary: string;
   textSecondary: string;
@@ -90,109 +116,156 @@ export interface SemanticColors {
   onInfoSubtle: string;
 }
 
-export function lightColors(brand: BrandRamp): SemanticColors {
+/** Optional extras layered on a brand ramp — combo palettes use all three. */
+export interface ColorOptions {
+  /** Second hue — drives CTAs or highlights depending on `cta`. Defaults to brand. */
+  accent?: BrandRamp;
+  /** Tinted neutrals for surfaces — replaces the flat gray defaults. */
+  neutral?: NeutralTints;
+  /** Color distribution. Default "60-30-10" (full brand layer). */
+  ratio?: ColorRatio;
+  /** Which hue owns primary actions: "accent" (default) or "brand". */
+  cta?: "brand" | "accent";
+  /** Reserved hues for verification results (success/error/etc). */
+  feedback?: FeedbackOverrides;
+}
+
+export function lightColors(brand: BrandRamp, opts: ColorOptions = {}): SemanticColors {
+  const { neutral, ratio = "60-30-10" } = opts;
+  const accent = opts.accent ?? brand;
+  const cta = opts.cta === "brand" ? brand : accent;
+  const fb = opts.feedback;
+  const sec = ratio === "60-30-10" ? 0.9 : 0.45;
+  const secBase = neutral?.sunken ?? palette.gray100;
+  const surfBase = neutral?.surface ?? palette.white;
   return {
-    actionPrimary: brand.b600,
-    actionPrimaryPressed: brand.b700,
-    actionPrimarySubtle: brand.b50,
-    actionPrimarySubtlePressed: brand.b100,
-    actionPrimaryDisabled: palette.gray300,
+    actionPrimary: cta.b600,
+    actionPrimaryPressed: cta.b700,
+    actionPrimarySubtle: cta.b50,
+    actionPrimarySubtlePressed: cta.b100,
+    // Tinted rather than gray — disabled/brand-light states sit on the same
+    // hue family as the palette instead of dropping to neutral gray.
+    actionPrimaryDisabled: neutral ? mix(brand.b200, surfBase, 0.5) : palette.gray300,
     onActionPrimary: palette.white,
-    actionSecondary: palette.gray100,
-    actionSecondaryPressed: palette.gray200,
-    actionSecondaryActive: palette.gray300,
-    onActionSecondary: palette.gray900,
+    actionSecondary: mix(secBase, brand.b100, sec),
+    actionSecondaryPressed: mix(secBase, brand.b200, sec),
+    actionSecondaryActive: mix(secBase, brand.b200, sec * 1.4),
+    onActionSecondary: sec >= 0.6 ? brand.b700 : palette.gray900,
     actionDanger: palette.red600,
     actionDangerPressed: palette.red700,
     actionDangerSubtle: palette.red50,
     onActionDanger: palette.white,
-    accent: brand.b500,
+    accent: accent.b500,
 
-    background: palette.gray50,
-    surface: palette.white,
-    surfaceRaised: palette.white,
-    surfaceSunken: palette.gray100,
+    background: neutral?.bg ?? palette.gray50,
+    surface: neutral?.surface ?? palette.white,
+    surfaceRaised: neutral?.surface ?? palette.white,
+    surfaceSunken: neutral?.sunken ?? palette.gray100,
     overlay: alpha(palette.gray950, 0.5),
     scrim: alpha(palette.gray950, 0.4),
+    chrome: neutral?.chrome ?? neutral?.surface ?? palette.white,
+    onChrome: neutral?.onChrome ?? neutral?.textPrimary ?? palette.gray900,
+    glass: alpha(neutral?.surface ?? palette.white, 0.72),
+    glassBorder: alpha(neutral?.shadow ?? palette.gray400, 0.25),
 
-    textPrimary: palette.gray900,
-    textSecondary: palette.gray600,
-    textMuted: palette.gray500,
-    textDisabled: palette.gray400,
+    brandSubtle: mix(surfBase, brand.b100, sec),
+    onBrandSubtle: brand.b700,
+    accentSubtle: mix(surfBase, accent.b100, 0.75),
+    onAccentSubtle: accent.b700,
+
+    textPrimary: neutral?.textPrimary ?? palette.gray900,
+    textSecondary: neutral?.textSecondary ?? (neutral ? mix(brand.b700, palette.gray600, 0.3) : palette.gray600),
+    textMuted: neutral?.textMuted ?? (neutral ? mix(brand.b700, palette.gray500, 0.22) : palette.gray500),
+    textDisabled: neutral ? mix(brand.b200, surfBase, 0.45) : palette.gray400,
     textInverse: palette.white,
     textLink: brand.b600,
     textLinkPressed: brand.b700,
 
-    border: palette.gray300,
-    borderSubtle: palette.gray200,
-    borderStrong: palette.gray400,
-    borderFocus: brand.b600,
+    border: neutral?.border ?? (neutral ? mix(neutral.sunken, palette.gray500, 0.68) : palette.gray300),
+    borderSubtle: neutral?.borderSubtle ?? (neutral ? mix(neutral.sunken, palette.white, 0.55) : palette.gray200),
+    borderStrong: neutral?.borderStrong ?? (neutral ? mix(neutral.sunken, palette.gray500, 0.42) : palette.gray400),
+    borderFocus: cta.b600,
 
-    success: palette.green600,
-    successSubtle: palette.green50,
-    onSuccessSubtle: palette.green700,
-    warning: palette.amber600,
-    warningSubtle: palette.amber50,
-    onWarningSubtle: palette.amber700,
-    error: palette.red600,
-    errorSubtle: palette.red50,
-    onErrorSubtle: palette.red700,
-    info: palette.sky600,
-    infoSubtle: palette.sky50,
-    onInfoSubtle: palette.sky700,
+    success: fb?.success?.b600 ?? palette.green600,
+    successSubtle: fb?.success?.b50 ?? palette.green50,
+    onSuccessSubtle: fb?.success?.b700 ?? palette.green700,
+    warning: fb?.warning?.b600 ?? palette.amber600,
+    warningSubtle: fb?.warning?.b50 ?? palette.amber50,
+    onWarningSubtle: fb?.warning?.b700 ?? palette.amber700,
+    error: fb?.error?.b600 ?? palette.red600,
+    errorSubtle: fb?.error?.b50 ?? palette.red50,
+    onErrorSubtle: fb?.error?.b700 ?? palette.red700,
+    info: fb?.info?.b600 ?? palette.sky600,
+    infoSubtle: fb?.info?.b50 ?? palette.sky50,
+    onInfoSubtle: fb?.info?.b700 ?? palette.sky700,
   };
 }
 
-export function darkColors(brand: BrandRamp): SemanticColors {
+export function darkColors(brand: BrandRamp, opts: ColorOptions = {}): SemanticColors {
+  const { neutral, ratio = "60-30-10" } = opts;
+  const accent = opts.accent ?? brand;
+  const cta = opts.cta === "brand" ? brand : accent;
+  const fb = opts.feedback;
+  const sec = ratio === "60-30-10" ? 0.9 : 0.45;
+  const darkSurf = neutral?.darkSurface ?? palette.gray900;
   return {
-    actionPrimary: brand.b600,
-    actionPrimaryPressed: brand.b700,
-    actionPrimarySubtle: alpha(brand.b600, 0.22),
-    actionPrimarySubtlePressed: alpha(brand.b600, 0.32),
-    actionPrimaryDisabled: palette.gray700,
+    actionPrimary: cta.b600,
+    actionPrimaryPressed: cta.b700,
+    actionPrimarySubtle: alpha(cta.b600, 0.22),
+    actionPrimarySubtlePressed: alpha(cta.b600, 0.32),
+    actionPrimaryDisabled: neutral ? mix(brand.b700, palette.gray700, 0.35) : palette.gray700,
     onActionPrimary: palette.white,
-    actionSecondary: palette.gray800,
-    actionSecondaryPressed: palette.gray700,
-    actionSecondaryActive: palette.gray600,
-    onActionSecondary: palette.gray100,
+    actionSecondary: mix(darkSurf, brand.b700, sec * 0.5),
+    actionSecondaryPressed: mix(darkSurf, brand.b700, sec * 0.75),
+    actionSecondaryActive: mix(darkSurf, brand.b700, sec),
+    onActionSecondary: sec >= 0.6 ? brand.b200 : palette.gray100,
     actionDanger: palette.red600,
     actionDangerPressed: palette.red700,
     actionDangerSubtle: alpha(palette.red600, 0.2),
     onActionDanger: palette.white,
-    accent: brand.b500,
+    accent: accent.b500,
 
-    background: palette.gray950,
-    surface: palette.gray900,
-    surfaceRaised: palette.gray800,
-    surfaceSunken: palette.gray950,
+    background: neutral?.darkBg ?? palette.gray950,
+    surface: neutral?.darkSurface ?? palette.gray900,
+    surfaceRaised: neutral ? mix(neutral.darkSurface, palette.white, 0.06) : palette.gray800,
+    surfaceSunken: neutral?.darkSunken ?? palette.gray950,
     overlay: alpha(palette.black, 0.65),
     scrim: alpha(palette.black, 0.55),
+    chrome: neutral?.darkSunken ?? palette.gray950,
+    onChrome: palette.gray50,
+    glass: alpha(neutral?.darkSurface ?? palette.gray900, 0.7),
+    glassBorder: alpha(palette.white, 0.12),
+
+    brandSubtle: mix(darkSurf, brand.b700, sec * 0.55),
+    onBrandSubtle: brand.b200,
+    accentSubtle: alpha(accent.b600, 0.22),
+    onAccentSubtle: accent.b200,
 
     textPrimary: palette.gray50,
     textSecondary: palette.gray300,
-    textMuted: palette.gray400,
-    textDisabled: palette.gray600,
+    textMuted: neutral ? mix(brand.b200, palette.gray400, 0.25) : palette.gray400,
+    textDisabled: neutral ? mix(brand.b700, palette.gray600, 0.3) : palette.gray600,
     textInverse: palette.gray900,
     textLink: brand.b500,
     textLinkPressed: brand.b200,
 
-    border: palette.gray700,
-    borderSubtle: palette.gray800,
-    borderStrong: palette.gray500,
-    borderFocus: brand.b500,
+    border: neutral ? mix(neutral.darkSurface, palette.white, 0.16) : palette.gray700,
+    borderSubtle: neutral ? mix(neutral.darkSurface, palette.white, 0.09) : palette.gray800,
+    borderStrong: neutral ? mix(neutral.darkSurface, palette.white, 0.32) : palette.gray500,
+    borderFocus: cta.b500,
 
-    success: palette.green600,
-    successSubtle: alpha(palette.green600, 0.18),
-    onSuccessSubtle: palette.green300,
-    warning: palette.amber600,
-    warningSubtle: alpha(palette.amber600, 0.18),
-    onWarningSubtle: palette.amber300,
-    error: palette.red600,
-    errorSubtle: alpha(palette.red600, 0.18),
-    onErrorSubtle: palette.red300,
-    info: palette.sky600,
-    infoSubtle: alpha(palette.sky600, 0.18),
-    onInfoSubtle: palette.sky300,
+    success: fb?.success?.b600 ?? palette.green600,
+    successSubtle: alpha(fb?.success?.b600 ?? palette.green600, 0.18),
+    onSuccessSubtle: fb?.success?.b200 ?? palette.green300,
+    warning: fb?.warning?.b600 ?? palette.amber600,
+    warningSubtle: alpha(fb?.warning?.b600 ?? palette.amber600, 0.18),
+    onWarningSubtle: fb?.warning?.b200 ?? palette.amber300,
+    error: fb?.error?.b600 ?? palette.red600,
+    errorSubtle: alpha(fb?.error?.b600 ?? palette.red600, 0.18),
+    onErrorSubtle: fb?.error?.b200 ?? palette.red300,
+    info: fb?.info?.b600 ?? palette.sky600,
+    infoSubtle: alpha(fb?.info?.b600 ?? palette.sky600, 0.18),
+    onInfoSubtle: fb?.info?.b200 ?? palette.sky300,
   };
 }
 
@@ -200,6 +273,9 @@ export function darkColors(brand: BrandRamp): SemanticColors {
 export interface Theme {
   scheme: "light" | "dark";
   brand: BrandRamp;
+  /** The resolved combo when `palette` is a ComboPresetName, else null. */
+  combo: ComboPreset | null;
+  ratio: ColorRatio;
   colors: SemanticColors;
   spacing: typeof spacing;
   radii: typeof radii;
@@ -216,13 +292,46 @@ export interface Theme {
   opacity: typeof opacity;
 }
 
-export function buildTheme(scheme: "light" | "dark", brand: BrandRamp = BRAND_PRESETS.blue): Theme {
+export interface BuildThemeOptions {
+  ratio?: ColorRatio;
+}
+
+/**
+ * `palette` accepts a BrandRamp (raw), a BrandPreset ("blue"), or a
+ * ComboPresetName ("violetLedger" | "trustBlue" | "violetCyan" …). Combos add
+ * tinted neutrals, soft shadows and rounder radii; `ratio` controls how
+ * strongly the secondary (brand) layer shows — "60-30-10" full, "70-20-10"
+ * restrained. The accent always owns CTAs.
+ */
+export function buildTheme(
+  scheme: "light" | "dark",
+  paletteChoice: BrandRamp | PaletteChoice = "blue",
+  opts: BuildThemeOptions = {},
+): Theme {
+  let brand: BrandRamp;
+  let combo: ComboPreset | null = null;
+  if (typeof paletteChoice === "string" && paletteChoice in COMBO_PRESETS) {
+    combo = COMBO_PRESETS[paletteChoice as ComboPresetName];
+    brand = combo.brand;
+  } else if (typeof paletteChoice === "string") {
+    brand = BRAND_PRESETS[paletteChoice as BrandPreset];
+  } else {
+    brand = paletteChoice;
+  }
+
+  const ratio = opts.ratio ?? combo?.defaultRatio ?? "60-30-10";
+  const colorOpts: ColorOptions | undefined = combo
+    ? { accent: combo.accent, neutral: combo.neutral, ratio, cta: combo.cta, feedback: combo.feedback }
+    : { ratio };
+
   return {
     scheme,
     brand,
-    colors: scheme === "dark" ? darkColors(brand) : lightColors(brand),
+    combo,
+    ratio,
+    colors: scheme === "dark" ? darkColors(brand, colorOpts) : lightColors(brand, colorOpts),
     spacing,
-    radii,
+    radii: combo ? roundedRadii : radii,
     fontSize,
     lineHeight,
     fontWeight,
@@ -230,7 +339,13 @@ export function buildTheme(scheme: "light" | "dark", brand: BrandRamp = BRAND_PR
     fontFamily,
     sizes,
     iconSize,
-    shadows: scheme === "dark" ? darkShadows : shadows,
+    shadows: combo
+      ? scheme === "dark"
+        ? softDarkShadows
+        : softShadows(combo.neutral.shadow)
+      : scheme === "dark"
+        ? darkShadows
+        : shadows,
     duration,
     zIndex,
     opacity,

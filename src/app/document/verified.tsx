@@ -1,11 +1,11 @@
-import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { BadgeCheck, Camera, FileText, ScanFace, TriangleAlert } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
-import { Animated, Image, View } from 'react-native';
+import { Animated, Image, ScrollView, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { ScreenHeader } from '@/components/composite';
+import { Card, ScreenHeader } from '@/components/composite';
+import { ConfidenceRing, DocumentIdCard } from '@/components/truepas';
 import { CoreButton, PopIn, RowIcon, Typography } from '@/components/ui';
 import { getDocumentImageUri } from '@/services/documentImageStore';
 import { makeStyles, useThemeTokens, type Theme } from '@/theme';
@@ -33,6 +33,7 @@ export default function DocumentVerifiedScreen() {
     docNumber,
     extractedName,
     extractedDob,
+    matchScore,
     outcome,
     issuingState,
     nationality,
@@ -80,12 +81,29 @@ export default function DocumentVerifiedScreen() {
   const isFailed = outcome !== 'approved';
   const title = docLabel ?? 'Document';
   const isLicense = (docLabel || '').toLowerCase().includes('license');
+  // matchScore arrives 0–1 from the BFF; ConfidenceRing renders a percentage.
+  const confidencePct =
+    matchScore && !isFailed
+      ? (() => {
+          const n = parseFloat(matchScore);
+          if (Number.isNaN(n)) return null;
+          return Math.round(n <= 1 ? n * 100 : n);
+        })()
+      : null;
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: theme.colors.background }}>
       <ScreenHeader title={isFailed ? 'Verification failed' : 'Verified'} />
 
-      <View style={{ flex: 1, alignItems: 'center', paddingHorizontal: theme.spacing[6], paddingTop: theme.spacing[2] }}>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{
+          alignItems: 'center',
+          paddingHorizontal: theme.spacing[6],
+          paddingTop: theme.spacing[2],
+          paddingBottom: theme.spacing[4],
+        }}
+        showsVerticalScrollIndicator={false}>
         {/* Result icon */}
         <PopIn>
           <RowIcon
@@ -110,12 +128,12 @@ export default function DocumentVerifiedScreen() {
             : 'Your document has been verified successfully'}
         </Typography>
 
-        {/* Flip card — front: info / back: captured scan */}
+        {/* Flip card — front: TruePas credential card / back: captured scan */}
         <View style={styles.cardWrapper}>
-          {/* Front face */}
+          {/* Front face — the physical-card presentation (truepas DocumentIdCard). */}
           <Animated.View
             style={[
-              styles.docInfoCard,
+              styles.docInfoCardFront,
               {
                 transform: [
                   { perspective: 1000 },
@@ -130,87 +148,17 @@ export default function DocumentVerifiedScreen() {
                 zIndex: isFlipped ? 0 : 1,
               },
             ]}>
-            <LinearGradient
-              colors={['#08B6FC', '#034965']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.docCardHeader}>
-              <Typography variant="body-sm" style={styles.countryName}>
-                {title}
-              </Typography>
-              <View style={styles.idCardStatusBadge}>
-                <View
-                  style={[
-                    styles.idCardStatusDot,
-                    { backgroundColor: isFailed ? theme.colors.error : theme.colors.success },
-                  ]}
-                />
-                <Typography variant="caption" style={styles.idCardStatusText}>
-                  {isFailed ? 'FAILED' : 'VERIFIED'}
-                </Typography>
-              </View>
-            </LinearGradient>
-
-            <View style={styles.docMainInfo}>
-              {/* Portrait — from backend (portraitImageUrl, extracted by server-side Regula)
-               *  → selfie fallback → icon placeholder */}
-              <View style={styles.docAvatarContainer}>
-                {portraitImageUrl ? (
-                  <Image source={{ uri: portraitImageUrl }} style={styles.docAvatar} resizeMode="cover" />
-                ) : selfieImageUri ? (
-                  <Image source={{ uri: selfieImageUri }} style={styles.docAvatar} resizeMode="cover" />
-                ) : (
-                  <View style={styles.docAvatarPlaceholder}>
-                    <ScanFace size={iconSize.lg} color={theme.colors.textMuted} />
-                  </View>
-                )}
-              </View>
-
-              <View style={styles.docDetailsGrid}>
-                <View style={styles.docDetailItem}>
-                  <Typography variant="caption" color="muted" style={styles.docDetailLabel}>
-                    FULL NAME
-                  </Typography>
-                  <Typography variant="body-sm" numberOfLines={2} style={styles.docDetailValue}>
-                    {extractedName || '—'}
-                  </Typography>
-                </View>
-                <View style={styles.docDetailItem}>
-                  <Typography variant="caption" color="muted" style={styles.docDetailLabel}>
-                    DOCUMENT NO
-                  </Typography>
-                  <Typography variant="body-sm" style={styles.docDetailValue}>
-                    {docNumber || '—'}
-                  </Typography>
-                </View>
-                <View style={styles.docDetailItem}>
-                  <Typography variant="caption" color="muted" style={styles.docDetailLabel}>
-                    DATE OF BIRTH
-                  </Typography>
-                  <Typography variant="body-sm" style={styles.docDetailValue}>
-                    {formatUSDate(extractedDob)}
-                  </Typography>
-                </View>
-                {isLicense && !dateOfExpiry ? null : (
-                  <View style={styles.docDetailItem}>
-                    <Typography variant="caption" color="muted" style={styles.docDetailLabel}>
-                      EXPIRES
-                    </Typography>
-                    <Typography variant="body-sm" style={styles.docDetailValue}>
-                      {formatUSDate(dateOfExpiry)}
-                    </Typography>
-                  </View>
-                )}
-                <View style={styles.docDetailItem}>
-                  <Typography variant="caption" color="muted" style={styles.docDetailLabel}>
-                    {isLicense ? 'STATE' : 'NATIONALITY'}
-                  </Typography>
-                  <Typography variant="body-sm" style={styles.docDetailValue}>
-                    {isLicense ? issuingState || '—' : nationality || '—'}
-                  </Typography>
-                </View>
-              </View>
-            </View>
+            <DocumentIdCard
+              doc={{
+                label: title,
+                number: docNumber || '—',
+                status: isFailed ? 'failed' : 'verified',
+                expiresAt: dateOfExpiry ? dateOfExpiry.split('T')[0] : null,
+                extractedName: extractedName || null,
+                type: isLicense ? 'drivingLicense' : 'passport',
+              }}
+              style={styles.idCardFace}
+            />
           </Animated.View>
 
           {/* Back face — captured document scan */}
@@ -232,18 +180,9 @@ export default function DocumentVerifiedScreen() {
                 zIndex: isFlipped ? 1 : 0,
               },
             ]}>
-            <LinearGradient
-              colors={['#08B6FC', '#034965']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.docCardHeader}>
-              <Typography variant="body-sm" style={styles.countryName}>
-                DOCUMENT SCAN
-              </Typography>
-            </LinearGradient>
             <View style={styles.docImageContainer}>
               {frontImageUri ? (
-                <Image source={{ uri: frontImageUri }} style={styles.docFullImage} resizeMode="contain" />
+                <Image source={{ uri: frontImageUri }} style={styles.docFullImage} resizeMode="cover" />
               ) : (
                 <View style={styles.docAvatarPlaceholder}>
                   <FileText size={iconSize.xl} color={theme.colors.textMuted} />
@@ -272,7 +211,75 @@ export default function DocumentVerifiedScreen() {
             {isFlipped ? 'View Info' : 'View Scan'}
           </CoreButton>
         </View>
-      </View>
+
+        {/* Extracted fields — portrait + captured data, off the credential card */}
+        <Card style={{ alignSelf: 'stretch', marginTop: theme.spacing[5] }}>
+          <View style={{ flexDirection: 'row' }}>
+            {/* Portrait — from backend (portraitImageUrl, extracted by server-side Regula)
+             *  → selfie fallback → icon placeholder */}
+            <View style={styles.docAvatarContainer}>
+              {portraitImageUrl ? (
+                <Image source={{ uri: portraitImageUrl }} style={styles.docAvatar} resizeMode="cover" />
+              ) : selfieImageUri ? (
+                <Image source={{ uri: selfieImageUri }} style={styles.docAvatar} resizeMode="cover" />
+              ) : (
+                <View style={styles.docAvatarPlaceholder}>
+                  <ScanFace size={iconSize.lg} color={theme.colors.textMuted} />
+                </View>
+              )}
+            </View>
+
+            <View style={styles.docDetailsGrid}>
+              <View style={styles.docDetailItem}>
+                <Typography variant="caption" color="muted" style={styles.docDetailLabel}>
+                  FULL NAME
+                </Typography>
+                <Typography variant="body-sm" numberOfLines={2} style={styles.docDetailValue}>
+                  {extractedName || '—'}
+                </Typography>
+              </View>
+              <View style={styles.docDetailItem}>
+                <Typography variant="caption" color="muted" style={styles.docDetailLabel}>
+                  DOCUMENT NO
+                </Typography>
+                <Typography variant="body-sm" style={styles.docDetailValue}>
+                  {docNumber || '—'}
+                </Typography>
+              </View>
+              <View style={styles.docDetailItem}>
+                <Typography variant="caption" color="muted" style={styles.docDetailLabel}>
+                  DATE OF BIRTH
+                </Typography>
+                <Typography variant="body-sm" style={styles.docDetailValue}>
+                  {formatUSDate(extractedDob)}
+                </Typography>
+              </View>
+              {isLicense && !dateOfExpiry ? null : (
+                <View style={styles.docDetailItem}>
+                  <Typography variant="caption" color="muted" style={styles.docDetailLabel}>
+                    EXPIRES
+                  </Typography>
+                  <Typography variant="body-sm" style={styles.docDetailValue}>
+                    {formatUSDate(dateOfExpiry)}
+                  </Typography>
+                </View>
+              )}
+              <View style={styles.docDetailItem}>
+                <Typography variant="caption" color="muted" style={styles.docDetailLabel}>
+                  {isLicense ? 'STATE' : 'NATIONALITY'}
+                </Typography>
+                <Typography variant="body-sm" style={styles.docDetailValue}>
+                  {isLicense ? issuingState || '—' : nationality || '—'}
+                </Typography>
+              </View>
+            </View>
+          </View>
+        </Card>
+
+        {confidencePct != null && (
+          <ConfidenceRing value={confidencePct} style={{ marginTop: theme.spacing[5] }} />
+        )}
+      </ScrollView>
 
       <View
         style={{
@@ -298,9 +305,7 @@ export default function DocumentVerifiedScreen() {
 const useStyles = makeStyles((t: Theme) => ({
   cardWrapper: {
     width: '100%',
-    height: 300,
-    alignItems: 'center',
-    justifyContent: 'center',
+    height: 260,
   },
   docInfoCard: {
     position: 'absolute',
@@ -311,51 +316,22 @@ const useStyles = makeStyles((t: Theme) => ({
     overflow: 'hidden',
     ...t.shadows.xl,
   },
+  docInfoCardFront: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: t.colors.surfaceRaised,
+    borderRadius: t.radii['2xl'],
+    overflow: 'hidden',
+    ...t.shadows.xl,
+  },
   docCardBackFace: {
     backgroundColor: t.colors.surfaceSunken,
   },
-  docCardHeader: {
-    flexDirection: 'row',
+  idCardFace: {
+    width: '100%',
+    height: '100%',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: t.spacing[5],
-    paddingVertical: t.spacing[4],
-  },
-  countryName: {
-    fontWeight: t.fontWeight.bold,
-    color: '#FFFFFF',
-    textTransform: 'uppercase',
-    letterSpacing: t.letterSpacing.caps,
-    flex: 1,
-  },
-  idCardStatusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    paddingHorizontal: t.spacing[3],
-    paddingVertical: t.spacing[1],
-    borderRadius: t.radii.md,
-    borderWidth: t.sizes.fieldBorderWidth,
-    borderColor: 'rgba(255,255,255,0.4)',
-    minWidth: 80,
-    flexShrink: 0,
-    marginLeft: t.spacing[2],
-  },
-  idCardStatusDot: {
-    width: 6,
-    height: 6,
-    borderRadius: t.radii.full,
-    marginRight: t.spacing[2],
-  },
-  idCardStatusText: {
-    fontWeight: t.fontWeight.bold,
-    color: '#FFFFFF',
-    letterSpacing: t.letterSpacing.caps,
-  },
-  docMainInfo: {
-    padding: t.spacing[5],
-    flexDirection: 'row',
+    borderRadius: t.radii['2xl'],
   },
   docAvatarContainer: {
     width: 88,
@@ -379,14 +355,12 @@ const useStyles = makeStyles((t: Theme) => ({
   },
   docImageContainer: {
     flex: 1,
-    padding: t.spacing[3],
     alignItems: 'center',
     justifyContent: 'center',
   },
   docFullImage: {
     width: '100%',
     height: '100%',
-    borderRadius: t.radii.sm,
   },
   docDetailsGrid: {
     flex: 1,

@@ -26,7 +26,7 @@ const GROUPS: { title: string; screens: ScreenEntry[] }[] = [
     title: 'AUTH',
     screens: [
       { label: 'Welcome carousel', route: '/(auth)/welcome', preset: 'unauth' },
-      { label: 'Register — phone number', route: '/(auth)/register', preset: 'unauth' },
+      { label: 'Register — create account', route: '/(auth)/register', preset: 'unauth' },
       { label: 'Verify phone (OTP)', route: '/(auth)/verify-phone', preset: 'unauth' },
       { label: 'Verify email (OTP)', route: '/(auth)/verify-email', preset: 'unauth' },
       { label: 'Account details + PIN', route: '/(auth)/account-details', preset: 'unauth' },
@@ -112,24 +112,10 @@ const GROUPS: { title: string; screens: ScreenEntry[] }[] = [
     ],
   },
   {
-    title: 'GFF DESIGN DEMO',
-    screens: [
-      { label: 'GFF — Sign in', route: '/demo/signin', preset: 'unauth' },
-      { label: 'GFF — OTP verify', route: '/demo/otp', preset: 'unauth' },
-      { label: 'GFF — Event home', route: '/demo/home', preset: 'unauth' },
-    ],
-  },
-  {
     title: 'NOTIFICATION',
     screens: [
       { label: 'Age-18 transition', route: '/notification/age-18', preset: 'auth-face' },
       { label: 'Notifications inbox', route: '/notification', preset: 'auth-face' },
-    ],
-  },
-  {
-    title: 'UI SHOWCASE',
-    screens: [
-      { label: 'Truepas UI Native — component showcase', route: '/demo/ui', preset: 'auth-face' },
     ],
   },
 ];

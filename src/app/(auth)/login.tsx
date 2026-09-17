@@ -3,14 +3,16 @@ import { useRouter } from 'expo-router';
 import { Eye, EyeOff, Lock, Mail, Phone } from 'lucide-react-native';
 import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { Pressable, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { api } from '@/api';
 import { toApiError } from '@/api/errors';
 import { BrandMark } from '@/components/app';
 import { FormField } from '@/components/composite';
-import { ScreenContainer } from '@/components/layout/ScreenContainer';
-import { Button, Input, Link, Select, Typography } from '@/components/ui';
+import { SoftCard, useKitStyles } from '@/components/truepas';
+import { Checkbox, Input, Link, Select, Typography } from '@/components/ui';
+import { Button } from '@/components/ui/Button';
 import { COUNTRIES } from '@/constants/countries';
 import { LoginForm, loginSchema } from '@/features/auth/schemas';
 import { sessionStarted } from '@/features/auth/slice';
@@ -19,18 +21,22 @@ import { useAppDispatch } from '@/store';
 import { useThemeTokens } from '@/theme';
 import { iconSize } from '@/theme/tokens';
 
-const DEFAULT_COUNTRY_CODE = '+1';
+const DEFAULT_COUNTRY_CODE = '+91';
 type LoginMethod = 'phone' | 'email';
 
+/** Login — email + password; "Remember me" controls whether the refresh token
+ *  is persisted. */
 export default function LoginScreen() {
   const router = useRouter();
   const dispatch = useAppDispatch();
   const theme = useThemeTokens();
+  const kit = useKitStyles();
   const [method, setMethod] = useState<LoginMethod>('phone');
   const [countryCode, setCountryCode] = useState(DEFAULT_COUNTRY_CODE);
+  const [remember, setRemember] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [loginError, setLoginError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [loginError, setLoginError] = useState('');
 
   const { control, handleSubmit, setValue } = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
@@ -73,8 +79,10 @@ export default function LoginScreen() {
         return;
       }
 
-      await secureStorage.setRefreshToken(refreshToken);
-      dispatch(sessionStarted({ user, accessToken, refreshToken }));
+      if (!remember) {
+        await secureStorage.clearRefreshToken();
+      }
+      dispatch(sessionStarted({ user, accessToken, refreshToken: remember ? refreshToken : undefined }));
     } catch (error) {
       setLoginError(toApiError(error).message);
     } finally {
@@ -83,140 +91,148 @@ export default function LoginScreen() {
   });
 
   return (
-    <ScreenContainer scroll background={false}>
-      <View style={{ padding: theme.spacing[4], paddingTop: theme.spacing[8], gap: theme.spacing[4] }}>
-        <BrandMark />
+    <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.background }} edges={['top', 'bottom']}>
+      <ScrollView
+        contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: theme.spacing[4] }}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}>
+        <SoftCard style={[kit.loginCard, { width: '100%' }]}>
+          <View style={kit.loginHead}>
+            <BrandMark compact />
+            <View style={{ gap: 6 }}>
+              <Typography variant="h2">Welcome back</Typography>
+              <Typography color="secondary">Sign in with your phone or email.</Typography>
+            </View>
+          </View>
 
-        <View style={{ gap: theme.spacing[1] }}>
-          <Typography variant="h2">Welcome back</Typography>
-          <Typography variant="body-lg" color="secondary">
-            Sign in with your phone or email.
-          </Typography>
-        </View>
+          <View
+            accessibilityRole="tablist"
+            style={{
+              flexDirection: 'row',
+              backgroundColor: theme.colors.surfaceSunken,
+              borderRadius: theme.radii.lg,
+              padding: theme.spacing[1],
+            }}>
+            {(['phone', 'email'] as const).map((m) => {
+              const active = method === m;
+              return (
+                <Pressable
+                  key={m}
+                  accessibilityRole="tab"
+                  accessibilityState={{ selected: active }}
+                  accessibilityLabel={`Sign in with ${m}`}
+                  onPress={() => switchMethod(m)}
+                  style={{
+                    flex: 1,
+                    height: theme.sizes.heightSm,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: theme.radii.md,
+                    backgroundColor: active ? theme.colors.actionPrimary : 'transparent',
+                  }}>
+                  <Typography
+                    variant="body"
+                    color={active ? 'inverse' : 'secondary'}
+                    style={{ fontWeight: active ? theme.fontWeight.semibold : theme.fontWeight.medium }}>
+                    {m === 'phone' ? 'Phone' : 'Email'}
+                  </Typography>
+                </Pressable>
+              );
+            })}
+          </View>
 
-        <View
-          accessibilityRole="tablist"
-          style={{
-            flexDirection: 'row',
-            backgroundColor: theme.colors.surfaceSunken,
-            borderRadius: theme.radii.lg,
-            padding: theme.spacing[1],
-          }}>
-          {(['phone', 'email'] as const).map((m) => {
-            const active = method === m;
-            return (
-              <Pressable
-                key={m}
-                accessibilityRole="tab"
-                accessibilityState={{ selected: active }}
-                accessibilityLabel={`Sign in with ${m}`}
-                onPress={() => switchMethod(m)}
-                style={{
-                  flex: 1,
-                  height: theme.sizes.heightSm,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  borderRadius: theme.radii.md,
-                  backgroundColor: active ? theme.colors.actionPrimary : 'transparent',
-                }}>
-                <Typography
-                  variant="body"
-                  color={active ? 'inverse' : 'secondary'}
-                  style={{ fontWeight: active ? theme.fontWeight.semibold : theme.fontWeight.medium }}>
-                  {m === 'phone' ? 'Phone' : 'Email'}
-                </Typography>
-              </Pressable>
-            );
-          })}
-        </View>
-
-        <View style={{ gap: theme.spacing[4] }}>
-          {method === 'phone' ? (
-            <Controller
-              control={control}
-              name="identifier"
-              render={({ field: { onChange, value }, fieldState }) => (
-                <FormField label="Mobile number" error={fieldState.error?.message}>
-                  <View style={{ flexDirection: 'row', gap: theme.spacing[2] }}>
-                    <Select
-                      size="md"
-                      title="Country code"
-                      accessibilityLabel="Country code"
-                      style={{ width: 108 }}
-                      value={countryCode}
-                      onValueChange={setCountryCode}
-                      options={COUNTRIES.map((c) => ({
-                        value: c.code,
-                        label: `${c.flag} ${c.name} (${c.code})`,
-                        fieldLabel: `${c.flag} ${c.code}`,
-                      }))}
-                    />
+          <View style={{ gap: 16 }}>
+            {method === 'phone' ? (
+              <Controller
+                control={control}
+                name="identifier"
+                render={({ field: { onChange, value }, fieldState }) => (
+                  <FormField label="Mobile number" error={fieldState.error?.message}>
+                    <View style={{ flexDirection: 'row', gap: theme.spacing[2] }}>
+                      <Select
+                        size="md"
+                        title="Country code"
+                        accessibilityLabel="Country code"
+                        style={{ width: 108 }}
+                        value={countryCode}
+                        onValueChange={setCountryCode}
+                        options={COUNTRIES.map((c) => ({
+                          value: c.code,
+                          label: `${c.flag} ${c.name} (${c.code})`,
+                          fieldLabel: `${c.flag} ${c.code}`,
+                        }))}
+                      />
+                      <Input
+                        containerStyle={{ flex: 1 }}
+                        value={value}
+                        onChangeText={onChange}
+                        placeholder="98765 43210"
+                        keyboardType="phone-pad"
+                        autoCorrect={false}
+                        iconLeft={<Phone size={iconSize.md} color={theme.colors.actionPrimary} />}
+                      />
+                    </View>
+                  </FormField>
+                )}
+              />
+            ) : (
+              <Controller
+                control={control}
+                name="identifier"
+                render={({ field: { onChange, value }, fieldState }) => (
+                  <FormField label="Email" error={fieldState.error?.message}>
                     <Input
-                      containerStyle={{ flex: 1 }}
                       value={value}
                       onChangeText={onChange}
-                      placeholder="98765 43210"
-                      keyboardType="phone-pad"
+                      placeholder="you@example.com"
+                      keyboardType="email-address"
+                      autoCapitalize="none"
                       autoCorrect={false}
-                      iconLeft={<Phone size={iconSize.sm} color={theme.colors.textMuted} />}
+                      iconLeft={<Mail size={iconSize.md} color={theme.colors.actionPrimary} />}
                     />
-                  </View>
-                </FormField>
-              )}
-            />
-          ) : (
+                  </FormField>
+                )}
+              />
+            )}
             <Controller
               control={control}
-              name="identifier"
+              name="password"
               render={({ field: { onChange, value }, fieldState }) => (
-                <FormField label="Email" error={fieldState.error?.message}>
+                <FormField label="Password" error={fieldState.error?.message}>
                   <Input
                     value={value}
                     onChangeText={onChange}
-                    placeholder="ada@example.com"
+                    placeholder="Enter your password"
+                    secureTextEntry={!showPassword}
                     autoCapitalize="none"
                     autoCorrect={false}
-                    keyboardType="email-address"
-                    iconLeft={<Mail size={iconSize.sm} color={theme.colors.textMuted} />}
+                    iconLeft={<Lock size={iconSize.md} color={theme.colors.actionPrimary} />}
+                    iconRight={
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
+                        onPress={() => setShowPassword((s) => !s)}
+                        hitSlop={8}>
+                        {showPassword ? (
+                          <EyeOff size={iconSize.md} color={theme.colors.actionPrimary} />
+                        ) : (
+                          <Eye size={iconSize.md} color={theme.colors.actionPrimary} />
+                        )}
+                      </Pressable>
+                    }
                   />
                 </FormField>
               )}
             />
-          )}
+          </View>
 
-          <Controller
-            control={control}
-            name="password"
-            render={({ field: { onChange, value }, fieldState }) => (
-              <FormField label="Password" error={fieldState.error?.message}>
-                <Input
-                  value={value}
-                  onChangeText={onChange}
-                  placeholder="••••••••"
-                  secureTextEntry={!showPassword}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  iconLeft={<Lock size={iconSize.sm} color={theme.colors.textMuted} />}
-                  iconRight={
-                    <Pressable
-                      accessibilityRole="button"
-                      accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
-                      onPress={() => setShowPassword((v) => !v)}
-                      hitSlop={8}>
-                      {showPassword ? (
-                        <EyeOff size={iconSize.sm} color={theme.colors.textMuted} />
-                      ) : (
-                        <Eye size={iconSize.sm} color={theme.colors.textMuted} />
-                      )}
-                    </Pressable>
-                  }
-                />
-              </FormField>
-            )}
-          />
-
-          <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
-            <Link onPress={() => router.push('/(auth)/forgot-password' as never)} accessibilityLabel="Forgot password">
+          <View style={kit.rowBetween}>
+            <Checkbox checked={remember} onCheckedChange={setRemember} label="Remember me" />
+            <Link
+              variant="quiet"
+              onPress={() => router.push('/(auth)/forgot-password' as never)}
+              accessibilityLabel="Forgot password"
+              style={{ fontSize: theme.fontSize.sm, fontWeight: theme.fontWeight.medium, flexShrink: 0 }}>
               Forgot password?
             </Link>
           </View>
@@ -226,27 +242,23 @@ export default function LoginScreen() {
               {loginError}
             </Typography>
           ) : null}
-        </View>
 
-        <View style={{ gap: theme.spacing[3], marginTop: theme.spacing[2] }}>
-          <Button
-            label="Sign in"
-            size="lg"
-            loading={submitting}
-            onPress={onSubmit}
-          />
+          <Button fullWidth size="lg" loading={submitting} onPress={onSubmit}>
+            Sign in
+          </Button>
 
           <Typography variant="body-sm" color="muted" center>
-            New to Truepas?{' '}
+            New to TruePas?{' '}
             <Link
+              variant="quiet"
               onPress={() => router.push('/(auth)/register')}
               accessibilityLabel="Create account"
-              style={{ fontSize: theme.fontSize.sm }}>
-              Create account
+              style={{ fontSize: theme.fontSize.sm, fontWeight: theme.fontWeight.medium }}>
+              Create an account
             </Link>
           </Typography>
-        </View>
-      </View>
-    </ScreenContainer>
+        </SoftCard>
+      </ScrollView>
+    </SafeAreaView>
   );
 }

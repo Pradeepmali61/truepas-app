@@ -5,7 +5,8 @@ import { ScrollView, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Card, CardContent, ScreenHeader } from '@/components/composite';
-import { Checkbox, CoreButton, Divider, FadeUp, PopIn, Progress, RowIcon, Typography } from '@/components/ui';
+import { ConsentCard } from '@/components/truepas';
+import { CoreButton, Divider, FadeUp, PopIn, Progress, RowIcon, Typography } from '@/components/ui';
 import { useBiometricConsent } from '@/features/auth/mutations';
 import { biometricConsentGiven } from '@/features/auth/slice';
 import { useToast } from '@/hooks/useToast';
@@ -95,10 +96,12 @@ export default function ConsentScreen() {
           </Card>
         </FadeUp>
         <FadeUp delay={240}>
-          <Checkbox
-            checked={checked}
-            onCheckedChange={setChecked}
-            label="I consent to the enrollment and processing of my biometric (facial) data for identity verification purposes."
+          {/* Design-repo ConsentCard, controlled — the toggle gates the CTA
+              exactly like the previous explicit checkbox. */}
+          <ConsentCard
+            value={checked}
+            onValueChange={setChecked}
+            style={{ width: '100%' }}
           />
         </FadeUp>
       </ScrollView>

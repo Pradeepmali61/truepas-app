@@ -1,22 +1,94 @@
 import { useRouter } from 'expo-router';
-import { ScanFace } from 'lucide-react-native';
-import { View } from 'react-native';
+import { Eye, Fingerprint, Lock, ScanFace } from 'lucide-react-native';
+import { useState } from 'react';
+import { ScrollView, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Alert, ScreenHeader } from '@/components/composite';
-import { CoreButton, Progress, RowIcon, Typography } from '@/components/ui';
+import { Alert, Card, CardContent, ScreenHeader } from '@/components/composite';
+import { CoreButton, Progress, Pulse, RowIcon, Typography } from '@/components/ui';
 import { CameraUnavailable, loadLivenessCamera } from '@/features/liveness/cameraModule';
 import { useThemeTokens } from '@/theme';
 import { iconSize } from '@/theme/tokens';
 
 /** Face scan — mandatory liveness + face enrollment gate (no skip, PRD v2.0).
- *  Uses server-provided challenge sequence via the LivenessCamera component,
- *  lazy-required so builds without NitroModules show a fallback. */
+ *  Shows the "Identity verification" intro (step preview + consent note) first;
+ *  "Start verification" opens the LivenessCamera, lazy-required so builds
+ *  without NitroModules show a fallback. */
 const LivenessCamera = loadLivenessCamera();
 
 export default function FaceScanScreen() {
+  const theme = useThemeTokens();
+  const insets = useSafeAreaInsets();
   const router = useRouter();
+  const [started, setStarted] = useState(false);
+
   if (!LivenessCamera) return <CameraUnavailable />;
+
+  if (!started) {
+    return (
+      <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: theme.colors.background }}>
+        <ScreenHeader title="Identity verification" onBack={() => router.back()} />
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{ padding: theme.spacing[4], gap: theme.spacing[4] }}
+          showsVerticalScrollIndicator={false}>
+          <View style={{ alignItems: 'center', gap: theme.spacing[2], paddingVertical: theme.spacing[4] }}>
+            <Pulse to={1.06} ms={1400}>
+              <RowIcon
+                tone="primary"
+                icon={<Fingerprint size={iconSize.xl} color={theme.colors.actionPrimary} />}
+              />
+            </Pulse>
+            <Typography variant="h3">One quick check</Typography>
+            <Typography color="secondary" center>
+              We&apos;ll verify your face against your document. Takes about 10 seconds.
+            </Typography>
+          </View>
+          <Card>
+            <CardContent style={{ gap: theme.spacing[3] }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing[3] }}>
+                <RowIcon icon={<ScanFace size={iconSize.md} color={theme.colors.textSecondary} />} />
+                <View style={{ flex: 1, gap: 2, minWidth: 0 }}>
+                  <Typography variant="body">Show your face</Typography>
+                  <Typography variant="body-sm" color="muted">Step 1 · camera opens</Typography>
+                </View>
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing[3] }}>
+                <RowIcon icon={<Eye size={iconSize.md} color={theme.colors.textSecondary} />} />
+                <View style={{ flex: 1, gap: 2, minWidth: 0 }}>
+                  <Typography variant="body">Blink + turn left</Typography>
+                  <Typography variant="body-sm" color="muted">Step 2 · liveness check</Typography>
+                </View>
+              </View>
+            </CardContent>
+          </Card>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing[2] }}>
+            <Lock size={iconSize.xs} color={theme.colors.textMuted} />
+            <Typography variant="caption" color="muted" style={{ flex: 1 }}>
+              Biometric data is processed on-device and discarded after verification.
+            </Typography>
+          </View>
+        </ScrollView>
+        <View
+          style={{
+            padding: theme.spacing[4],
+            paddingTop: theme.spacing[3],
+            paddingBottom: theme.spacing[4] + insets.bottom,
+            borderTopWidth: theme.sizes.fieldBorderWidth,
+            borderTopColor: theme.colors.borderSubtle,
+            backgroundColor: theme.colors.surface,
+          }}>
+          <CoreButton
+            fullWidth
+            size="lg"
+            accessibilityLabel="Start verification"
+            onPress={() => setStarted(true)}>
+            Start verification
+          </CoreButton>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <LivenessCamera

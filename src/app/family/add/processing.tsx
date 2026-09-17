@@ -5,7 +5,7 @@ import { View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { api } from '@/api';
-import { Alert } from '@/components/composite';
+import { Alert, StagedFlow } from '@/components/composite';
 import { CoreButton, RowIcon, Spinner, Typography } from '@/components/ui';
 import { useAddDocument } from '@/features/documents/hooks';
 import { ageFromDob, useAddFamilyMember } from '@/features/family/hooks';
@@ -52,6 +52,11 @@ export default function FamilyProcessingScreen() {
   const isMinorWithFace = band !== '0-4';
   const [status, setStatus] = useState<ProcessingStatus>('adding');
   const [error, setError] = useState<string | null>(null);
+  // Staged flow — index advances at each real await boundary inside process().
+  const [stepIndex, setStepIndex] = useState(0);
+  const STEP_LABELS = isExistingMember
+    ? ['Document captured', 'Adding document', 'Verifying document']
+    : ['Creating member profile', 'Adding document', 'Verifying document'];
   const processRef = useRef<(() => Promise<void>) | null>(null);
   const addFamilyMember = useAddFamilyMember();
   const addDocument = useAddDocument();
@@ -84,6 +89,7 @@ export default function FamilyProcessingScreen() {
   const process = async () => {
     try {
       setStatus('adding');
+      setStepIndex(0);
 
       if (isExistingMember) {
         // Existing member — attach the captured document to their profile
@@ -94,6 +100,7 @@ export default function FamilyProcessingScreen() {
         console.log('[FamilyAdd] Adding document to member:', personId, docType);
         let doc = createdDocRef.current;
         if (!doc) {
+          setStepIndex(1);
           doc = await addDocument.mutateAsync({
             type: docType,
             label: DOC_LABELS[docType],
@@ -134,6 +141,7 @@ export default function FamilyProcessingScreen() {
           console.warn('[FamilyAdd] Failed to save document images locally:', e);
         }
         console.log('[FamilyAdd] Document added for member:', personId, '| doc.personId=', doc.personId);
+        setStepIndex(2);
         await verifyMemberDoc(doc.id, scanResult.documentImageBase64);
         clearScanResult();
         setStatus('done');
@@ -159,6 +167,7 @@ export default function FamilyProcessingScreen() {
       const scanResult = getScanResult();
       let doc = createdDocRef.current;
       if (scanResult?.documentImageBase64 && !doc) {
+        setStepIndex(1);
         console.log('[FamilyAdd] Adding document to new member:', member.id, docType);
         doc = await addDocument.mutateAsync({
           type: docType,
@@ -180,6 +189,7 @@ export default function FamilyProcessingScreen() {
       }
 
       if (doc && scanResult?.documentImageBase64) {
+        setStepIndex(2);
         await verifyMemberDoc(doc.id, scanResult.documentImageBase64);
       }
 
@@ -206,13 +216,16 @@ export default function FamilyProcessingScreen() {
       const msg = err?.response?.data?.message ?? err?.message ?? 'Could not add family member';
       console.error('[FamilyAdd] Failed:', msg, JSON.stringify(err?.response?.data));
       setError(msg);
+      setStatus('error');
       // stay on screen with retry
     }
   };
 
   useEffect(() => {
     processRef.current = process;
-    process();
+    // Defer to a microtask — process() updates state synchronously, which is
+    // not allowed directly inside an effect (react-hooks/set-state-in-effect).
+    queueMicrotask(process);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -247,6 +260,14 @@ export default function FamilyProcessingScreen() {
           <Typography variant="body-sm" color="secondary" center>
             {status === 'adding' ? 'Creating profile…' : 'Please wait'}
           </Typography>
+        </View>
+
+        <View style={{ alignSelf: 'stretch', paddingHorizontal: theme.spacing[6] }}>
+          <StagedFlow
+            steps={STEP_LABELS}
+            index={status === 'done' ? STEP_LABELS.length : stepIndex}
+            status={status === 'error' ? 'failed' : 'active'}
+          />
         </View>
 
         {error ? (

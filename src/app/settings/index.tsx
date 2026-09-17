@@ -1,25 +1,57 @@
 /** @jsxImportSource react */
+import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
-import { Bell, ChevronRight, FileText, Info, Palette, ScanFace, Sun, Trash2 } from 'lucide-react-native';
+import {
+    ChevronRight,
+    FileText,
+    Info,
+    Lock,
+    Shield,
+    Trash2,
+    User
+} from 'lucide-react-native';
 import { useState, type ReactNode } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Card, CardContent, Modal, ScreenHeader } from '@/components/composite';
-import { CoreButton, Divider, Select, Switch, Typography } from '@/components/ui';
+import { Badge, CoreButton, Divider, RowIcon, Select, Switch, Typography } from '@/components/ui';
+import { useLogout } from '@/features/auth/mutations';
+import { sessionEnded } from '@/features/auth/slice';
+import { secureStorage } from '@/services/secureStorage';
+import { useAppDispatch, useAppSelector } from '@/store';
 import { BRAND_PRESETS, useTheme, useThemeTokens, type BrandPreset, type ColorScheme, type RadiusPreset } from '@/theme';
 import { iconSize } from '@/theme/tokens';
 
+/** Settings — quiet chrome + whitespace (design ref: showcase verification.tsx #9).
+ *  User row → toggle card → Privacy/Change PIN card → utility sections → ghost sign out. */
 export default function SettingsScreen() {
   const router = useRouter();
   const theme = useThemeTokens();
   const insets = useSafeAreaInsets();
-  const { scheme, setScheme, brand, setBrand, radius, setRadius } = useTheme();
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-  const [biometricEnabled, setBiometricEnabled] = useState(true);
+  const queryClient = useQueryClient();
+  const dispatch = useAppDispatch();
+  const { scheme, setScheme, palette, setPalette, radius, setRadius } = useTheme();
+  const user = useAppSelector((state) => state.auth.user);
+  const logout = useLogout();
+  const [faceIdEnabled, setFaceIdEnabled] = useState(!!user?.faceEnrolled);
+  const [biometricConsent, setBiometricConsent] = useState(!!user?.biometricConsentAt);
+  const [alertsEnabled, setAlertsEnabled] = useState(true);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
-  const settingRow = (icon: ReactNode, label: string, right: ReactNode) => (
+  const handleLogout = async () => {
+    try {
+      const refreshToken = await secureStorage.getRefreshToken();
+      if (refreshToken) await logout.mutateAsync({ refreshToken });
+    } catch {
+      // Best-effort — clear local state regardless
+    }
+    queryClient.clear();
+    dispatch(sessionEnded());
+    router.dismissTo('/(auth)/login' as never);
+  };
+
+  const settingRow = (label: string, right: ReactNode) => (
     <View
       style={{
         flexDirection: 'row',
@@ -28,15 +60,12 @@ export default function SettingsScreen() {
         gap: theme.spacing[3],
         paddingVertical: theme.spacing[2],
       }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing[3], flexShrink: 1 }}>
-        {icon}
-        <Typography variant="body">{label}</Typography>
-      </View>
+      <Typography variant="body">{label}</Typography>
       {right}
     </View>
   );
 
-  const linkRow = (icon: ReactNode, title: string, onPress: () => void) => (
+  const linkRow = (icon: ReactNode, title: string, subtitle: string | null, onPress: () => void) => (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={title}
@@ -46,14 +75,19 @@ export default function SettingsScreen() {
           flexDirection: 'row',
           alignItems: 'center',
           gap: theme.spacing[3],
-          paddingVertical: theme.spacing[3],
+          paddingVertical: theme.spacing[2],
         },
         pressed && { opacity: 0.7 },
       ]}>
       {icon}
-      <Typography variant="body" style={{ flex: 1 }}>
-        {title}
-      </Typography>
+      <View style={{ flex: 1, gap: 2, minWidth: 0 }}>
+        <Typography variant="body">{title}</Typography>
+        {subtitle ? (
+          <Typography variant="body-sm" color="muted">
+            {subtitle}
+          </Typography>
+        ) : null}
+      </View>
       <ChevronRight size={iconSize.sm} color={theme.colors.textMuted} />
     </Pressable>
   );
@@ -66,7 +100,7 @@ export default function SettingsScreen() {
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: theme.colors.background }}>
-      <ScreenHeader title="Settings" />
+      <ScreenHeader title="Settings" onBack={() => router.back()} />
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{
@@ -75,38 +109,68 @@ export default function SettingsScreen() {
           gap: theme.spacing[5],
         }}
         showsVerticalScrollIndicator={false}>
-        <View style={{ gap: theme.spacing[2] }}>
-          {sectionLabel('PREFERENCES')}
-          <Card>
-            <CardContent>
-              {settingRow(
-                <Bell size={iconSize.md} color={theme.colors.actionPrimary} />,
-                'Notifications',
-                <Switch
-                  value={notificationsEnabled}
-                  onValueChange={setNotificationsEnabled}
-                />,
-              )}
-              <Divider />
-              {settingRow(
-                <ScanFace size={iconSize.md} color={theme.colors.actionPrimary} />,
-                'Face ID Login',
-                <Switch
-                  value={biometricEnabled}
-                  onValueChange={setBiometricEnabled}
-                />,
-              )}
-            </CardContent>
-          </Card>
+        {/* User — GET /cb/user/me */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing[3] }}>
+          <RowIcon
+            tone="primary"
+            icon={<User size={iconSize.md} color={theme.colors.actionPrimary} />}
+          />
+          <View style={{ flex: 1, gap: 2, minWidth: 0 }}>
+            <Typography variant="body" numberOfLines={1}>
+              {user?.fullName ?? 'User'}
+            </Typography>
+            <Typography variant="body-sm" color="muted" numberOfLines={1}>
+              {user?.email ?? ''}
+            </Typography>
+          </View>
+          {user?.faceEnrolled ? <Badge variant="success">Verified</Badge> : null}
         </View>
+
+        <Card>
+          <CardContent style={{ gap: theme.spacing[1] }}>
+            {settingRow(
+              'Face ID sign-in',
+              <Switch value={faceIdEnabled} onValueChange={setFaceIdEnabled} />,
+            )}
+            {settingRow(
+              'Biometric consent',
+              <Switch value={biometricConsent} onValueChange={setBiometricConsent} />,
+            )}
+            {settingRow(
+              'Verification alerts',
+              <Switch value={alertsEnabled} onValueChange={setAlertsEnabled} />,
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent style={{ gap: theme.spacing[1] }}>
+            {linkRow(
+              <RowIcon
+                tone="neutral"
+                icon={<Shield size={iconSize.md} color={theme.colors.textSecondary} />}
+              />,
+              'Privacy',
+              'Your image is never stored',
+              () => router.push('/legal/data-privacy'),
+            )}
+            {linkRow(
+              <RowIcon
+                tone="neutral"
+                icon={<Lock size={iconSize.md} color={theme.colors.textSecondary} />}
+              />,
+              'Change PIN',
+              null,
+              () => router.push('/security/change-pin' as never),
+            )}
+          </CardContent>
+        </Card>
 
         <View style={{ gap: theme.spacing[2] }}>
           {sectionLabel('APPEARANCE')}
           <Card>
             <CardContent>
-              {/* Theme — light/dark/system, resolved against the OS when system */}
               {settingRow(
-                <Sun size={iconSize.md} color={theme.colors.actionPrimary} />,
                 'Theme',
                 <Select
                   size="sm"
@@ -123,24 +187,22 @@ export default function SettingsScreen() {
                 />,
               )}
               <Divider />
-              {/* Accent — swaps the brand ramp; every token-built screen recolors */}
               {settingRow(
-                <Palette size={iconSize.md} color={theme.colors.actionPrimary} />,
                 'Accent',
                 <View style={{ flexDirection: 'row', gap: theme.spacing[2] }}>
                   {(Object.keys(BRAND_PRESETS) as BrandPreset[]).map((p) => (
                     <Pressable
                       key={p}
                       accessibilityRole="radio"
-                      accessibilityState={{ selected: brand === p }}
+                      accessibilityState={{ selected: palette === p }}
                       accessibilityLabel={`${p} accent`}
-                      onPress={() => setBrand(p)}
+                      onPress={() => setPalette(p)}
                       style={{
                         width: 26,
                         height: 26,
                         borderRadius: theme.radii.full,
                         backgroundColor: BRAND_PRESETS[p].b500,
-                        borderWidth: brand === p ? 3 : 0,
+                        borderWidth: palette === p ? 3 : 0,
                         borderColor: theme.colors.actionPrimary,
                       }}
                     />
@@ -148,9 +210,7 @@ export default function SettingsScreen() {
                 </View>,
               )}
               <Divider />
-              {/* Corner radius preset */}
               {settingRow(
-                <Palette size={iconSize.md} color={theme.colors.actionPrimary} />,
                 'Radius',
                 <Select
                   size="sm"
@@ -173,22 +233,23 @@ export default function SettingsScreen() {
         <View style={{ gap: theme.spacing[2] }}>
           {sectionLabel('PRIVACY & LEGAL')}
           <Card>
-            <CardContent style={{ paddingVertical: theme.spacing[1] }}>
+            <CardContent style={{ gap: theme.spacing[1] }}>
               {linkRow(
-                <FileText size={iconSize.md} color={theme.colors.actionPrimary} />,
-                'Data & Privacy',
-                () => router.push('/legal/data-privacy'),
-              )}
-              <Divider />
-              {linkRow(
-                <FileText size={iconSize.md} color={theme.colors.actionPrimary} />,
+                <RowIcon
+                  tone="neutral"
+                  icon={<FileText size={iconSize.md} color={theme.colors.textSecondary} />}
+                />,
                 'Privacy Policy',
+                null,
                 () => router.push('/legal/privacy-policy'),
               )}
-              <Divider />
               {linkRow(
-                <FileText size={iconSize.md} color={theme.colors.actionPrimary} />,
+                <RowIcon
+                  tone="neutral"
+                  icon={<FileText size={iconSize.md} color={theme.colors.textSecondary} />}
+                />,
                 'Terms of Service',
+                null,
                 () => router.push('/legal/terms'),
               )}
             </CardContent>
@@ -198,15 +259,17 @@ export default function SettingsScreen() {
         <View style={{ gap: theme.spacing[2] }}>
           {sectionLabel('ABOUT')}
           <Card>
-            <CardContent style={{ paddingVertical: theme.spacing[1] }}>
+            <CardContent style={{ gap: theme.spacing[1] }}>
               {linkRow(
-                <Info size={iconSize.md} color={theme.colors.actionPrimary} />,
+                <RowIcon
+                  tone="neutral"
+                  icon={<Info size={iconSize.md} color={theme.colors.textSecondary} />}
+                />,
                 'About Truepas',
+                null,
                 () => router.push('/about' as never),
               )}
-              <Divider />
               {settingRow(
-                <FileText size={iconSize.md} color={theme.colors.actionPrimary} />,
                 'Version',
                 <Typography variant="body-sm" color="muted">
                   1.0.0
@@ -219,7 +282,7 @@ export default function SettingsScreen() {
         <View style={{ gap: theme.spacing[2] }}>
           {sectionLabel('DANGER ZONE')}
           <Card>
-            <CardContent style={{ paddingVertical: theme.spacing[1] }}>
+            <CardContent style={{ gap: theme.spacing[1] }}>
               <Pressable
                 onPress={() => setConfirmDelete(true)}
                 accessibilityRole="button"
@@ -229,11 +292,14 @@ export default function SettingsScreen() {
                     flexDirection: 'row',
                     alignItems: 'center',
                     gap: theme.spacing[3],
-                    paddingVertical: theme.spacing[3],
+                    paddingVertical: theme.spacing[2],
                   },
                   pressed && { opacity: 0.7 },
                 ]}>
-                <Trash2 size={iconSize.md} color={theme.colors.error} />
+                <RowIcon
+                  tone="error"
+                  icon={<Trash2 size={iconSize.md} color={theme.colors.onErrorSubtle} />}
+                />
                 <Typography variant="body" style={{ color: theme.colors.error, flex: 1 }}>
                   Delete Account
                 </Typography>
@@ -241,6 +307,15 @@ export default function SettingsScreen() {
             </CardContent>
           </Card>
         </View>
+
+        {/* Ghost sign out — quiet, centered (design pattern) */}
+        <CoreButton
+          variant="ghost"
+          accessibilityLabel="Sign out"
+          loading={logout.isPending}
+          onPress={handleLogout}>
+          Sign out
+        </CoreButton>
       </ScrollView>
 
       <Modal

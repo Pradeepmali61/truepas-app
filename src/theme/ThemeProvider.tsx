@@ -7,7 +7,14 @@ import {
     type ReactNode,
 } from "react";
 import { StyleSheet, useColorScheme, type ImageStyle, type TextStyle, type ViewStyle } from "react-native";
-import { BRAND_PRESETS, type BrandPreset, type BrandRamp } from "./palette";
+import {
+    COMBO_PRESETS,
+    type BrandRamp,
+    type ColorRatio,
+    type ComboPreset,
+    type ComboPresetName,
+    type PaletteChoice
+} from "./palette";
 import { buildTheme, type Theme } from "./themes";
 
 export type ColorScheme = "light" | "dark" | "system";
@@ -48,8 +55,12 @@ interface ThemeContextValue {
   scheme: ColorScheme;
   resolvedScheme: "light" | "dark";
   setScheme: (s: ColorScheme) => void;
-  brand: BrandPreset;
-  setBrand: (b: BrandPreset) => void;
+  /** Active palette — a ComboPresetName ("violetLedger"…) or BrandPreset ("blue"…) */
+  palette: PaletteChoice;
+  setPalette: (p: PaletteChoice) => void;
+  /** Color distribution — only affects combo palettes. */
+  ratio: ColorRatio;
+  setRatio: (r: ColorRatio) => void;
   radius: RadiusPreset;
   setRadius: (r: RadiusPreset) => void;
   theme: Theme;
@@ -57,40 +68,61 @@ interface ThemeContextValue {
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
+/** Resolve a PaletteChoice to its ComboPreset, or undefined for single brands. */
+function comboPreset(p: PaletteChoice): ComboPreset | undefined {
+  return p in COMBO_PRESETS ? COMBO_PRESETS[p as ComboPresetName] : undefined;
+}
+
 export interface ThemeProviderProps {
   scheme?: ColorScheme;
-  /** Curated brand ramp */
-  brand?: BrandPreset;
-  /** Full custom ramp (takes precedence over `brand`) */
+  /** Palette id: a ComboPresetName or a single BrandPreset. Default "blue". */
+  palette?: PaletteChoice;
+  /** Full custom ramp (takes precedence over `palette`) */
   brandRamp?: BrandRamp;
-  /** Deep-partial theme overrides applied after scheme+brand resolution */
+  /** Color distribution for combo palettes. Default: preset's defaultRatio. */
+  ratio?: ColorRatio;
+  /** Deep-partial theme overrides applied after scheme+palette resolution */
   tokens?: DeepPartial<Theme>;
   children: ReactNode;
 }
 
 export function ThemeProvider({
   scheme: schemeProp = "system",
-  brand: brandProp = "blue",
+  palette: paletteProp = "blue",
   brandRamp,
+  ratio: ratioProp,
   tokens,
   children,
 }: ThemeProviderProps) {
   const [scheme, setScheme] = useState<ColorScheme>(schemeProp);
-  const [brand, setBrand] = useState<BrandPreset>(brandProp);
+  const [palette, setPaletteState] = useState<PaletteChoice>(paletteProp);
+  const [ratio, setRatio] = useState<ColorRatio>(
+    ratioProp ?? comboPreset(paletteProp)?.defaultRatio ?? "60-30-10",
+  );
   const [radius, setRadius] = useState<RadiusPreset>("default");
   const system = useColorScheme();
+
+  /** Switching palette snaps to its designed ratio; user can still override. */
+  const setPalette = (p: PaletteChoice) => {
+    setPaletteState(p);
+    const preset = comboPreset(p);
+    if (preset?.defaultRatio) setRatio(preset.defaultRatio);
+  };
 
   const resolvedScheme: "light" | "dark" =
     scheme === "system" ? (system === "dark" ? "dark" : "light") : scheme;
 
   const theme = useMemo(() => {
-    const ramp = brandRamp ?? BRAND_PRESETS[brand];
-    return deepMerge(deepMerge(buildTheme(resolvedScheme, ramp), RADIUS_TOKENS[radius]), tokens);
-  }, [resolvedScheme, brand, brandRamp, tokens, radius]);
+    const choice = brandRamp ?? palette;
+    return deepMerge(
+      deepMerge(buildTheme(resolvedScheme, choice, { ratio }), RADIUS_TOKENS[radius]),
+      tokens,
+    );
+  }, [resolvedScheme, palette, brandRamp, ratio, tokens, radius]);
 
   const value = useMemo<ThemeContextValue>(
-    () => ({ scheme, resolvedScheme, setScheme, brand, setBrand, radius, setRadius, theme }),
-    [scheme, resolvedScheme, brand, theme, radius],
+    () => ({ scheme, resolvedScheme, setScheme, palette, setPalette, ratio, setRatio, radius, setRadius, theme }),
+    [scheme, resolvedScheme, palette, ratio, theme, radius],
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
@@ -154,9 +186,9 @@ function applyFonts<T extends NamedStyles>(theme: Theme, styles: T): T {
 export function makeStyles<T extends NamedStyles>(factory: (theme: Theme) => T) {
   return function useStyles(): T {
     const { theme } = useTheme();
-    const cache = useRef<{ theme: Theme; styles: T } | null>(null);
-    if (!cache.current || cache.current.theme !== theme) {
-      cache.current = { theme, styles: StyleSheet.create(applyFonts(theme, factory(theme))) };
+    const cache = useRef<{ factory: (theme: Theme) => T; theme: Theme; styles: T } | null>(null);
+    if (!cache.current || cache.current.theme !== theme || cache.current.factory !== factory) {
+      cache.current = { factory, theme, styles: StyleSheet.create(applyFonts(theme, factory(theme))) };
     }
     return cache.current.styles;
   };

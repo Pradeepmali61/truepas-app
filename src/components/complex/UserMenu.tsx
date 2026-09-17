@@ -1,6 +1,6 @@
 /** @jsxImportSource react */
 import { CreditCard, LogOut, Settings, User } from "lucide-react-native";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Pressable } from "react-native";
 import { makeStyles, useThemeTokens } from "../../theme";
 import { iconSize } from "../../theme/tokens";
@@ -17,10 +17,12 @@ export interface UserMenuProps {
   onLogout?: () => void;
   /** Extra action rows */
   extra?: ActionItem[];
+  /** Replaces the default avatar trigger */
+  trigger?: ReactNode;
 }
 
 /** Avatar trigger → action sheet with account actions. */
-export function UserMenu({ name, email, avatarUri, onProfile, onSettings, onBilling, onLogout, extra = [] }: UserMenuProps) {
+export function UserMenu({ name, email, avatarUri, onProfile, onSettings, onBilling, onLogout, extra = [], trigger }: UserMenuProps) {
   const styles = useStyles();
   const theme = useThemeTokens();
   const [open, setOpen] = useState(false);
@@ -41,7 +43,7 @@ export function UserMenu({ name, email, avatarUri, onProfile, onSettings, onBill
         onPress={() => setOpen(true)}
         style={({ pressed }) => [styles.trigger, pressed && { opacity: 0.8 }]}
       >
-        <Avatar uri={avatarUri} name={name} size="sm" />
+        {trigger ?? <Avatar uri={avatarUri} name={name} size="sm" />}
       </Pressable>
       <ActionSheet
         visible={open}

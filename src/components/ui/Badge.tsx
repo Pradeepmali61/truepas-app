@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { Text, View, type StyleProp, type ViewStyle } from "react-native";
 import { makeStyles } from "../../theme";
 
-export type BadgeVariant = "neutral" | "primary" | "success" | "warning" | "error" | "info";
+export type BadgeVariant = "neutral" | "primary" | "brand" | "success" | "warning" | "error" | "info";
 
 export interface BadgeProps {
   variant?: BadgeVariant;
@@ -47,6 +47,7 @@ const useStyles = makeStyles((t) => {
   const subtleBg = {
     neutral: t.colors.actionSecondary,
     primary: t.colors.actionPrimarySubtle,
+    brand: t.colors.brandSubtle,
     success: t.colors.successSubtle,
     warning: t.colors.warningSubtle,
     error: t.colors.errorSubtle,
@@ -55,6 +56,7 @@ const useStyles = makeStyles((t) => {
   const subtleFg = {
     neutral: t.colors.textSecondary,
     primary: t.colors.actionPrimary,
+    brand: t.colors.onBrandSubtle,
     success: t.colors.onSuccessSubtle,
     warning: t.colors.onWarningSubtle,
     error: t.colors.onErrorSubtle,
@@ -63,6 +65,7 @@ const useStyles = makeStyles((t) => {
   const solidBg = {
     neutral: t.colors.textSecondary,
     primary: t.colors.actionPrimary,
+    brand: t.brand.b600,
     success: t.colors.success,
     warning: t.colors.warning,
     error: t.colors.error,
@@ -71,6 +74,7 @@ const useStyles = makeStyles((t) => {
   const accent = {
     neutral: t.colors.borderStrong,
     primary: t.colors.actionPrimary,
+    brand: t.brand.b600,
     success: t.colors.success,
     warning: t.colors.warning,
     error: t.colors.error,
