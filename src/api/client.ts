@@ -47,22 +47,77 @@ export function clearRegistrationToken(): void {
   registrationToken = null;
 }
 
+// ── Session expiry ────────────────────────────────────────────────────
+/** The stored session can never be refreshed — the user must log in again. */
+export class SessionExpiredError extends Error {
+  constructor(message = 'Session expired') {
+    super(message);
+    this.name = 'SessionExpiredError';
+  }
+}
+
+// Registered by the root layout — invoked when the session is dead so the
+// app can drop Redux auth state and route to login instead of leaving the
+// user half-authenticated while every request fails.
+let onSessionExpired: (() => void) | null = null;
+
+export function setOnSessionExpired(handler: () => void): void {
+  onSessionExpired = handler;
+}
+
 // ── Token refresh (shared, single-flight) ─────────────────────────────
 let refreshPromise: Promise<string> | null = null;
 
 async function refreshAccessToken(): Promise<string> {
-  const refreshToken = await secureStorage.getRefreshToken();
-  if (!refreshToken) {
-    throw new Error('NO_REFRESH_TOKEN');
+  let refreshToken: string | null;
+  try {
+    refreshToken = await secureStorage.getRefreshToken();
+  } catch (e) {
+    // Storage unreadable (corrupt keystore, unsupported platform) — the
+    // session can't be recovered.
+    if (__DEV__) console.warn('[API] refresh-token read failed:', e);
+    throw new SessionExpiredError();
   }
-  const response = await axios.post<AuthResponse>(
-    `${BFF_BASE_URL}/auth/refresh`,
-    { refreshToken },
-    { timeout: 15_000 }
-  );
+  if (!refreshToken) {
+    throw new SessionExpiredError('NO_REFRESH_TOKEN');
+  }
+
+  let response;
+  try {
+    response = await axios.post<AuthResponse>(
+      `${BFF_BASE_URL}/auth/refresh`,
+      { refreshToken },
+      { timeout: 15_000 }
+    );
+  } catch (e) {
+    const status = (e as AxiosError).response?.status;
+    if (__DEV__) {
+      const data = (e as AxiosError).response?.data;
+      console.warn(
+        `[API] /auth/refresh failed → ${status ?? 'no-response'}`,
+        typeof data === 'object' ? JSON.stringify(data) : data,
+      );
+    }
+    // 4xx → the backend rejected the token (expired/revoked/rotated):
+    // the session is over. No response or 5xx → transient: keep the
+    // stored refresh token so the next attempt can still succeed.
+    if (status !== undefined && status < 500) {
+      // Remove the dead token — the cold-start restore in app/index.tsx calls
+      // this directly (bypassing the response interceptor), so without this
+      // it would replay a rejected token on every launch, which can revoke
+      // the whole token family per the backend contract.
+      await secureStorage.clearRefreshToken().catch(() => {});
+      throw new SessionExpiredError();
+    }
+    throw e;
+  }
+
   // Handle both camelCase and snake_case token fields from backend
   const newRefreshToken = response.data.refreshToken ?? (response.data as any).refresh_token;
   const newAccessToken = response.data.accessToken ?? (response.data as any).access_token;
+  if (__DEV__ && !newRefreshToken) {
+    console.warn('[API] /auth/refresh returned no refresh token — response keys:', Object.keys(response.data));
+  }
   if (newRefreshToken) {
     await secureStorage.setRefreshToken(newRefreshToken);
   }
@@ -123,7 +178,13 @@ function createClient(baseURL: string): AxiosInstance {
           return instance(original);
         } catch (refreshError) {
           setAccessToken(null);
-          await secureStorage.clearRefreshToken();
+          if (refreshError instanceof SessionExpiredError) {
+            // Session is unrecoverable — wipe the stored token and end the
+            // session so the app routes to login. Transient failures keep
+            // the stored refresh token for the next attempt.
+            await secureStorage.clearRefreshToken().catch(() => {});
+            onSessionExpired?.();
+          }
           throw refreshError;
         }
       }

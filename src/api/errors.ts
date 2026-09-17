@@ -1,5 +1,7 @@
 import { AxiosError } from 'axios';
 
+import { SessionExpiredError } from '@/api/client';
+
 export interface ApiError {
   code: string;
   message: string;
@@ -21,6 +23,16 @@ export interface ApiError {
  *  - 4xx request errors
  */
 export function toApiError(error: unknown): ApiError {
+  // Refresh token missing/rejected — session is over, not retryable.
+  if (error instanceof SessionExpiredError) {
+    return {
+      code: 'UNAUTHORIZED',
+      message: 'Your session expired. Please log in again.',
+      status: 401,
+      retryable: false,
+    };
+  }
+
   if (error instanceof AxiosError) {
     const status = error.response?.status ?? null;
 

@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 
 import { api } from '@/api';
-import { getOrRefreshAccessToken } from '@/api/client';
+import { getOrRefreshAccessToken, SessionExpiredError } from '@/api/client';
 import { Spinner } from '@/components/ui';
 import { sessionStarted } from '@/features/auth/slice';
 import { secureStorage } from '@/services/secureStorage';
@@ -28,11 +28,20 @@ export default function Index() {
           const accessToken = await getOrRefreshAccessToken();
           const user = await api.getUser();
           if (!cancelled) {
-            dispatch(sessionStarted({ user, accessToken, refreshToken }));
+            // Do NOT pass the refreshToken we read above — the refresh call
+            // already rotated it and stored the new one. Re-persisting the
+            // stale token overwrites the rotated one, and replaying a rotated
+            // token revokes the whole family (contract) — that's what was
+            // killing "Remember me" sessions.
+            dispatch(sessionStarted({ user, accessToken }));
           }
         }
-      } catch {
+      } catch (e) {
         // No valid session — fall through to the unauthenticated route.
+        // A rejected token is dead: drop it so it isn't replayed every launch.
+        if (e instanceof SessionExpiredError) {
+          await secureStorage.clearRefreshToken().catch(() => {});
+        }
       } finally {
         if (!cancelled) {
           setRestoring(false);

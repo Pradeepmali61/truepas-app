@@ -30,8 +30,10 @@ const authSlice = createSlice({
       setAccessToken(action.payload.accessToken);
       // Persist refresh token to secure storage if provided
       if (action.payload.refreshToken) {
-        secureStorage.setRefreshToken(action.payload.refreshToken).catch(() => {
-          // Best-effort; session still works with access token
+        secureStorage.setRefreshToken(action.payload.refreshToken).catch((e) => {
+          // Best-effort; session still works with access token — but log it,
+          // a silent failure here surfaces later as NO_REFRESH_TOKEN errors.
+          console.warn('[auth] failed to persist refresh token:', e);
         });
       }
     },
