@@ -8,13 +8,11 @@ import {
     UserMenu,
     type AppNotification,
 } from '@/components/complex';
-import { useLogout } from '@/features/auth/mutations';
-import { sessionEnded } from '@/features/auth/slice';
+import { useLogoutFlow } from '@/features/auth/useLogoutFlow';
 import { useNotifications } from '@/features/notifications/hooks';
 import { useProfilePicture } from '@/features/profile/hooks';
 import { useToast } from '@/hooks/useToast';
-import { secureStorage } from '@/services/secureStorage';
-import { useAppDispatch, useAppSelector } from '@/store';
+import { useAppSelector } from '@/store';
 import { useThemeTokens } from '@/theme';
 import { iconSize } from '@/theme/tokens';
 import type { Notification } from '@/types/domain';
@@ -40,10 +38,9 @@ export function AppChrome() {
     const router = useRouter();
 
     const user = useAppSelector((state) => state.auth.user);
-    const dispatch = useAppDispatch();
     const queryClient = useQueryClient();
     const toast = useToast();
-    const logout = useLogout();
+    const { logout: logoutFlow } = useLogoutFlow();
     const { url: avatarUri } = useProfilePicture();
     const { data: notifData, isPending: notifLoading } = useNotifications();
 
@@ -61,17 +58,7 @@ export function AppChrome() {
     };
 
     const handleLogout = async () => {
-        try {
-            const refreshToken = await secureStorage.getRefreshToken();
-            if (refreshToken) {
-                await logout.mutateAsync({ refreshToken });
-            }
-        } catch {
-            // Best-effort — clear local state regardless
-        }
-        queryClient.clear();
-        dispatch(sessionEnded());
-        router.dismissTo('/(auth)/login' as never);
+        await logoutFlow();
         toast.show('success', 'Logged out successfully');
     };
 

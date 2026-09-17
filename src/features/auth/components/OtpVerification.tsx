@@ -103,12 +103,19 @@ export function OtpVerification({
         purpose,
         ...identifier,
       };
-      console.log('[OTP] Verifying:', { purpose, registrationId: identifier?.registrationId, otpLength: otp.length, payload: JSON.stringify(payload) });
+      // Never log the raw payload — it carries the OTP code.
+      console.log('[OTP] Verifying:', { purpose, registrationId: identifier?.registrationId, otpLength: otp.length });
       if (purpose === 'phone' && !identifier?.registrationId) {
         console.error('[OTP] Missing registrationId for phone verification — backend will return 404');
       }
       const response = await verifyOtp.mutateAsync(payload);
-      console.log('[OTP] Response:', JSON.stringify(response));
+      // Response can carry session tokens (registrationToken/accessToken) — redact them.
+      console.log('[OTP] Response:', JSON.stringify({
+        ...response,
+        registrationToken: response.registrationToken ? '***' : undefined,
+        accessToken: response.accessToken ? '***' : undefined,
+        refreshToken: response.refreshToken ? '***' : undefined,
+      }));
 
       // Store registration token if present (phone verification during registration)
       if (response.registrationToken) {

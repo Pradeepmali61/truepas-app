@@ -75,6 +75,18 @@ export async function clearDocumentImages(documentId: string): Promise<void> {
   }
 }
 
+/**
+ * Wipe the whole doc-images store — logout/session teardown.
+ * Captured document photos of every member are sensitive; they must not
+ * linger on the device after the session ends.
+ */
+export async function clearAllDocumentImages(): Promise<void> {
+  const base = new Directory(Paths.document, BASE_DIR_NAME);
+  if (base.exists) {
+    base.delete();
+  }
+}
+
 /** Strip a data-uri prefix (e.g. "data:image/jpeg;base64,") if present. */
 function stripDataUri(data: string): string {
   const commaIdx = data.indexOf(',');

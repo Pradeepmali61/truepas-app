@@ -594,7 +594,9 @@ export function ProfileHeader({
           <Text style={styles.cardTitle}>{user.fullName}</Text>
           <Text style={styles.helper}>{user.email}</Text>
         </View>
-        {user.faceEnrolled && <Badge variant="success">Face ID</Badge>}
+        {/* "Face enrolled" — a face-scoped fact, not the overall verified
+            status (that's face + document, see /identity). */}
+        {user.faceEnrolled && <Badge variant="success">Face enrolled</Badge>}
       </View>
       {memberSince != null && (
         <>

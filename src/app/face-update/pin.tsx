@@ -15,7 +15,7 @@ import { useThemeTokens } from '@/theme';
 export default function FaceUpdatePinScreen() {
   const router = useRouter();
   const theme = useThemeTokens();
-  const { personId } = useLocalSearchParams<{ personId?: string }>();
+  const { personId, age } = useLocalSearchParams<{ personId?: string; age?: string }>();
   const gate = usePinVerification();
 
   const handleComplete = async (value: string) => {
@@ -23,7 +23,7 @@ export default function FaceUpdatePinScreen() {
     if (!code) return;
     router.push({
       pathname: '/face-update/camera',
-      params: personId ? { personId } : {},
+      params: personId ? { personId, ...(age ? { age } : {}) } : {},
     });
   };
 

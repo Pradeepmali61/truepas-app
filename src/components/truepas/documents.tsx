@@ -7,7 +7,6 @@ import {
     Car,
     ChevronDown,
     ChevronRight,
-    Contact,
     CreditCard,
     FileText,
     Globe,
@@ -32,7 +31,6 @@ import { useStyles } from "./styles";
 export const DOC_ICON: Record<string, typeof FileText> = {
   passport: Globe,
   drivingLicense: Car,
-  idCard: Contact,
   greenCard: CreditCard,
   birthCertificate: FileText,
   usVisa: Landmark,

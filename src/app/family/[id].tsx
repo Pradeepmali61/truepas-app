@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { toApiError } from '@/api/errors';
 import { ActionSheet, Alert, Card, CardContent, ErrorState, Modal, ScreenHeader } from '@/components/composite';
 import { LivenessStepsCard } from '@/components/truepas';
 import {
@@ -20,6 +21,7 @@ import {
 } from '@/components/ui';
 import { useDocuments } from '@/features/documents/hooks';
 import { useFamilyMember, useRemoveFamilyMember } from '@/features/family/hooks';
+import { useToast } from '@/hooks/useToast';
 import { useThemeTokens } from '@/theme';
 import { iconSize } from '@/theme/tokens';
 import type { FamilyMember } from '@/types/domain';
@@ -64,6 +66,7 @@ export default function FamilyMemberScreen() {
   const removeMember = useRemoveFamilyMember();
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
+  const toast = useToast();
 
   if (isPending) {
     return (
@@ -95,8 +98,10 @@ export default function FamilyMemberScreen() {
 
   const m: FamilyMember = member;
   const first = m.name.split(' ')[0];
-  const isPhoto = (m.faceCaptureMode ?? (m.ageBand === '0-4' ? 'photo' : 'liveness')) === 'photo';
-  const anyCamera = m.allowedCameras?.includes('back') ?? false;
+  // Fall back to the numeric age when the payload omits faceCaptureMode/
+  // allowedCameras — under 5 → photo, under 10 → rear camera allowed.
+  const isPhoto = (m.faceCaptureMode ?? (m.age < 5 ? 'photo' : 'liveness')) === 'photo';
+  const anyCamera = m.allowedCameras?.includes('back') ?? m.age < 10;
   const doneDoc = memberDocs?.find((d) => d.status !== 'failed' && d.status !== 'missing');
   // Member docs may stay 'pending' when backend verification isn't run for
   // them — any captured (non-failed) document completes this step.
@@ -140,8 +145,9 @@ export default function FamilyMemberScreen() {
   const confirmRemoveMember = async () => {
     try {
       await removeMember.mutateAsync(id);
-    } finally {
       router.dismissTo('/(tabs)');
+    } catch (err: any) {
+      toast.show('error', toApiError(err).message || 'Could not remove member. Please try again.');
     }
   };
 
@@ -269,7 +275,7 @@ export default function FamilyMemberScreen() {
                           pathname: '/family/add/photo-capture',
                           params: { personId: id, name: first, age: String(m.age) },
                         } as never)
-                      : router.push({ pathname: '/face-update/pin', params: { personId: id } } as never),
+                      : router.push({ pathname: '/face-update/pin', params: { personId: id, age: String(m.age) } } as never),
                 },
               ]
             : []),

@@ -86,7 +86,12 @@ export default function VerifyEmailScreen() {
         // onboarding layout would bounce the user to /welcome silently.
         // The account almost certainly exists (email is verified), so send
         // them to login where they can recover with their new password.
-        console.error('[VerifyEmail] Missing user/accessToken in verify response:', JSON.stringify(response));
+        console.error('[VerifyEmail] Missing user/accessToken in verify response:', JSON.stringify({
+          ...response,
+          registrationToken: response.registrationToken ? '***' : undefined,
+          accessToken: response.accessToken ? '***' : undefined,
+          refreshToken: response.refreshToken ? '***' : undefined,
+        }));
         Alert.alert(
           'Almost there',
           'Your email is verified, but we could not sign you in automatically. Please log in with your new password.',

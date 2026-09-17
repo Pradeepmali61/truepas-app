@@ -254,7 +254,7 @@ export const mockApi = {
   // ── Family ───────────────────────────────────────────────────────────
   addFamilyMember: (payload: AddFamilyMemberRequest): Promise<FamilyMember> => {
     const age = ageFromDob(payload.dateOfBirth);
-    const ageBand = age >= 18 ? '18+' : age >= 5 ? '5-17' : '0-4';
+    const ageBand = age >= 10 ? '10+' : age >= 5 ? '5-9' : '0-4';
     const member: FamilyMember = {
       id: nextId('f'),
       name: payload.name,
@@ -264,6 +264,8 @@ export const mockApi = {
       verification: ageBand === '0-4' ? 'Doc Verified' : 'Face + Doc Verified',
       turning18Soon: age === 17,
       faceEnrolled: false,
+      faceCaptureMode: age < 5 ? 'photo' : 'liveness',
+      allowedCameras: age < 10 ? ['front', 'back'] : ['front'],
     };
     family = [...family, member];
     return respond(member);

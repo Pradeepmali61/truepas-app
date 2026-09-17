@@ -16,15 +16,12 @@ import { Card, ScreenHeader } from '@/components/composite';
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
 import { ProfileHeader } from '@/components/truepas';
 import { Avatar, Divider, Spinner, Typography } from '@/components/ui';
-import { useLogout } from '@/features/auth/mutations';
-import { sessionEnded } from '@/features/auth/slice';
+import { useLogoutFlow } from '@/features/auth/useLogoutFlow';
 import { useProfilePicture, useUploadProfilePicture } from '@/features/profile/hooks';
 import { useToast } from '@/hooks/useToast';
-import { secureStorage } from '@/services/secureStorage';
-import { useAppDispatch, useAppSelector } from '@/store';
+import { useAppSelector } from '@/store';
 import { useThemeTokens } from '@/theme';
 import { iconSize } from '@/theme/tokens';
-import { useQueryClient } from '@tanstack/react-query';
 
 /** Icon-in-tile + value/label row used for the contact card. */
 function InfoRow({ icon, value, label }: { icon: ReactNode; value: string; label: string }) {
@@ -101,14 +98,12 @@ function ActionRow({
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const dispatch = useAppDispatch();
-  const queryClient = useQueryClient();
   const theme = useThemeTokens();
   const user = useAppSelector((state) => state.auth.user);
   const { url: profilePictureUrl } = useProfilePicture();
   const { mutateAsync: uploadProfilePicture, isPending: isUploading } = useUploadProfilePicture();
   const toast = useToast();
-  const logout = useLogout();
+  const { logout: logoutFlow } = useLogoutFlow();
 
   const handlePickProfilePicture = async () => {
     try {
@@ -140,17 +135,7 @@ export default function ProfileScreen() {
   };
 
   const handleLogout = async () => {
-    try {
-      const refreshToken = await secureStorage.getRefreshToken();
-      if (refreshToken) {
-        await logout.mutateAsync({ refreshToken });
-      }
-    } catch {
-      // Best-effort — clear local state regardless
-    }
-    queryClient.clear();
-    dispatch(sessionEnded());
-    router.dismissTo('/(auth)/login' as never);
+    await logoutFlow();
     toast.show('success', 'Logged out successfully');
   };
 

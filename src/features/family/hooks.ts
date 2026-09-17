@@ -49,10 +49,10 @@ export function useRemoveFamilyMember() {
   });
 }
 
-/** PRD age rules: 0-4 doc only · 5-17 doc + selfie + face · 18+ rejected. */
+/** Backend age rules: 0-4 photo enrollment · 5-9 liveness (front or back camera) · 10+ liveness (front only). */
 export function ageBandFromAge(age: number): FamilyAgeBand {
-  if (age >= 18) return '18+';
-  if (age >= 5) return '5-17';
+  if (age >= 10) return '10+';
+  if (age >= 5) return '5-9';
   return '0-4';
 }
 

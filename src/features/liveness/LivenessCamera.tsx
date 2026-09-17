@@ -1,7 +1,7 @@
-﻿import { useRouter } from 'expo-router';
-import { CircleCheck, CircleHelp, Eye, ScanFace, TriangleAlert, X } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
+import { CircleCheck, CircleHelp, Eye, ScanFace, SwitchCamera, TriangleAlert, X } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { Text, View } from 'react-native';
+import { Linking, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
     Camera,
@@ -38,6 +38,10 @@ interface LivenessCameraProps {
    *  429 rate limit, network) are handled in-place by the built-in failed
    *  UI with a retry cooldown, so this rarely fires. */
   onError?: (message: string) => void;
+  /** Members under 10 may use the rear camera too (a parent holds the phone
+   *  while the child faces it). When true, a front/back toggle shows in the
+   *  challenge header. Default: front camera only (ages 10+). */
+  allowBackCamera?: boolean;
 }
 
 // Calibration thresholds (per guide Â§4.5 â€” tune on real devices)
@@ -129,7 +133,7 @@ function FaceFrame({ camera, pulseMs = 1200 }: { camera?: ReactNode; pulseMs?: n
  *
  * NO manual button press â€” detection is fully automatic.
  */
-export function LivenessCamera({ mode, personId, onSuccess }: LivenessCameraProps) {
+export function LivenessCamera({ mode, personId, onSuccess, onError, allowBackCamera }: LivenessCameraProps) {
   const { hasPermission, requestPermission } = useCameraPermission();
   const theme = useThemeTokens();
   const [capturing, setCapturing] = useState(false);
@@ -149,7 +153,10 @@ export function LivenessCamera({ mode, personId, onSuccess }: LivenessCameraProp
   // Absolute overlays ignore SafeAreaView padding â€” apply insets manually
   const insets = useSafeAreaInsets();
 
-  const device = useCameraDevice('front');
+  // Under-10 members may flip to the rear camera (parent holds the phone);
+  // everyone else stays front-only per the age-band spec.
+  const [cameraPosition, setCameraPosition] = useState<'front' | 'back'>('front');
+  const device = useCameraDevice(cameraPosition);
   const photoOutput = usePhotoOutput();
 
   const cameraRef = useRef<CameraRef>(null);
@@ -160,6 +167,13 @@ export function LivenessCamera({ mode, personId, onSuccess }: LivenessCameraProp
   const eyesWereClosed = useRef(false);
   const submittingRef = useRef(false);
   const lastSampleTs = useRef(0);
+  const hintTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Transient UX hints (too-fast action, multiple faces) shown under the dial
+  const [hint, setHint] = useState<string | null>(null);
+  const [multiFace, setMultiFace] = useState(false);
+  // True once requestPermission() comes back denied - shows a Settings button
+  const [permDenied, setPermDenied] = useState(false);
 
   // Request camera permission on mount
   useEffect(() => {
@@ -167,6 +181,11 @@ export function LivenessCamera({ mode, personId, onSuccess }: LivenessCameraProp
       requestPermission();
     }
   }, [hasPermission, requestPermission]);
+
+  // Clear any pending hint timer on unmount
+  useEffect(() => () => {
+    if (hintTimer.current) clearTimeout(hintTimer.current);
+  }, []);
 
   // â”€â”€ In-place failure handling (fixes the 429 retry loop) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // Failures fail the session LOCALLY instead of navigating away:
@@ -246,18 +265,31 @@ export function LivenessCamera({ mode, personId, onSuccess }: LivenessCameraProp
         return; // eyes not yet fully open after closing
       }
       console.log('[Liveness] Blink: eyes REOPENED â€” blink complete!');
-    } else {
+    } else if (action === 'turn_left' || action === 'turn_right') {
       // ML Kit yaw: positive = subject turns to their LEFT, negative = to their RIGHT
       if (action === 'turn_right' && yaw > -YAW_THRESHOLD) return;
       if (action === 'turn_left' && yaw < YAW_THRESHOLD) return;
       console.log(`[Liveness] Turn detected: yaw=${yaw.toFixed(1)}Â° crossed threshold ${YAW_THRESHOLD}Â°`);
+    } else {
+      // Unknown challenge type from the server - never submit evidence for an
+      // action we didn't actually detect (any turn would otherwise "pass" it).
+      console.error('[Liveness] Unknown challenge action:', action);
+      liveness.failSession('Unsupported verification step. Please update the app.');
+      return;
     }
 
     // Action detected â€” check timing
     const durationMs = Date.now() - stepStartedAt.current;
     const { min_ms, max_ms } = liveness.challenge.step_time_limits;
     console.log(`[Liveness] Action detected: duration=${durationMs}ms (limits: ${min_ms}-${max_ms}ms)`);
-    if (durationMs < min_ms) return; // too fast â€” keep waiting
+    if (durationMs < min_ms) {
+      // Too fast - not a failure, just ask them to hold the pose. The hint
+      // auto-clears so the next (slower) attempt isn't blocked.
+      setHint('Hold that pose a moment...');
+      if (hintTimer.current) clearTimeout(hintTimer.current);
+      hintTimer.current = setTimeout(() => setHint(null), 1500);
+      return;
+    }
     if (durationMs > max_ms) {
       // too slow â€” fail the session locally so the retry UI shows and
       // sample processing stops (phase leaves 'challenging').
@@ -320,8 +352,10 @@ export function LivenessCamera({ mode, personId, onSuccess }: LivenessCameraProp
   // The handler only touches refs + the stable runOnJS wrapper, so a plain
   // useCallback stays current — the memoized output can call it directly.
   const handleFaces = useCallback((faces: Face[]) => {
+    setMultiFace(faces.length > 1);
     const face = faces[0];
-    if (!face) return;
+    // Ambiguous frame - don't let a second person satisfy the challenge.
+    if (!face || faces.length > 1) return;
 
     // Throttle: ~10 samples/sec
     const now = Date.now();
@@ -374,18 +408,14 @@ export function LivenessCamera({ mode, personId, onSuccess }: LivenessCameraProp
       }
       console.log('[Liveness] Photo captured:', photoFile.filePath);
 
-      // Read file as base64 using SDK 57 File API (readAsStringAsync is deprecated & throws)
-      // File API requires an absolute URI (file:// prefix on Android)
-      const { File } = await import('expo-file-system');
-      const filePath = photoFile.filePath.startsWith('file://')
+      // Send the captured file straight into multipart FormData - no base64
+      // round-trip (a high-res frame as a base64 string spikes memory).
+      const fileUri = photoFile.filePath.startsWith('file://')
         ? photoFile.filePath
         : `file://${photoFile.filePath}`;
-      const photoFileRef = new File(filePath);
-      const frameBase64 = await photoFileRef.base64();
-      console.log('[Liveness] Frame base64 length:', frameBase64.length);
 
       console.log('[Liveness] Calling finalize API...');
-      const result = await liveness.finalize(frameBase64);
+      const result = await liveness.finalize(fileUri);
       console.log('[Liveness] Finalize result:', JSON.stringify(result));
 
       if (result.status !== 'passed') {
@@ -433,11 +463,14 @@ export function LivenessCamera({ mode, personId, onSuccess }: LivenessCameraProp
       await settleCameraThen(onSuccess);
     } catch (err: any) {
       console.error('[Liveness] Face enrollment failed:', err?.message);
-      liveness.reset();
+      // The liveness session is single-use — consumed whether enroll
+      // succeeded or not — so the failed screen's Try Again starts a NEW
+      // challenge rather than retrying a dead credential.
+      failWithCooldown(err, 'Face enrollment failed');
     } finally {
       setEnrolling(false);
     }
-  }, [enrolling, liveness, mode, personId, enrollFace, updateFace, dispatch, onSuccess, settleCameraThen]);
+  }, [enrolling, liveness, mode, personId, enrollFace, updateFace, dispatch, onSuccess, settleCameraThen, failWithCooldown]);
 
   // Auto-finalize when phase becomes 'finalizing'
   useEffect(() => {
@@ -464,6 +497,16 @@ export function LivenessCamera({ mode, personId, onSuccess }: LivenessCameraProp
     return () => clearInterval(t);
   }, [sessionId, liveness.challenge?.expires_in_seconds]);
 
+  // Proactively fail an expired session — otherwise the user keeps doing
+  // steps and the next evidence submit dies with a cryptic server error.
+  useEffect(() => {
+    if (sessionLeft === 0 && liveness.phase === 'challenging') {
+      // queueMicrotask: a synchronous setState inside the effect body trips
+      // react-hooks/set-state-in-effect (same pattern as the seed above).
+      queueMicrotask(() => failSession('Your session expired — please try again.'));
+    }
+  }, [sessionLeft, liveness.phase, failSession]);
+
   // Permission not granted
   if (!hasPermission) {
     return (
@@ -479,9 +522,25 @@ export function LivenessCamera({ mode, personId, onSuccess }: LivenessCameraProp
         <Typography variant="body" center style={{ marginBottom: theme.spacing[4] }}>
           Camera permission is required for face verification.
         </Typography>
-        <CoreButton onPress={requestPermission} accessibilityLabel="Grant camera permission">
+        <CoreButton
+          onPress={async () => {
+            const granted = await requestPermission();
+            // Permanently denied -> the dialog won't show again; send the
+            // user to system settings instead of a dead button.
+            if (!granted) setPermDenied(true);
+          }}
+          accessibilityLabel="Grant camera permission">
           Grant Permission
         </CoreButton>
+        {permDenied ? (
+          <CoreButton
+            variant="outline"
+            style={{ marginTop: theme.spacing[3] }}
+            onPress={() => void Linking.openSettings()}
+            accessibilityLabel="Open app settings">
+            Open Settings
+          </CoreButton>
+        ) : null}
       </SafeAreaView>
     );
   }
@@ -695,7 +754,7 @@ export function LivenessCamera({ mode, personId, onSuccess }: LivenessCameraProp
               {confidencePct}%
             </Text>
             <Typography variant="caption" color="muted">
-              Match confidence
+              Verification confidence
             </Typography>
           </View>
           <FadeUp delay={140}>
@@ -751,11 +810,20 @@ export function LivenessCamera({ mode, personId, onSuccess }: LivenessCameraProp
         title="Face verification"
         subtitle={liveness.sessionId ? `Session ${liveness.sessionId}` : undefined}
         actions={
-          <IconButton
-            accessibilityLabel="Close liveness check"
-            icon={<X size={iconSize.md} color={theme.colors.textPrimary} />}
-            onPress={() => router.back()}
-          />
+          <View style={{ flexDirection: 'row', gap: theme.spacing[1] }}>
+            {allowBackCamera ? (
+              <IconButton
+                accessibilityLabel={cameraPosition === 'front' ? 'Switch to back camera' : 'Switch to front camera'}
+                icon={<SwitchCamera size={iconSize.md} color={theme.colors.textPrimary} />}
+                onPress={() => setCameraPosition((p) => (p === 'front' ? 'back' : 'front'))}
+              />
+            ) : null}
+            <IconButton
+              accessibilityLabel="Close liveness check"
+              icon={<X size={iconSize.md} color={theme.colors.textPrimary} />}
+              onPress={() => router.back()}
+            />
+          </View>
         }
       />
       <View style={{ flex: 1, padding: theme.spacing[4], gap: theme.spacing[3] }}>
@@ -777,8 +845,17 @@ export function LivenessCamera({ mode, personId, onSuccess }: LivenessCameraProp
             Expires in {sessionLeft} seconds.
           </Alert>
         ) : null}
+        {multiFace ? (
+          <Typography variant="caption" center style={{ color: theme.colors.error }}>
+            Only one person in the frame
+          </Typography>
+        ) : hint ? (
+          <Typography variant="caption" color="muted" center>
+            {hint}
+          </Typography>
+        ) : null}
         <Typography variant="caption" color="muted" center>
-          {sessionLabel} · front camera
+          {sessionLabel} · {cameraPosition} camera
         </Typography>
       </View>
       {/* Camera mounted off-screen during the challenge — same trick the

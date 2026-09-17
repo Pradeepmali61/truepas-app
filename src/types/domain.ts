@@ -30,7 +30,6 @@ export interface ActivityItem {
 export type DocumentType =
   | 'passport'
   | 'drivingLicense'
-  | 'idCard'
   | 'greenCard'
   | 'birthCertificate'
   | 'usVisa';
@@ -57,7 +56,7 @@ export interface IdentityDocument {
   documentImageUrl?: string | null;
 }
 
-export type FamilyAgeBand = '0-4' | '5-17' | '18+';
+export type FamilyAgeBand = '0-4' | '5-9' | '10+';
 
 export interface FamilyMember {
   id: string;

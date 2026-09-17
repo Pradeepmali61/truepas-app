@@ -9,6 +9,8 @@ import { SessionExpiredError, setOnSessionExpired } from '@/api/client';
 import { ToastProvider } from '@/components/composite';
 import { DevFloatingButton } from '@/components/layout/DevFloatingButton';
 import { sessionEnded } from '@/features/auth/slice';
+import { clearAllDocumentImages } from '@/services/documentImageStore';
+import { clearAllProfileImages } from '@/services/profileImageStore';
 import { store } from '@/store';
 import { ThemeProvider, useTheme, useTruepasFonts } from '@/theme';
 
@@ -32,10 +34,15 @@ const queryClient = new QueryClient({
 setOnSessionExpired(() => {
   queryClient.clear();
   store.dispatch(sessionEnded());
+  // Forced logout gets the same filesystem teardown as a manual logout —
+  // captured document/member photos must not outlive the session.
+  void Promise.allSettled([clearAllDocumentImages(), clearAllProfileImages()]);
   if (router.canDismiss()) {
     router.dismissAll();
   }
-  router.replace('/(auth)/login');
+  // reason → the login screen explains why the session ended instead of
+  // dumping the user on a bare login form.
+  router.replace({ pathname: '/(auth)/login', params: { reason: 'session-expired' } } as never);
 });
 
 function RootShell({ children }: { children: React.ReactNode }) {

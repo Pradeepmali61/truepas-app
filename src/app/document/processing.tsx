@@ -22,7 +22,6 @@ const DOC_LABELS: Record<DocumentType, string> = {
   greenCard: 'US Green Card',
   birthCertificate: 'Birth Certificate',
   usVisa: 'U.S. Visa',
-  idCard: 'Identity Card',
 };
 
 type ProcessingStatus = 'adding' | 'creating_session' | 'verifying' | 'done' | 'error';
@@ -194,6 +193,7 @@ export default function DocumentProcessingScreen() {
             params: {
               docId: doc.id,
               docLabel,
+              docType,
               docNumber: result.document?.number ?? doc.number ?? '',
               extractedName: result.extractedName ?? '',
               extractedDob: result.extractedDob ?? '',

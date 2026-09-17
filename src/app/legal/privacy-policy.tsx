@@ -11,7 +11,7 @@ const SECTIONS = [
   },
   {
     heading: '3. Minor/Guardianship Consent',
-    body: 'For family members under 18, a parent or legal guardian must provide explicit consent before biometric enrollment. Children aged 0-4 require document upload only — no face enrollment. Ages 5-17 require document, selfie, and face enrollment.',
+    body: 'For family members under 18, a parent or legal guardian must provide explicit consent before biometric enrollment. Children aged 0-4 require a document upload and one photo — no liveness scan. Ages 5-9 require a document and liveness verification (front or back camera). Ages 10+ require a document and front-camera liveness verification.',
   },
   {
     heading: '4. Data Retention',

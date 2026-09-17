@@ -1,7 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { Check, CircleCheck, Database, Image as ImageIcon, ScanFace } from 'lucide-react-native';
-import type { ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -19,6 +19,14 @@ export default function DeleteSuccessScreen() {
   const dispatch = useAppDispatch();
   const router = useRouter();
   const queryClient = useQueryClient();
+
+  // End the session as soon as the deletion is confirmed — the backend has
+  // already revoked tokens, so keeping Redux/query state alive until the
+  // "Close App" tap would let the user back into authenticated screens.
+  useEffect(() => {
+    queryClient.clear();
+    dispatch(sessionEnded());
+  }, [queryClient, dispatch]);
 
   const systems: { icon: ReactNode; label: string }[] = [
     { icon: <Database size={iconSize.sm} color={theme.colors.actionPrimary} />, label: 'PostgreSQL' },
@@ -94,10 +102,8 @@ export default function DeleteSuccessScreen() {
           size="lg"
           accessibilityLabel="Close app"
           onPress={() => {
-            queryClient.clear();
-            dispatch(sessionEnded());
-            // Session is gone — the entry gate won't re-render, so navigate
-            // explicitly to the login screen.
+            // Session already ended on mount — just navigate out; the entry
+            // gate won't re-render so go to login explicitly.
             router.dismissTo('/(auth)/login' as never);
           }}>
           Close App

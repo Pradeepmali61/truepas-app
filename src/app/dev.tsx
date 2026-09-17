@@ -74,6 +74,7 @@ const GROUPS: { title: string; screens: ScreenEntry[] }[] = [
   {
     title: 'DOCUMENT VERIFICATION',
     screens: [
+      { label: 'Identity dashboard', route: '/identity', preset: 'auth-face' },
       { label: 'Select document type', route: '/document/select-type', preset: 'auth-face' },
       { label: 'Document scan', route: '/document/scan', preset: 'auth-face' },
       { label: 'Processing / matching', route: '/document/processing', preset: 'auth-face' },
@@ -85,11 +86,10 @@ const GROUPS: { title: string; screens: ScreenEntry[] }[] = [
     title: 'FAMILY',
     screens: [
       { label: 'Add family — basic info', route: '/family/add', preset: 'auth-face' },
-      { label: 'Add family — document (5-17)', route: '/family/add/document?name=Max+Kim&band=5-17', preset: 'auth-face' },
+      { label: 'Add family — document (5-9)', route: '/family/add/document?name=Max+Kim&band=5-9', preset: 'auth-face' },
       { label: 'Add family — document (0-4)', route: '/family/add/document?name=Lily+Kim&band=0-4', preset: 'auth-face' },
-      { label: 'Add family — face capture', route: '/family/add/face-capture?name=Max', preset: 'auth-face' },
+      { label: 'Add family — face capture (5-9)', route: '/family/add/face-capture?name=Max&age=7&personId=f1', preset: 'auth-face' },
       { label: 'Add family — photo capture (0-4)', route: '/family/add/photo-capture?name=Noah&age=3&personId=f1', preset: 'auth-face' },
-      { label: '18+ rejected', route: '/family/add/rejected?name=John&age=20', preset: 'auth-face' },
       { label: 'Family member detail', route: '/family/f1', preset: 'auth-face' },
     ],
   },

@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { Ticket } from 'lucide-react-native';
+import { ChevronRight, CircleCheck, ShieldCheck, Ticket } from 'lucide-react-native';
 import { useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -10,6 +10,7 @@ import { EmptyState, ErrorState, LoadingState, Typography } from '@/components/u
 import { useDocuments } from '@/features/documents/hooks';
 import { useFamily } from '@/features/family/hooks';
 import { useBookings } from '@/features/history/hooks';
+import { useIdentitySummary } from '@/features/identity/hooks';
 import { useAppSelector } from '@/store';
 import { makeStyles, useThemeTokens } from '@/theme';
 import { iconSize } from '@/theme/tokens';
@@ -40,6 +41,8 @@ export default function HomeScreen() {
     const selectedMember = selected === 0 ? undefined : members?.[selected - 1];
     const selectedPersonId = selectedMember?.id;
     const { data: documents, isPending, isError, isRefetching, refetch } = useDocuments(selectedPersonId);
+    // Identity status card — the signed-in user's own summary (face + document).
+    const { data: identity } = useIdentitySummary();
 
     // Possessive labels — "Your documents" for self, "Manju's documents" for members.
     const firstName = selectedMember?.name.split(' ')[0];
@@ -101,6 +104,42 @@ export default function HomeScreen() {
                     onAdd={() => router.push('/family/add' as never)}
                     style={styles.strip}
                 />
+                {/* Identity status card (design-repo HomeFeed banner) — opens
+                    the /identity dashboard. Hidden while loading or on error. */}
+                {identity ? (
+                    <Pressable
+                        onPress={() => router.push('/identity' as never)}
+                        accessibilityRole="button"
+                        accessibilityLabel={
+                            identity.status === 'verified' ? 'Identity verified — view details' : 'Identity incomplete — view details'
+                        }
+                        style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            gap: t.spacing[3],
+                            padding: t.spacing[4],
+                            borderRadius: t.radii.xl,
+                            backgroundColor: identity.status === 'verified' ? t.colors.successSubtle : t.colors.warningSubtle,
+                        }}>
+                        {identity.status === 'verified' ? (
+                            <CircleCheck size={iconSize.md} color={t.colors.success} />
+                        ) : (
+                            <ShieldCheck size={iconSize.md} color={t.colors.onWarningSubtle} />
+                        )}
+                        <View style={{ flex: 1, gap: 2 }}>
+                            <Typography variant="body" style={{ fontFamily: t.fontFamily.sans.semibold }}>
+                                {identity.status === 'verified' ? 'Identity verified' : 'Identity incomplete'}
+                            </Typography>
+                            <Typography variant="body-sm" color="secondary">
+                                {identity.status === 'verified' ? 'Face + document verified' : "Tap to see what's missing"}
+                            </Typography>
+                        </View>
+                        <ChevronRight
+                            size={iconSize.sm}
+                            color={identity.status === 'verified' ? t.colors.success : t.colors.onWarningSubtle}
+                        />
+                    </Pressable>
+                ) : null}
                 <View style={styles.sectionHead}>
                     <Typography variant="label" color="muted">{documentsHeading}</Typography>
                     {(selectedMember != null || (documents?.length ?? 0) > 2) && (

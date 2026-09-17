@@ -10,29 +10,23 @@ import type { DocumentType, FamilyAgeBand } from '@/types/domain';
 
 type DocOption = { id: DocumentType; label: string };
 
-const OPTIONS_5_17: DocOption[] = [
+// Minors can't hold a driving license.
+const OPTIONS_MINOR: DocOption[] = [
   { id: 'passport', label: 'Passport' },
   { id: 'greenCard', label: 'US Green Card' },
   { id: 'birthCertificate', label: 'Birth Certificate' },
   { id: 'usVisa', label: 'US Visa' },
 ];
 
-const OPTIONS_0_4: DocOption[] = [
-  { id: 'passport', label: 'Passport' },
-  { id: 'greenCard', label: 'US Green Card' },
-  { id: 'birthCertificate', label: 'Birth Certificate' },
-  { id: 'usVisa', label: 'US Visa' },
-];
-
-// Adults can hold any document type, including driving license.
-const OPTIONS_18_PLUS: DocOption[] = [
+// 10+ covers adults too — they can hold any document type, including driving license.
+const OPTIONS_10_PLUS: DocOption[] = [
   { id: 'passport', label: 'Passport' },
   { id: 'drivingLicense', label: "Driver's License" },
   { id: 'greenCard', label: 'US Green Card' },
   { id: 'usVisa', label: 'US Visa' },
 ];
 
-/** Add family — step 2: document. 5-17 → doc + selfie + face; 0-4 → doc only (PRD). */
+/** Add family — step 2: document. 5-9/10+ → doc + liveness; 0-4 → doc + photo. */
 export default function FamilyDocumentScreen() {
   const theme = useThemeTokens();
   const insets = useSafeAreaInsets();
@@ -43,12 +37,14 @@ export default function FamilyDocumentScreen() {
     dob?: string;
     relationship?: string;
   }>();
-  const isMinorWithFace = band !== '0-4';
+  const needsFace = band !== '0-4';
   const firstName = (name ?? 'Member').split(' ')[0];
 
-  const docOptions = band === '18+' ? OPTIONS_18_PLUS : isMinorWithFace ? OPTIONS_5_17 : OPTIONS_0_4;
+  const docOptions = band === '10+' ? OPTIONS_10_PLUS : OPTIONS_MINOR;
   const [selectedDocType, setSelectedDocType] = useState<DocOption>(docOptions[0]);
-  const stepDone = isMinorWithFace ? 2 : 3;
+  // Flow: basics (1) → document (2) → capture (3) — three steps for every band.
+  const stepDone = 2;
+  const stepTotal = 3;
 
   const handleComplete = () => {
     if (!name || !dob || !relationship) {
@@ -77,9 +73,9 @@ export default function FamilyDocumentScreen() {
           gap: theme.spacing[2],
           paddingBottom: theme.spacing[3],
         }}>
-        <Progress value={(stepDone / 4) * 100} accessibilityLabel="Add family member progress" />
+        <Progress value={(stepDone / stepTotal) * 100} accessibilityLabel="Add family member progress" />
         <Typography variant="caption" color="muted">
-          Step {stepDone} of 4 · Document
+          Step {stepDone} of {stepTotal} · Document
         </Typography>
       </View>
       <ScrollView
@@ -87,15 +83,17 @@ export default function FamilyDocumentScreen() {
         contentContainerStyle={{ padding: theme.spacing[4], gap: theme.spacing[4] }}
         showsVerticalScrollIndicator={false}>
         <View style={{ alignItems: 'center' }}>
-          {isMinorWithFace ? (
-            <Badge variant="primary">Age 5-17 · Doc + Selfie + Face Required</Badge>
+          {band === '0-4' ? (
+            <Badge variant="neutral">Age 0-4 · Document + Photo</Badge>
+          ) : band === '5-9' ? (
+            <Badge variant="primary">Age 5-9 · Doc + Liveness · any camera</Badge>
           ) : (
-            <Badge variant="neutral">Age 0-4 · Document Only</Badge>
+            <Badge variant="primary">Age 10+ · Doc + Liveness · front camera</Badge>
           )}
         </View>
-        {!isMinorWithFace ? (
+        {!needsFace ? (
           <Alert variant="info">
-            Children under 5 only need a document uploaded — no face scan required.
+            Children under 5 need a document and one photo — no liveness scan required.
           </Alert>
         ) : null}
         <Select
@@ -108,7 +106,7 @@ export default function FamilyDocumentScreen() {
         />
         <View style={{ alignItems: 'center', gap: theme.spacing[2], paddingVertical: theme.spacing[4] }}>
           <Typography variant="h4">
-            {isMinorWithFace
+            {needsFace
               ? `Scan ${firstName}'s ${selectedDocType.label}`
               : `Upload ${selectedDocType.label}`}
           </Typography>
@@ -129,9 +127,9 @@ export default function FamilyDocumentScreen() {
         <CoreButton
           fullWidth
           size="lg"
-          accessibilityLabel={isMinorWithFace ? 'Scan document' : 'Upload document'}
+          accessibilityLabel={needsFace ? 'Scan document' : 'Upload document'}
           onPress={handleComplete}>
-          {isMinorWithFace ? 'Scan Document' : 'Upload Document'}
+          {needsFace ? 'Scan Document' : 'Upload Document'}
         </CoreButton>
       </View>
     </SafeAreaView>

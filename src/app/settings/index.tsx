@@ -1,5 +1,4 @@
 /** @jsxImportSource react */
-import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import {
     ChevronRight,
@@ -16,10 +15,9 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { Card, CardContent, Modal, ScreenHeader } from '@/components/composite';
 import { Badge, CoreButton, Divider, RowIcon, Select, Switch, Typography } from '@/components/ui';
-import { useLogout } from '@/features/auth/mutations';
-import { sessionEnded } from '@/features/auth/slice';
-import { secureStorage } from '@/services/secureStorage';
-import { useAppDispatch, useAppSelector } from '@/store';
+import { useLogoutFlow } from '@/features/auth/useLogoutFlow';
+import { useIdentitySummary } from '@/features/identity/hooks';
+import { useAppSelector } from '@/store';
 import { BRAND_PRESETS, useTheme, useThemeTokens, type BrandPreset, type ColorScheme, type RadiusPreset } from '@/theme';
 import { iconSize } from '@/theme/tokens';
 
@@ -29,27 +27,16 @@ export default function SettingsScreen() {
   const router = useRouter();
   const theme = useThemeTokens();
   const insets = useSafeAreaInsets();
-  const queryClient = useQueryClient();
-  const dispatch = useAppDispatch();
+  const { logout: handleLogout, isPending: loggingOut } = useLogoutFlow();
   const { scheme, setScheme, palette, setPalette, radius, setRadius } = useTheme();
   const user = useAppSelector((state) => state.auth.user);
-  const logout = useLogout();
+  // Real verification status (face + document) — faceEnrolled alone is not "Verified".
+  const { data: identity } = useIdentitySummary();
   const [faceIdEnabled, setFaceIdEnabled] = useState(!!user?.faceEnrolled);
   const [biometricConsent, setBiometricConsent] = useState(!!user?.biometricConsentAt);
   const [alertsEnabled, setAlertsEnabled] = useState(true);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
-  const handleLogout = async () => {
-    try {
-      const refreshToken = await secureStorage.getRefreshToken();
-      if (refreshToken) await logout.mutateAsync({ refreshToken });
-    } catch {
-      // Best-effort — clear local state regardless
-    }
-    queryClient.clear();
-    dispatch(sessionEnded());
-    router.dismissTo('/(auth)/login' as never);
-  };
 
   const settingRow = (label: string, right: ReactNode) => (
     <View
@@ -123,7 +110,11 @@ export default function SettingsScreen() {
               {user?.email ?? ''}
             </Typography>
           </View>
-          {user?.faceEnrolled ? <Badge variant="success">Verified</Badge> : null}
+          {identity ? (
+            <Badge variant={identity.status === 'verified' ? 'success' : 'warning'}>
+              {identity.status === 'verified' ? 'Verified' : 'Incomplete'}
+            </Badge>
+          ) : null}
         </View>
 
         <Card>
@@ -312,7 +303,7 @@ export default function SettingsScreen() {
         <CoreButton
           variant="ghost"
           accessibilityLabel="Sign out"
-          loading={logout.isPending}
+          loading={loggingOut}
           onPress={handleLogout}>
           Sign out
         </CoreButton>

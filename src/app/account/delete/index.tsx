@@ -2,6 +2,7 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { View } from 'react-native';
 
+import { toApiError } from '@/api/errors';
 import { Card, Alert as InlineAlert, OtpInput, ScreenHeader } from '@/components/composite';
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
 import { Button, Input, Typography } from '@/components/ui';
@@ -18,18 +19,23 @@ export default function DeleteAccountScreen() {
   const theme = useThemeTokens();
   const [confirmation, setConfirmation] = useState('');
   const [pin, setPin] = useState('');
+  const [error, setError] = useState('');
   const deleteAccount = useDeleteAccount();
 
   const canDelete = confirmation.trim() === 'DELETE' && pin.length === 4;
 
   const handleDelete = async () => {
-    if (!canDelete) return;
+    if (!canDelete || deleteAccount.isPending) return;
+    setError('');
     try {
-      await deleteAccount.mutateAsync({ confirmation, pin });
-    } catch {
-      // Original behavior: proceed to processing even on a failed call.
+      await deleteAccount.mutateAsync({ confirmation: confirmation.trim(), pin });
+      router.push('/account/delete/processing');
+    } catch (err: any) {
+      // A failed delete must NOT reach the success flow — a wrong PIN or a
+      // network drop means the account still exists server-side.
+      setError(toApiError(err).message || 'Could not delete account. Please try again.');
+      setPin('');
     }
-    router.push('/account/delete/processing');
   };
 
   return (
@@ -60,9 +66,21 @@ export default function DeleteAccountScreen() {
           />
           <View style={{ gap: theme.spacing[2], marginTop: theme.spacing[2] }}>
             <Typography variant="body">Account PIN</Typography>
-            <OtpInput length={4} value={pin} onChange={setPin} accessibilityLabel="Account PIN" />
+            <OtpInput
+              length={4}
+              value={pin}
+              onChange={(v) => { setPin(v); if (error) setError(''); }}
+              state={error ? 'error' : 'default'}
+              accessibilityLabel="Account PIN"
+            />
           </View>
         </Card>
+
+        {error ? (
+          <InlineAlert variant="error" title="Deletion failed">
+            {error}
+          </InlineAlert>
+        ) : null}
       </View>
 
       <View

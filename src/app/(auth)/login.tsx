@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Eye, EyeOff, Lock, Mail, Phone } from 'lucide-react-native';
 import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
@@ -9,7 +9,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { api } from '@/api';
 import { toApiError } from '@/api/errors';
 import { BrandMark } from '@/components/app';
-import { FormField } from '@/components/composite';
+import { Alert, FormField } from '@/components/composite';
 import { SoftCard, useKitStyles } from '@/components/truepas';
 import { CoreButton, Input, Link, Select, Switch, Typography } from '@/components/ui';
 import { COUNTRIES, DEFAULT_COUNTRY_CODE } from '@/constants/countries';
@@ -29,6 +29,9 @@ export default function LoginScreen() {
   const dispatch = useAppDispatch();
   const theme = useThemeTokens();
   const kit = useKitStyles();
+  // Set by the session-expired handler in _layout — explains why the user
+  // landed here instead of silently dropping them on a bare login form.
+  const { reason } = useLocalSearchParams<{ reason?: string }>();
   const [method, setMethod] = useState<LoginMethod>('phone');
   const [countryCode, setCountryCode] = useState(DEFAULT_COUNTRY_CODE);
   const [remember, setRemember] = useState(true);
@@ -108,6 +111,12 @@ export default function LoginScreen() {
             <BrandMark />
             <Typography variant="h1">Welcome back</Typography>
           </View>
+
+          {reason === 'session-expired' ? (
+            <Alert variant="warning" title="Session expired">
+              For your security, you were signed out. Please sign in again to continue.
+            </Alert>
+          ) : null}
 
           <View
             accessibilityRole="tablist"

@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Camera as CameraIcon, ScanFace } from 'lucide-react-native';
+import { Camera as CameraIcon, ScanFace, SwitchCamera } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
 import { Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -13,7 +13,7 @@ import {
 
 import { toApiError } from '@/api/errors';
 import { Alert, ScreenHeader } from '@/components/composite';
-import { CoreButton, LoadingState, Pulse, ScanLine, Typography } from '@/components/ui';
+import { CoreButton, IconButton, LoadingState, Pulse, ScanLine, Typography } from '@/components/ui';
 import { useEnrollFace } from '@/features/auth/mutations';
 import { useThemeTokens } from '@/theme';
 import { iconSize } from '@/theme/tokens';
@@ -30,7 +30,10 @@ export function PhotoCapture() {
   const { name, age, personId } = useLocalSearchParams<{ name?: string; age?: string; personId?: string }>();
 
   const { hasPermission, requestPermission } = useCameraPermission();
-  const device = useCameraDevice('front');
+  // Under-5 photo enrollment allows either camera — a parent can hold the
+  // phone and capture the child with the rear camera.
+  const [cameraPosition, setCameraPosition] = useState<'front' | 'back'>('front');
+  const device = useCameraDevice(cameraPosition);
   const photoOutput = usePhotoOutput();
   const cameraRef = useRef<CameraRef>(null);
   const enrollFace = useEnrollFace();
@@ -105,6 +108,13 @@ export function PhotoCapture() {
         title={`Add ${name ?? 'child'}'s photo`}
         subtitle={age ? `Age ${age} · photo enrollment` : 'Photo enrollment'}
         onBack={() => router.back()}
+        actions={
+          <IconButton
+            accessibilityLabel={cameraPosition === 'front' ? 'Switch to back camera' : 'Switch to front camera'}
+            icon={<SwitchCamera size={iconSize.md} color={theme.colors.textPrimary} />}
+            onPress={() => setCameraPosition((p) => (p === 'front' ? 'back' : 'front'))}
+          />
+        }
       />
       <View style={{ flex: 1, padding: theme.spacing[4], gap: theme.spacing[3] }}>
         <View
@@ -165,7 +175,7 @@ export function PhotoCapture() {
           }}>
           <CameraIcon size={iconSize.sm} color={theme.colors.textSecondary} />
           <Typography variant="body-sm" color="secondary">
-            Front or back camera allowed
+            {cameraPosition === 'front' ? 'Front camera' : 'Back camera'} — flip icon above to switch
           </Typography>
         </View>
         {error ? (

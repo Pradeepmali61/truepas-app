@@ -127,14 +127,16 @@ export function useLivenessSession() {
     [state],
   );
 
-  const finalize = useCallback(async (frameBase64: string): Promise<LivenessFinalizeResponse> => {
+  // Finalize liveness - submit the captured frame file (file:// URI); it
+  // goes straight into multipart FormData without a base64 round-trip.
+  const finalize = useCallback(async (frameUri: string): Promise<LivenessFinalizeResponse> => {
     if (!state.challenge) {
       throw new Error('No active liveness session');
     }
 
     const result = await api.finalizeLiveness(
       state.challenge.session_id,
-      frameBase64,
+      frameUri,
       state.challenge.session_token,
     );
 

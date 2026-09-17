@@ -1,6 +1,9 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 
-import { setAccessToken } from '@/api/client';
+import { clearRegistrationToken, setAccessToken } from '@/api/client';
+import { accountDetailsStore } from '@/services/accountDetailsStore';
+import { pinStore } from '@/services/pinStore';
+import { clearScanResult } from '@/services/scanStore';
 import { secureStorage } from '@/services/secureStorage';
 import type { User } from '@/types/domain';
 
@@ -56,8 +59,15 @@ const authSlice = createSlice({
     },
     sessionEnded() {
       setAccessToken(null);
+      clearRegistrationToken();
       // Clear refresh token from secure storage (best-effort)
       secureStorage.clearRefreshToken().catch(() => {});
+      // In-memory stashes hold session-scoped secrets/data (verified PIN,
+      // captured scan images, resend payload) — drop them so a different
+      // login on the same session can't inherit them.
+      pinStore.clear();
+      accountDetailsStore.clear();
+      clearScanResult();
       return initialState;
     },
   },

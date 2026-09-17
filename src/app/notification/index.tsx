@@ -1,7 +1,8 @@
+import { useQueryClient, type InfiniteData } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Clock3 } from 'lucide-react-native';
 import { useState } from 'react';
-import { FlatList, RefreshControl, View } from 'react-native';
+import { FlatList, Pressable, RefreshControl, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { EmptyState, ErrorState, ScreenHeader, Tabs } from '@/components/composite';
@@ -10,6 +11,7 @@ import { Badge, CoreButton, Divider, Skeleton } from '@/components/ui';
 import { useNotifications } from '@/features/notifications/hooks';
 import { useThemeTokens } from '@/theme';
 import { iconSize } from '@/theme/tokens';
+import type { Notification } from '@/types/domain';
 
 /** Notifications inbox — GET /cb/notifications?limit=50&offset=…&unread_only=…
  *  Inbox reads only (no push delivery); "Load more" paginates via offset. */
@@ -21,6 +23,24 @@ export default function NotificationsScreen() {
   const [unreadOnly, setUnreadOnly] = useState(filter === 'unread');
   const { data, isPending, isError, isRefetching, refetch, fetchNextPage, hasNextPage, isFetchingNextPage } =
     useNotifications(unreadOnly);
+  const queryClient = useQueryClient();
+
+  // Interim until a backend mark-read endpoint exists: tapping a row flips
+  // the cached flag so the dot/badge clears immediately; a refetch restores
+  // server truth.
+  const markReadLocally = (id: string) => {
+    queryClient.setQueryData<InfiniteData<Notification[], number>>(
+      ['notifications', { unreadOnly }],
+      (old) => old
+        ? {
+            ...old,
+            pages: old.pages.map((page) =>
+              page.map((n) => (n.id === id ? { ...n, read: true } : n)),
+            ),
+          }
+        : old,
+    );
+  };
 
   const notifications = data?.pages.flat() ?? [];
   const unread = notifications.filter((n) => !n.read).length;
@@ -70,6 +90,10 @@ export default function NotificationsScreen() {
           }}
           showsVerticalScrollIndicator={false}
           renderItem={({ item }) => (
+            <Pressable
+              onPress={() => { if (!item.read) markReadLocally(item.id); }}
+              accessibilityRole="button"
+              accessibilityLabel={`Notification: ${item.title}`}>
             <NotificationRow
               item={{
                 title: item.title,
@@ -84,6 +108,7 @@ export default function NotificationsScreen() {
               }}
               style={{ paddingVertical: theme.spacing[2] }}
             />
+            </Pressable>
           )}
           ListEmptyComponent={
             <EmptyState

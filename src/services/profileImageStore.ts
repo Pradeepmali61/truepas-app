@@ -70,3 +70,23 @@ export async function getMemberProfileImage(personId: string): Promise<string | 
   const file = memberFile(personId);
   return file.exists ? file.uri : null;
 }
+
+/**
+ * Wipe every locally stored profile picture — the account avatar plus all
+ * member-<personId>-image.jpg files — on logout/session teardown. Without
+ * this the next account on a shared device would see the previous user's
+ * photos (the avatar filename is fixed, not user-scoped).
+ */
+export async function clearAllProfileImages(): Promise<void> {
+  await clearLocalProfileImage();
+  const entries = new Directory(Paths.document).list();
+  for (const entry of entries) {
+    if (
+      entry instanceof File &&
+      entry.name.startsWith('member-') &&
+      entry.name.endsWith('-image.jpg')
+    ) {
+      entry.delete();
+    }
+  }
+}

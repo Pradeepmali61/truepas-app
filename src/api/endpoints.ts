@@ -84,8 +84,13 @@ export const realApi = {
     return data;
   },
   getBookings: async (): Promise<Booking[]> => {
-    const { data } = await apiClient.get<Booking[]>('/bookings');
-    return data;
+    const { data } = await apiClient.get<Booking[] | { bookings?: Booking[] }>('/bookings');
+    // [] is the valid "no check-ins yet" state — unwrap a {bookings:[]}
+    // envelope and treat any other non-array shape as empty rather than
+    // crashing the list on .filter/.length.
+    if (Array.isArray(data)) return data;
+    if (Array.isArray(data?.bookings)) return data.bookings;
+    return [];
   },
   getBooking: async (id: string): Promise<Booking | null> => {
     const { data } = await apiClient.get<Booking>(`/bookings/${id}`);
@@ -262,7 +267,12 @@ export const realApi = {
       payload,
       config,
     );
-    console.log('[API] /document-verification-sessions/:id/verify response:', JSON.stringify(data));
+    // Log only the outcome — the response carries extracted PII (name, DOB,
+    // portrait URL, document number) which must not land in device logs.
+    console.log('[API] /document-verification-sessions/:id/verify response:', JSON.stringify({
+      status: data.status, outcome: data.outcome, reasonCode: data.reasonCode,
+      matchScore: data.matchScore, documentId: data.documentId,
+    }));
     return data;
   },
   /** Legacy: start verification without images (not per guide — kept for compatibility) */
@@ -288,7 +298,8 @@ export const realApi = {
       null,
       { params: personId ? { personId } : undefined },
     );
-    console.log('[API] /liveness/v2/challenge response:', JSON.stringify(data));
+    // session_token is a bearer credential — never log it.
+    console.log('[API] /liveness/v2/challenge response:', JSON.stringify({ ...data, session_token: data.session_token ? '***' : undefined }));
     return data;
   },
   submitLivenessEvidence: async (
@@ -322,12 +333,12 @@ export const realApi = {
   },
   finalizeLiveness: async (
     sessionId: string,
-    frameBase64: string,
+    frameUri: string,
     sessionToken: string,
   ): Promise<LivenessFinalizeResponse> => {
     const formData = new FormData();
     formData.append('frame', {
-      uri: `data:image/jpeg;base64,${frameBase64}`,
+      uri: frameUri,
       type: 'image/jpeg',
       name: 'finalize.jpg',
     } as any);

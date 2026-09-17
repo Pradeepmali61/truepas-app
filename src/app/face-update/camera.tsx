@@ -10,17 +10,18 @@ const LivenessCamera = loadLivenessCamera();
 
 export default function FaceUpdateCameraScreen() {
   const router = useRouter();
-  const { personId } = useLocalSearchParams<{ personId?: string }>();
+  const { personId, age } = useLocalSearchParams<{ personId?: string; age?: string }>();
+  // Under-10 family members may use the rear camera here too.
+  const ageNum = age != null ? Number(age) : NaN;
+  const allowBackCamera = Number.isFinite(ageNum) && ageNum < 10;
   if (!LivenessCamera) return <CameraUnavailable />;
 
   return (
     <LivenessCamera
       mode="update"
       personId={personId}
+      allowBackCamera={allowBackCamera}
       onSuccess={() => router.replace('/face-update/success')}
-      onError={(msg: string) => {
-        router.push({ pathname: '/face-update/error', params: { message: msg } });
-      }}
     />
   );
 }

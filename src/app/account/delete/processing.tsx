@@ -1,4 +1,4 @@
-﻿import { useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { Check, Hourglass } from 'lucide-react-native';
 import { useEffect } from 'react';
 import { View } from 'react-native';

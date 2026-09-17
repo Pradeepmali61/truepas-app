@@ -30,6 +30,7 @@ export default function DocumentVerifiedScreen() {
   const {
     docId,
     docLabel,
+    docType,
     docNumber,
     extractedName,
     extractedDob,
@@ -42,6 +43,7 @@ export default function DocumentVerifiedScreen() {
   } = useLocalSearchParams<{
     docId?: string;
     docLabel?: string;
+    docType?: string;
     docNumber?: string;
     extractedName?: string;
     extractedDob?: string;
@@ -80,7 +82,9 @@ export default function DocumentVerifiedScreen() {
   // manual_review, rejected) → FAILED. No intermediate "review" state in UI.
   const isFailed = outcome !== 'approved';
   const title = docLabel ?? 'Document';
-  const isLicense = (docLabel || '').toLowerCase().includes('license');
+  // Prefer the real doc type (passed from processing); fall back to the label
+  // heuristic for direct navigation without the param.
+  const isLicense = (docType ?? docLabel ?? '').toLowerCase().includes('license');
   // matchScore arrives 0–1 from the BFF; ConfidenceRing renders a percentage.
   const confidencePct =
     matchScore && !isFailed
@@ -155,7 +159,7 @@ export default function DocumentVerifiedScreen() {
                 status: isFailed ? 'failed' : 'verified',
                 expiresAt: dateOfExpiry ? dateOfExpiry.split('T')[0] : null,
                 extractedName: extractedName || null,
-                type: isLicense ? 'drivingLicense' : 'passport',
+                type: docType || (isLicense ? 'drivingLicense' : 'passport'),
               }}
               style={styles.idCardFace}
             />
@@ -294,7 +298,7 @@ export default function DocumentVerifiedScreen() {
           fullWidth
           size="lg"
           accessibilityLabel="Go to identity dashboard"
-          onPress={() => router.dismissTo('/(tabs)')}>
+          onPress={() => router.dismissTo('/identity' as never)}>
           Go to Identity Dashboard
         </CoreButton>
       </View>

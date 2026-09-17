@@ -23,7 +23,6 @@ const DOC_LABELS: Record<DocumentType, string> = {
   greenCard: 'US Green Card',
   birthCertificate: 'Birth Certificate',
   usVisa: 'U.S. Visa',
-  idCard: 'Identity Card',
 };
 
 /** Family document processing — runs AFTER document capture.
@@ -31,7 +30,7 @@ const DOC_LABELS: Record<DocumentType, string> = {
  *  - personId present (existing member): adds the captured document to that
  *    member's profile, then routes to the member detail page.
  *  - no personId (new member): creates the family member, then:
- *    - 5-17: routes to face-capture (liveness + face enrollment), which
+ *    - 5+: routes to face-capture (liveness + face enrollment), which
  *      then routes to the member detail page on completion.
  *    - 0-4:  routes to photo-capture (photo enrollment, no liveness), which
  *      then routes to the member detail page on completion. */
@@ -49,7 +48,7 @@ export default function FamilyProcessingScreen() {
   }>();
   const isExistingMember = !!personId;
   const docType = (type ?? 'passport') as DocumentType;
-  const isMinorWithFace = band !== '0-4';
+  const needsFace = band !== '0-4';
   const [status, setStatus] = useState<ProcessingStatus>('adding');
   const [error, setError] = useState<string | null>(null);
   // Staged flow — index advances at each real await boundary inside process().
@@ -195,11 +194,12 @@ export default function FamilyProcessingScreen() {
 
       clearScanResult();
       setStatus('done');
-      if (isMinorWithFace) {
-        // 5-17: face capture first, then route to member detail page
+      if (needsFace) {
+        // 5+: liveness + face enrollment, then route to member detail page.
+        // `age` lets face-capture enable the back camera for under-10 members.
         router.replace({
           pathname: '/family/add/face-capture',
-          params: { name: name.split(' ')[0], personId: member.id },
+          params: { name: name.split(' ')[0], personId: member.id, age: String(ageFromDob(dob)) },
         });
       } else {
         // 0-4: can't run liveness — photo enrollment captures one photo

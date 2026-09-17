@@ -4,7 +4,7 @@
     "name": "Maya Example",
     "relationship": "Child",
     "age": 10,
-    "ageBand": "5-17",
+    "ageBand": "10+",
     "verification": "pending_document",
     "turning18Soon": false,
     "faceCaptureMode": "liveness",
