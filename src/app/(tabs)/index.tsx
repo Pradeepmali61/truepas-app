@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { CalendarDays } from 'lucide-react-native';
+import { Ticket } from 'lucide-react-native';
 import { useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -72,7 +72,12 @@ export default function HomeScreen() {
 
     const stripMembers: FamilyMemberRef[] = [
         { name: user?.fullName ?? 'You' },
-        ...(members ?? []).map((m) => ({ name: m.name })),
+        ...(members ?? []).map((m) => ({
+            name: m.name,
+            statusDot: m.verification === 'verified' ? ('success' as const)
+                : m.verification === 'failed' ? ('error' as const)
+                : ('warning' as const),
+        })),
     ];
 
     const scrollBottom = TAB_BAR_HEIGHT + insets.bottom + t.spacing[4];
@@ -98,10 +103,10 @@ export default function HomeScreen() {
                 />
                 <View style={styles.sectionHead}>
                     <Typography variant="label" color="muted">{documentsHeading}</Typography>
-                    {(documents?.length ?? 0) > 2 && (
+                    {(selectedMember != null || (documents?.length ?? 0) > 2) && (
                         <Pressable
                             accessibilityRole="button"
-                            accessibilityLabel="See all documents"
+                            accessibilityLabel={selectedMember ? `View ${firstName}'s details` : 'See all documents'}
                             onPress={() =>
                                 router.push(
                                     (selectedMember ? `/family/${selectedMember.id}` : '/(tabs)/documents') as never,
@@ -109,7 +114,7 @@ export default function HomeScreen() {
                             }
                             style={({ pressed }) => pressed && { opacity: 0.6 }}>
                             <Typography variant="body-sm" style={{ color: t.colors.actionPrimary }}>
-                                See all
+                                {selectedMember ? `${firstName}'s details` : 'See all'}
                             </Typography>
                         </Pressable>
                     )}
@@ -182,7 +187,7 @@ export default function HomeScreen() {
                             <EmptyStateCard
                                 title="No check-ins yet"
                                 description="When you check in at a venue with Truepas, it shows up here."
-                                icon={<CalendarDays size={iconSize.lg} color={t.colors.actionPrimary} />}
+                                icon={<Ticket size={iconSize.xl} color={t.colors.actionPrimary} />}
                                 style={styles.emptyCard}
                             />
                         )}

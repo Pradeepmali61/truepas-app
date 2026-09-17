@@ -4,8 +4,8 @@ import { FlatList, RefreshControl, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Card, EmptyState, ErrorState, ScreenHeader } from '@/components/composite';
-import { DocumentRow } from '@/components/truepas';
-import { CoreButton, Skeleton } from '@/components/ui';
+import { AddDocumentButton, DocumentRow } from '@/components/truepas';
+import { Skeleton } from '@/components/ui';
 import { useDocuments } from '@/features/documents/hooks';
 import { useThemeTokens } from '@/theme';
 import type { IdentityDocument } from '@/types/domain';
@@ -106,13 +106,7 @@ export default function DocumentsScreen() {
           backgroundColor: theme.colors.surface,
           gap: theme.spacing[2],
         }}>
-        <CoreButton
-          fullWidth
-          variant="outline"
-          accessibilityLabel="Add document"
-          onPress={() => router.push('/document/select-type' as never)}>
-          Add document
-        </CoreButton>
+        <AddDocumentButton onPress={() => router.push('/document/select-type' as never)} />
       </View>
     </SafeAreaView>
   );

@@ -52,7 +52,7 @@ export default function FamilyDocumentScreen() {
 
   const handleComplete = () => {
     if (!name || !dob || !relationship) {
-      router.dismissTo('/(tabs)/family');
+      router.dismissTo('/(tabs)');
       return;
     }
     router.push({

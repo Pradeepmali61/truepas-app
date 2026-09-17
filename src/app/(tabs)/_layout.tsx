@@ -2,7 +2,7 @@
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import * as Haptics from 'expo-haptics';
 import { Redirect, Tabs } from 'expo-router';
-import { FileText, Home, Ticket, Users } from 'lucide-react-native';
+import { FileText, Home, Ticket } from 'lucide-react-native';
 import { useEffect, useRef } from 'react';
 import { Animated, Pressable, Text, View, type ColorValue } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -114,13 +114,6 @@ export default function TabsLayout() {
         options={{
           title: 'Docs',
           tabBarIcon: tabIcon(FileText),
-        }}
-      />
-      <Tabs.Screen
-        name="family"
-        options={{
-          title: 'Family',
-          tabBarIcon: tabIcon(Users),
         }}
       />
       <Tabs.Screen

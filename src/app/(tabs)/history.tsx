@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { CalendarDays } from 'lucide-react-native';
+import { Ticket } from 'lucide-react-native';
 import { memo, useState } from 'react';
 import { FlatList, RefreshControl, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -157,7 +157,7 @@ export default function HistoryScreen() {
                 <EmptyState
                   title="No bookings yet"
                   description="When you check in at a venue with Truepas, it shows up here."
-                  icon={<CalendarDays size={iconSize.lg} color={theme.colors.actionPrimary} />}
+                  icon={<Ticket size={iconSize.xl} color={theme.colors.actionPrimary} />}
                   action={
                     <CoreButton
                       variant="outline"

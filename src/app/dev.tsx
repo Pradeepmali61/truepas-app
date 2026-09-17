@@ -48,7 +48,6 @@ const GROUPS: { title: string; screens: ScreenEntry[] }[] = [
     screens: [
       { label: 'Identity tab', route: '/(tabs)', preset: 'auth-face' },
       { label: 'Documents tab', route: '/(tabs)/documents', preset: 'auth-face' },
-      { label: 'Family tab', route: '/(tabs)/family', preset: 'auth-face' },
       { label: 'History tab', route: '/(tabs)/history', preset: 'auth-face' },
     ],
   },

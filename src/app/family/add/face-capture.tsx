@@ -16,7 +16,7 @@ export default function FamilyFaceCaptureScreen() {
     if (personId) {
       router.replace({ pathname: '/family/[id]', params: { id: personId } });
     } else {
-      router.dismissTo('/(tabs)/family');
+      router.dismissTo('/(tabs)');
     }
   };
 

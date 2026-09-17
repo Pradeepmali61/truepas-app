@@ -1,6 +1,6 @@
+import { Check } from "lucide-react-native";
 import { useState, type ReactNode } from "react";
 import { Text, View, type StyleProp, type ViewStyle } from "react-native";
-import { Check } from "lucide-react-native";
 import { makeStyles, useThemeTokens } from "../../theme";
 import { iconSize } from "../../theme/tokens";
 import { Button } from "../ui/Button";
@@ -106,7 +106,8 @@ const useStyles = makeStyles((t) => ({
   bubble: {
     width: 28,
     height: 28,
-    borderRadius: t.radii.full,
+    // Android: borderRadius > h/2 + borderWidth breaks the background fill.
+    borderRadius: 14,
     borderWidth: t.sizes.fieldBorderWidth,
     borderColor: t.colors.border,
     backgroundColor: t.colors.surface,

@@ -7,7 +7,7 @@ export type BadgeVariant = "neutral" | "primary" | "brand" | "success" | "warnin
 export interface BadgeProps {
   variant?: BadgeVariant;
   appearance?: "subtle" | "outline" | "solid";
-  size?: "sm" | "md";
+  size?: "sm" | "md" | "lg";
   dot?: boolean;
   icon?: ReactNode;
   children: ReactNode;
@@ -94,9 +94,11 @@ const useStyles = makeStyles((t) => {
     },
     sm: { height: 20, paddingHorizontal: t.spacing[2] },
     md: { height: 24, paddingHorizontal: t.spacing[3] },
+    lg: { height: 28, paddingHorizontal: t.spacing[4] },
     text: { fontWeight: t.fontWeight.medium },
     smText: { fontSize: t.fontSize.xs },
     mdText: { fontSize: t.fontSize.sm },
+    lgText: { fontSize: t.fontSize.base },
     dot: { width: 6, height: 6, borderRadius: t.radii.full },
   };
 

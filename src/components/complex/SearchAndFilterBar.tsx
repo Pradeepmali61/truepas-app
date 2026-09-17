@@ -131,7 +131,8 @@ const useStyles = makeStyles((t) => ({
     alignItems: "center",
     height: t.sizes.heightSm,
     paddingHorizontal: t.spacing[3],
-    borderRadius: t.radii.full,
+    // Android: borderRadius > h/2 + borderWidth breaks the background fill.
+    borderRadius: t.sizes.heightSm / 2,
     borderWidth: t.sizes.fieldBorderWidth,
     borderColor: t.colors.border,
     backgroundColor: t.colors.surface,

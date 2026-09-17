@@ -12,7 +12,6 @@ import {
     FileText,
     Globe,
     Landmark,
-    Plus,
     RefreshCw,
     Share,
     ShieldCheck
@@ -72,7 +71,7 @@ export function DocumentRow({ doc, onPress, style }: { doc: ProductDocument; onP
         <View style={styles.rowBetween}>
           <View style={styles.rowCenter}>
             <View style={[styles.productIcon, { backgroundColor: theme.colors.brandSubtle, width: 48, height: 48 }]}>
-              <DocIcon doc={doc} size={iconSize.lg} />
+              <DocIcon doc={doc} size={iconSize.xl} />
             </View>
             <View style={{ gap: 2, flexShrink: 1 }}>
               <Text style={styles.idCardTitle} numberOfLines={1}>{doc.label}</Text>
@@ -243,17 +242,15 @@ export function DocumentVerifyCard({ doc }: { doc: ProductDocument }) {
   );
 }
 
-/** Add row — full-width outline CTA below a document list
- *  (design-repo identity.tsx "Documents wallet" sticky action, inlined for scroll). */
+/** Add row — full-width solid CTA below a document list
+ *  (design-repo family.tsx member detail "Add Maya's document" sticky action,
+ *  inlined for scroll). */
 export function AddDocumentButton({ onPress, label = "Add document", style }: { onPress?: () => void; label?: string; style?: StyleProp<ViewStyle> }) {
-  const theme = useThemeTokens();
   return (
     <Button
       fullWidth
-      variant="outline"
       accessibilityLabel={label}
       onPress={onPress}
-      iconLeft={<Plus size={iconSize.sm} color={theme.colors.actionPrimary} />}
       style={style}
     >
       {label}

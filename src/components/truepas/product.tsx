@@ -1,4 +1,3 @@
-import { Avatar } from "@/components/ui/Avatar";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Pulse } from "@/components/ui/motion";
@@ -41,13 +40,6 @@ export interface ProductDocument {
   extractedDob?: string | null;
   nationality?: string | null;
   issuingState?: string | null;
-}
-export interface ProductMember {
-  name: string;
-  relationship: string;
-  age: number;
-  verification: string;
-  faceCaptureMode?: 'photo' | 'liveness';
 }
 export interface ProductIssued {
   name: string;
@@ -259,66 +251,6 @@ export function DocumentCard({
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={`${doc.label}, ${doc.status}`}
-          onPress={onPress}
-          style={({ pressed }) => pressed && styles.pressed}
-        >
-          {body}
-        </Pressable>
-      ) : (
-        body
-      )}
-    </SoftCard>
-  );
-}
-
-const MEMBER_STATUS: Record<string, { variant: "success" | "warning" | "error" | "neutral"; label: string }> = {
-  verified: { variant: "success", label: "Verified" },
-  pending_document: { variant: "warning", label: "Needs document" },
-  pending_face: { variant: "warning", label: "Needs face" },
-  failed: { variant: "error", label: "Failed" },
-};
-
-/** Family member card — relationship, age band, capture mode. */
-export function FamilyCard({
-  member,
-  onPress,
-  style,
-}: {
-  member: ProductMember;
-  onPress?: () => void;
-  style?: StyleProp<ViewStyle>;
-}) {
-  const styles = useStyles();
-  const theme = useThemeTokens();
-  const status = MEMBER_STATUS[member.verification] ?? { variant: "warning" as const, label: "Action needed" };
-  const body = (
-    <>
-      <View style={styles.rowBetween}>
-        <View style={styles.rowCenter}>
-          <View style={styles.stripRing}>
-            <Avatar name={member.name} size="md" />
-          </View>
-          <View style={{ gap: 2, flexShrink: 1 }}>
-            <Text style={styles.cardTitle} numberOfLines={1}>{member.name}</Text>
-            <Text style={styles.helper} numberOfLines={1}>
-              {member.relationship} · age {member.age}
-              {member.faceCaptureMode && ` · ${member.faceCaptureMode === "photo" ? "photo" : "liveness"}`}
-            </Text>
-          </View>
-        </View>
-        <View style={styles.rowCenter}>
-          <Badge variant={status.variant}>{status.label}</Badge>
-          <ChevronRight size={iconSize.md} color={theme.colors.textSecondary} />
-        </View>
-      </View>
-    </>
-  );
-  return (
-    <SoftCard style={[styles.productCard, style]}>
-      {onPress ? (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={member.name}
           onPress={onPress}
           style={({ pressed }) => pressed && styles.pressed}
         >
@@ -689,7 +621,7 @@ export function EmptyStateCard({
   title?: string;
   description?: string;
   actionLabel?: string;
-  /** Overrides the default FileText glyph (e.g. CalendarDays for check-ins). */
+  /** Overrides the default FileText glyph (e.g. Ticket for check-ins). */
   icon?: ReactNode;
   onAction?: () => void;
   style?: StyleProp<ViewStyle>;

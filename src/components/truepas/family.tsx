@@ -24,8 +24,12 @@ import { useStyles } from "./styles";
 
 /* Family members — avatar strip, profile, access request, chat, week strip. */
 
+export type FamilyStatusDot = "success" | "warning" | "error";
+
 export interface FamilyMemberRef {
   name: string;
+  /** Small status dot on the avatar — success/warning/error tone. */
+  statusDot?: FamilyStatusDot;
 }
 export interface FamilyMemberFull extends FamilyMemberRef {
   relationship?: string;
@@ -36,17 +40,34 @@ const DEFAULT_MESSAGES = [
   { text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit." },
   { out: true, text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit." },
 ];
+/* Vivid signal colors — the theme's semantic tones are palette-muted
+ * (violetLedger warning reads brown), but a status dot must read as
+ * traffic-light green/yellow/red in every palette. */
+const DOT_HEX: Record<FamilyStatusDot, string> = {
+  success: "#22c55e",
+  warning: "#eab308",
+  error: "#ef4444",
+};
+
+const DOT_LABEL: Record<FamilyStatusDot, string> = {
+  success: "verified",
+  warning: "action needed",
+  error: "verification failed",
+};
+
 export function FamilyStripCell({
   name,
   add,
   you,
   selected,
+  statusDot,
   onPress,
 }: {
   name: string;
   add?: boolean;
   you?: boolean;
   selected?: boolean;
+  statusDot?: FamilyStatusDot;
   onPress?: () => void;
 }) {
   const styles = useStyles();
@@ -58,20 +79,32 @@ export function FamilyStripCell({
           accessibilityRole="button"
           accessibilityLabel="Add family member"
           onPress={onPress}
-          style={({ pressed }) => [styles.stripAdd, pressed && styles.pressed]}
+          style={({ pressed }) => pressed && styles.pressed}
         >
-          <UserPlus size={iconSize.md} color={theme.colors.actionPrimary} />
+          <View style={styles.stripAdd}>
+            <UserPlus size={iconSize.md} color={theme.colors.actionPrimary} />
+          </View>
         </Pressable>
       ) : (
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={name}
+          accessibilityLabel={statusDot ? `${name}, ${DOT_LABEL[statusDot]}` : name}
           accessibilityState={{ selected }}
           onPress={onPress}
           style={({ pressed }) => pressed && styles.pressed}
         >
-          <View style={[styles.stripRing, selected && styles.stripRingSelected]}>
-            <Avatar name={name} size="lg" />
+          <View>
+            <View style={[styles.stripRing, selected && styles.stripRingSelected]}>
+              <Avatar name={name} size="lg" />
+            </View>
+            {statusDot && (
+              <View
+                style={[
+                  styles.statusDot,
+                  { backgroundColor: DOT_HEX[statusDot], borderColor: theme.colors.surface },
+                ]}
+              />
+            )}
           </View>
         </Pressable>
       )}
@@ -116,6 +149,7 @@ export function FamilyStrip({
               name={m.name}
               you={i === youIndex}
               selected={i === selectedIndex}
+              statusDot={m.statusDot}
               onPress={() => onSelect?.(i)}
             />
           ))}

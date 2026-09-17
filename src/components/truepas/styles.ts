@@ -224,6 +224,9 @@ export const useStyles = makeStyles((t) => ({
   loginHead: { gap: t.spacing[4] },
   field: { gap: 6 },
   fieldLabel: { fontSize: t.fontSize.sm, fontWeight: t.fontWeight.medium, color: t.colors.textSecondary },
+  fieldError: { fontSize: t.fontSize.xs, color: t.colors.error },
+  phoneRow: { flexDirection: "row", gap: t.spacing[2], alignItems: "stretch" },
+  ccSelect: { width: 112 },
   link: { fontSize: t.fontSize.sm, fontWeight: t.fontWeight.medium, color: t.colors.actionPrimary },
   orRow: { flexDirection: "row", alignItems: "center", gap: t.spacing[3] },
   orLine: { flex: 1, height: t.sizes.fieldBorderWidth, backgroundColor: t.colors.border },
@@ -234,20 +237,21 @@ export const useStyles = makeStyles((t) => ({
   stripCell: { alignItems: "center", gap: 6, width: 60 },
   stripRing: {
     padding: 3,
-    borderRadius: t.radii.full,
+    // Android: borderRadius > h/2 + borderWidth breaks the background fill.
+    borderRadius: 29,
     borderWidth: 2,
     borderColor: t.colors.actionPrimary,
   },
   stripAdd: {
     width: 54,
     height: 54,
-    borderRadius: t.radii.full,
+    // Android: borderRadius > h/2 + borderWidth breaks the background fill.
+    borderRadius: 27,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: t.colors.surfaceSunken,
     borderWidth: t.sizes.fieldBorderWidth,
     borderColor: t.colors.border,
-    borderStyle: "dashed",
   },
   stripScroll: { flex: 1, marginRight: -t.spacing[5] },
   stripContent: { paddingRight: t.spacing[5] },
@@ -265,8 +269,19 @@ export const useStyles = makeStyles((t) => ({
     bottom: 0,
     width: 10,
     height: 10,
-    borderRadius: t.radii.full,
+    // Android: borderRadius > h/2 + borderWidth breaks the background fill.
+    borderRadius: 5,
     backgroundColor: t.colors.success,
+    borderWidth: 2,
+  },
+  statusDot: {
+    position: "absolute",
+    right: 0,
+    bottom: 0,
+    width: 14,
+    height: 14,
+    // Android: borderRadius > h/2 + borderWidth breaks the background fill.
+    borderRadius: 7,
     borderWidth: 2,
   },
   bubbleIn: {
@@ -366,7 +381,8 @@ export const useStyles = makeStyles((t) => ({
   heroRing: {
     width: 150,
     height: 150,
-    borderRadius: t.radii.full,
+    // Android: borderRadius > h/2 + borderWidth breaks the background fill.
+    borderRadius: 75,
     borderWidth: 3,
     borderColor: t.colors.actionPrimary,
     backgroundColor: t.colors.surfaceSunken,

@@ -60,7 +60,7 @@ export default function Age18NotificationScreen() {
           size="lg"
           accessibilityLabel="Create their own account"
           iconLeft={<Plus size={iconSize.sm} color={theme.colors.onActionPrimary} />}
-          onPress={() => router.dismissTo('/(tabs)/family')}>
+          onPress={() => router.dismissTo('/(tabs)')}>
           Create their account
         </CoreButton>
         <CoreButton

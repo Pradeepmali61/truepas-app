@@ -152,7 +152,7 @@ export default function FamilyProcessingScreen() {
       }
 
       if (!name || !dob || !relationship) {
-        router.dismissTo('/(tabs)/family');
+        router.dismissTo('/(tabs)');
         return;
       }
       console.log('[FamilyAdd] Creating member:', JSON.stringify({ name, dob, relationship, band }));
@@ -288,7 +288,7 @@ export default function FamilyProcessingScreen() {
                 fullWidth
                 variant="outline"
                 accessibilityLabel="Back to family"
-                onPress={() => router.dismissTo('/(tabs)/family')}>
+                onPress={() => router.dismissTo('/(tabs)')}>
                 Back to Family
               </CoreButton>
             </View>

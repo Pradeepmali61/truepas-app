@@ -255,6 +255,10 @@ export default function ProfileScreen() {
           <Divider style={{ marginHorizontal: theme.spacing[4] }} />
           <ActionRow label="Change PIN" onPress={gate('/security/change-pin')} />
           <Divider style={{ marginHorizontal: theme.spacing[4] }} />
+          {/* Direct push, not gate(): /face-update/pin is itself the PIN
+              verification step — wrapping it would ask for the PIN twice. */}
+          <ActionRow label="Update face" onPress={() => router.push('/face-update/pin')} />
+          <Divider style={{ marginHorizontal: theme.spacing[4] }} />
           <ActionRow label="Delete account" destructive onPress={gate('/account/delete')} />
         </Card>
 
