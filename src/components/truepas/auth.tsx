@@ -1,11 +1,14 @@
 import { BrandMark } from "@/components/app/BrandMark";
+import { Alert } from "@/components/composite";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
 import { Switch } from "@/components/ui/Switch";
 import { Typography } from "@/components/ui/Typography";
+import { COUNTRIES } from "@/constants/countries";
 import { useThemeTokens } from "@/theme";
 import { iconSize } from "@/theme/tokens";
-import { Eye, EyeOff, KeyRound, Lock, Mail, User } from "lucide-react-native";
+import { KeyRound, Lock, Mail, Phone } from "lucide-react-native";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { Pressable, Text, View, type StyleProp, type ViewStyle } from "react-native";
@@ -15,12 +18,13 @@ import { useStyles } from "./styles";
 /* Auth screens — login, registration, forgot password, reset PIN. */
 
 /** Labelled field wrapper — label sits above the control. */
-export function Field({ label, children }: { label: string; children: ReactNode }) {
+export function Field({ label, error, children }: { label: string; error?: string; children: ReactNode }) {
   const styles = useStyles();
   return (
     <View style={styles.field}>
       <Text style={styles.fieldLabel}>{label}</Text>
       {children}
+      {error ? <Text style={styles.fieldError}>{error}</Text> : null}
     </View>
   );
 }
@@ -87,14 +91,33 @@ export function LoginCard() {
   );
 }
 
+/** Register — phone-first step 1 (contract v1.1.0): country code + mobile
+ *  number → POST /cb/auth/register → registrationId → verify-phone.
+ *  Controlled card: the screen owns the form state and mutation. */
 export function RegisterCard({
   style,
+  countryCode,
+  onCountryCodeChange,
+  phone,
+  onPhoneChange,
+  onPhoneBlur,
+  phoneError,
+  error,
+  loading,
   onCreateAccount,
   onSignIn,
   onTerms,
   onPrivacy,
 }: {
   style?: StyleProp<ViewStyle>;
+  countryCode?: string;
+  onCountryCodeChange?: (value: string) => void;
+  phone?: string;
+  onPhoneChange?: (value: string) => void;
+  onPhoneBlur?: () => void;
+  phoneError?: string;
+  error?: string | null;
+  loading?: boolean;
   onCreateAccount?: () => void;
   onSignIn?: () => void;
   onTerms?: () => void;
@@ -102,55 +125,50 @@ export function RegisterCard({
 }) {
   const styles = useStyles();
   const theme = useThemeTokens();
-  const [show, setShow] = useState(false);
   return (
     <SoftCard style={[styles.loginCard, style]}>
       <View style={styles.loginHead}>
         <BrandMark compact />
         <View style={{ gap: 6 }}>
           <Typography variant="h2">Create your account</Typography>
-          <Typography color="secondary">Verify once. Check in anywhere.</Typography>
+          <Typography color="secondary">We&apos;ll text a verification code to your phone.</Typography>
         </View>
       </View>
 
-      <View style={{ gap: 16 }}>
-        <Field label="Full name">
-          <Input
-            placeholder="Ada Example"
-            autoCapitalize="words"
-            iconLeft={<User size={iconSize.md} color={theme.colors.actionPrimary} />}
+      <Field label="Mobile number" error={phoneError}>
+        <View style={styles.phoneRow}>
+          <Select
+            size="md"
+            title="Country code"
+            accessibilityLabel="Country code"
+            style={styles.ccSelect}
+            value={countryCode}
+            onValueChange={onCountryCodeChange}
+            options={COUNTRIES.map((c) => ({
+              value: c.code,
+              label: `${c.flag} ${c.name} (${c.code})`,
+              fieldLabel: `${c.flag} ${c.code}`,
+            }))}
           />
-        </Field>
-        <Field label="Email">
           <Input
-            placeholder="you@example.com"
-            keyboardType="email-address"
-            autoCapitalize="none"
-            iconLeft={<Mail size={iconSize.md} color={theme.colors.actionPrimary} />}
+            placeholder="(555) 555-0123"
+            keyboardType="phone-pad"
+            containerStyle={styles.grow}
+            value={phone}
+            onChangeText={onPhoneChange}
+            onBlur={onPhoneBlur}
+            state={phoneError ? "error" : "default"}
+            iconLeft={<Phone size={iconSize.sm} color={theme.colors.textMuted} />}
+            accessibilityLabel="Mobile number"
           />
-        </Field>
-        <Field label="Password">
-          <Input
-            placeholder="8+ characters"
-            secureTextEntry={!show}
-            iconLeft={<Lock size={iconSize.md} color={theme.colors.actionPrimary} />}
-            iconRight={
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={show ? "Hide password" : "Show password"}
-                onPress={() => setShow((s) => !s)}
-                hitSlop={8}
-              >
-                {show ? (
-                  <EyeOff size={iconSize.md} color={theme.colors.actionPrimary} />
-                ) : (
-                  <Eye size={iconSize.md} color={theme.colors.actionPrimary} />
-                )}
-              </Pressable>
-            }
-          />
-        </Field>
-      </View>
+        </View>
+      </Field>
+
+      {error ? (
+        <Alert variant="error" title="Couldn't send code">
+          {error}
+        </Alert>
+      ) : null}
 
       <Text style={styles.helper}>
         By continuing you agree to our{" "}
@@ -158,8 +176,8 @@ export function RegisterCard({
         <Text style={styles.link} onPress={onPrivacy}>Privacy policy</Text>.
       </Text>
 
-      <Button fullWidth size="lg" onPress={onCreateAccount} accessibilityLabel="Create account">
-        Create account
+      <Button fullWidth size="lg" loading={loading} onPress={onCreateAccount} accessibilityLabel="Send code">
+        Send code
       </Button>
 
       <Text style={[styles.helper, styles.centerText]}>

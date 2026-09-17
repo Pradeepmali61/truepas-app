@@ -6,6 +6,7 @@ import { KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
 import Animated, { useSharedValue, withSequence, withTiming } from 'react-native-reanimated';
 
 import { setRegistrationToken } from '@/api/client';
+import { toApiError } from '@/api/errors';
 import { OtpInput, ScreenHeader } from '@/components/composite';
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
 import { CoreButton, Link, Progress, RowIcon, Typography } from '@/components/ui';
@@ -105,7 +106,7 @@ export function OtpVerification({
         data: JSON.stringify(err?.response?.data),
       });
       setVerifyState('error');
-      setErrorMsg(err?.message ?? 'Invalid verification code. Please try again.');
+      setErrorMsg(toApiError(err).message || 'Invalid verification code. Please try again.');
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       shakeX.value = withSequence(
         withTiming(-10, { duration: 50 }),
@@ -131,7 +132,7 @@ export function OtpVerification({
       setVerifyState('idle');
     } catch (err: any) {
       setVerifyState('error');
-      setErrorMsg(err?.message ?? 'Could not resend code. Please try again.');
+      setErrorMsg(toApiError(err).message || 'Could not resend code. Please try again.');
     } finally {
       setResending(false);
     }

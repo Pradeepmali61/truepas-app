@@ -22,6 +22,8 @@
 
 7. **Biometric consent endpoint** — Please confirm `POST /cb/user/me/biometric-consent` with body `{ accepted: boolean }` is deployed and returns `200` with `{ ok: true, consentAt: string }`.
 
+8. **Duplicate phone not rejected at register** — `POST /cb/auth/register` must return `409 CONFLICT` when the phone already belongs to a completed account (contract v1.1.0 §6.1 / QA handoff §3.1: "409 if account exists"). Verified 17 Sep 2026: the seeded smoke account `+919999999998` gets `202` + `registrationId`, so the app only learns about the duplicate at the final email-OTP step — the user completes the whole funnel before being told the account exists. Re-registering the same phone while a registration is still in progress must still return `202` — only completed accounts should conflict.
+
 ---
 
 ## Environment
@@ -40,3 +42,4 @@ Protected endpoints: ✅ 401 without token (routing works)
 - Confirm dev test OTP `123456` is active
 - Deploy signed object-upload endpoint for document verification
 - Confirm liveness, face, and biometric-consent endpoints are live in dev
+- Return `409` from `POST /cb/auth/register` when the phone already has a completed account

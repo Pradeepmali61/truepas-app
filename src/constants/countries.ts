@@ -18,3 +18,5 @@ export const COUNTRIES: Country[] = [
   { code: '+92', name: 'Pakistan', flag: '🇵🇰' },
   { code: '+880', name: 'Bangladesh', flag: '🇧🇩' },
 ];
+
+export const DEFAULT_COUNTRY_CODE = '+91';

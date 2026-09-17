@@ -1,6 +1,7 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Inbox } from 'lucide-react-native';
 import { useEffect } from 'react';
+import { Alert } from 'react-native';
 
 import { api } from '@/api';
 import { clearRegistrationToken } from '@/api/client';
@@ -76,10 +77,22 @@ export default function VerifyEmailScreen() {
               refreshToken: response.refreshToken,
             }),
           );
+          // Navigate to consent — the auth layout will redirect to consent
+          // because faceEnrolled is false
+          router.replace('/(onboarding)/consent');
+          return;
         }
-        // Navigate to consent — the auth layout will redirect to consent
-        // because faceEnrolled is false
-        router.replace('/(onboarding)/consent');
+        // Verified but no session tokens — without sessionStarted the
+        // onboarding layout would bounce the user to /welcome silently.
+        // The account almost certainly exists (email is verified), so send
+        // them to login where they can recover with their new password.
+        console.error('[VerifyEmail] Missing user/accessToken in verify response:', JSON.stringify(response));
+        Alert.alert(
+          'Almost there',
+          'Your email is verified, but we could not sign you in automatically. Please log in with your new password.',
+          [{ text: 'Go to sign in', onPress: () => router.replace('/(auth)/login') }],
+          { cancelable: false },
+        );
       }}
     />
   );

@@ -11,9 +11,8 @@ import { toApiError } from '@/api/errors';
 import { BrandMark } from '@/components/app';
 import { FormField } from '@/components/composite';
 import { SoftCard, useKitStyles } from '@/components/truepas';
-import { Input, Link, Select, Typography } from '@/components/ui';
-import { Button } from '@/components/ui/Button';
-import { COUNTRIES } from '@/constants/countries';
+import { CoreButton, Input, Link, Select, Switch, Typography } from '@/components/ui';
+import { COUNTRIES, DEFAULT_COUNTRY_CODE } from '@/constants/countries';
 import { LoginForm, loginSchema } from '@/features/auth/schemas';
 import { sessionStarted } from '@/features/auth/slice';
 import { secureStorage } from '@/services/secureStorage';
@@ -21,7 +20,6 @@ import { useAppDispatch } from '@/store';
 import { useThemeTokens } from '@/theme';
 import { iconSize } from '@/theme/tokens';
 
-const DEFAULT_COUNTRY_CODE = '+91';
 type LoginMethod = 'phone' | 'email';
 
 /** Login — email + password; "Remember me" controls whether the refresh token
@@ -57,8 +55,17 @@ export default function LoginScreen() {
       let identifier = values.identifier.trim();
       if (method === 'phone') {
         const digits = identifier.replace(/\D/g, '');
+        if (digits.length < 7 || digits.length > 15) {
+          setLoginError('Enter a valid mobile number');
+          setSubmitting(false);
+          return;
+        }
         const cc = countryCode.slice(1);
-        identifier = digits.startsWith(cc) ? `+${digits}` : `${countryCode}${digits}`;
+        // A bare national number is ≤10 digits — always prepend the country
+        // code. Only treat it as already-international when it's longer AND
+        // starts with the cc digits (a 10-digit number can itself start with
+        // '91', e.g. 9198765432, and must still get the +91 prefix).
+        identifier = digits.startsWith(cc) && digits.length > 10 ? `+${digits}` : `${countryCode}${digits}`;
       } else if (!identifier.includes('@')) {
         const digits = identifier.replace(/\D/g, '');
         if (digits.length === 10) {
@@ -231,6 +238,7 @@ export default function LoginScreen() {
               value={remember}
               onValueChange={setRemember}
               label={<Typography variant="body-lg">Remember me</Typography>}
+              style={{ flex: 1 }}
             />
             <Link
               variant="quiet"
@@ -247,9 +255,9 @@ export default function LoginScreen() {
             </Typography>
           ) : null}
 
-          <Button fullWidth size="lg" loading={submitting} onPress={onSubmit}>
+          <CoreButton fullWidth size="lg" loading={submitting} onPress={onSubmit}>
             Sign in
-          </Button>
+          </CoreButton>
 
           <Typography variant="body" color="muted" center>
             New to TruePas?{' '}
