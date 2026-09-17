@@ -11,7 +11,7 @@ import { toApiError } from '@/api/errors';
 import { BrandMark } from '@/components/app';
 import { FormField } from '@/components/composite';
 import { SoftCard, useKitStyles } from '@/components/truepas';
-import { Checkbox, Input, Link, Select, Typography } from '@/components/ui';
+import { Input, Link, Select, Typography } from '@/components/ui';
 import { Button } from '@/components/ui/Button';
 import { COUNTRIES } from '@/constants/countries';
 import { LoginForm, loginSchema } from '@/features/auth/schemas';
@@ -227,9 +227,9 @@ export default function LoginScreen() {
           </View>
 
           <View style={kit.rowBetween}>
-            <Checkbox
-              checked={remember}
-              onCheckedChange={setRemember}
+            <Switch
+              value={remember}
+              onValueChange={setRemember}
               label={<Typography variant="body-lg">Remember me</Typography>}
             />
             <Link

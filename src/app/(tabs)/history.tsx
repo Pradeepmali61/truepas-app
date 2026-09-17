@@ -157,7 +157,7 @@ export default function HistoryScreen() {
                 <EmptyState
                   title="No bookings yet"
                   description="When you check in at a venue with Truepas, it shows up here."
-                  icon={<CalendarDays size={iconSize.lg} color={theme.colors.textMuted} />}
+                  icon={<CalendarDays size={iconSize.lg} color={theme.colors.actionPrimary} />}
                   action={
                     <CoreButton
                       variant="outline"

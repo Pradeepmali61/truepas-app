@@ -182,7 +182,7 @@ export default function HomeScreen() {
                             <EmptyStateCard
                                 title="No check-ins yet"
                                 description="When you check in at a venue with Truepas, it shows up here."
-                                icon={<CalendarDays size={iconSize.lg} color={t.colors.textMuted} />}
+                                icon={<CalendarDays size={iconSize.lg} color={t.colors.actionPrimary} />}
                                 style={styles.emptyCard}
                             />
                         )}

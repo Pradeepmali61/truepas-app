@@ -1,3 +1,4 @@
+/** @jsxImportSource react */
 import { useEffect, useRef, type ReactNode } from "react";
 import { Animated, Pressable, Text, View, type StyleProp, type ViewStyle } from "react-native";
 import { makeStyles } from "../../theme";
@@ -64,10 +65,11 @@ const useStyles = makeStyles((t) => ({
   track: {
     width: TRACK_W,
     height: TRACK_H,
-    borderRadius: t.radii.full,
-    backgroundColor: t.colors.borderStrong,
+    // Android: borderRadius > h/2 + borderWidth breaks the background fill.
+    borderRadius: TRACK_H / 2,
+    backgroundColor: t.colors.surfaceSunken,
     borderWidth: t.sizes.fieldBorderWidth,
-    borderColor: t.colors.textMuted,
+    borderColor: t.colors.borderStrong,
     justifyContent: "center",
     paddingHorizontal: INSET,
     ...t.shadows.sm,
@@ -81,7 +83,7 @@ const useStyles = makeStyles((t) => ({
   knob: {
     width: KNOB,
     height: KNOB,
-    borderRadius: t.radii.full,
+    borderRadius: KNOB / 2,
     backgroundColor: t.colors.actionPrimary,
     ...t.shadows.sm,
   },
