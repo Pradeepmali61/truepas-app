@@ -231,7 +231,7 @@ export const useStyles = makeStyles((t) => ({
 
   /* family members */
   stripRow: { flexDirection: "row", alignItems: "center", gap: t.spacing[4] },
-  stripCell: { alignItems: "center", gap: 6, width: 56 },
+  stripCell: { alignItems: "center", gap: 6, width: 60 },
   stripRing: {
     padding: 3,
     borderRadius: t.radii.full,
@@ -249,8 +249,14 @@ export const useStyles = makeStyles((t) => ({
     borderColor: t.colors.border,
     borderStyle: "dashed",
   },
+  stripScroll: { flex: 1, marginRight: -t.spacing[5] },
+  stripContent: { paddingRight: t.spacing[5] },
+  stripRingSelected: {
+    borderWidth: 3,
+    backgroundColor: t.colors.actionPrimarySubtle,
+  },
   stripName: { fontSize: 11, color: t.colors.textSecondary, textAlign: "center" },
-  stripChevron: { marginLeft: "auto", padding: t.spacing[1] },
+  stripNameSelected: { color: t.colors.textPrimary, fontWeight: t.fontWeight.semibold },
   starRow: { flexDirection: "row", gap: 3 },
   contactRow: { flexDirection: "row", alignItems: "center", gap: t.spacing[2] },
   onlineDot: {

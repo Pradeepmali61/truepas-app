@@ -1,25 +1,25 @@
-import type { ReactNode } from "react";
-import { Pressable, Text, View } from "react-native";
-import {
-  ChevronLeft,
-  ChevronRight,
-  Ellipsis,
-  Mail,
-  MapPin,
-  MessageCircle,
-  Phone,
-  Plus,
-  Send,
-  Star,
-  UserPlus,
-} from "lucide-react-native";
+import { Avatar } from "@/components/ui/Avatar";
+import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
 import { useThemeTokens } from "@/theme";
 import { iconSize } from "@/theme/tokens";
-import { Avatar } from "@/components/ui/Avatar";
-import { Input } from "@/components/ui/Input";
-import { Button } from "@/components/ui/Button";
-import { Badge } from "@/components/ui/Badge";
-import { SoftCard, CircleButton } from "./core";
+import {
+    ChevronLeft,
+    ChevronRight,
+    Ellipsis,
+    Mail,
+    MapPin,
+    MessageCircle,
+    Phone,
+    Plus,
+    Send,
+    Star,
+    UserPlus,
+} from "lucide-react-native";
+import type { ReactNode } from "react";
+import { Pressable, ScrollView, Text, View, type StyleProp, type ViewStyle } from "react-native";
+import { CircleButton, SoftCard } from "./core";
 import { useStyles } from "./styles";
 
 /* Family members — avatar strip, profile, access request, chat, week strip. */
@@ -40,11 +40,13 @@ export function FamilyStripCell({
   name,
   add,
   you,
+  selected,
   onPress,
 }: {
   name: string;
   add?: boolean;
   you?: boolean;
+  selected?: boolean;
   onPress?: () => void;
 }) {
   const styles = useStyles();
@@ -61,40 +63,63 @@ export function FamilyStripCell({
           <UserPlus size={iconSize.md} color={theme.colors.actionPrimary} />
         </Pressable>
       ) : (
-        <View style={styles.stripRing}>
-          <Avatar name={name} size="lg" />
-        </View>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={name}
+          accessibilityState={{ selected }}
+          onPress={onPress}
+          style={({ pressed }) => pressed && styles.pressed}
+        >
+          <View style={[styles.stripRing, selected && styles.stripRingSelected]}>
+            <Avatar name={name} size="lg" />
+          </View>
+        </Pressable>
       )}
-      <Text style={styles.stripName} numberOfLines={1}>
+      <Text style={[styles.stripName, selected && styles.stripNameSelected]} numberOfLines={1}>
         {you ? "You" : name.split(" ")[0]}
       </Text>
     </View>
   );
 }
 
-/** Horizontal member strip — add slot, ringed avatars, scroll chevron. */
+/** Horizontal member strip — pinned add slot, ringed avatars scroll beside it. */
 export function FamilyStrip({
   members,
   youIndex = 0,
   onAdd,
+  selectedIndex = 0,
+  onSelect,
+  style,
 }: {
   members: FamilyMemberRef[];
   youIndex?: number;
   onAdd?: () => void;
+  selectedIndex?: number;
+  onSelect?: (index: number) => void;
+  style?: StyleProp<ViewStyle>;
 }) {
   const styles = useStyles();
-  const theme = useThemeTokens();
   return (
-    <SoftCard style={styles.wideCard}>
+    <SoftCard style={[styles.wideCard, style]}>
       <Text style={styles.helper}>family members</Text>
       <View style={styles.stripRow}>
         <FamilyStripCell name="Add" add onPress={onAdd} />
-        {members.map((m, i) => (
-          <FamilyStripCell key={m.name} name={m.name} you={i === youIndex} />
-        ))}
-        <Pressable accessibilityRole="button" accessibilityLabel="More members" style={styles.stripChevron}>
-          <ChevronRight size={iconSize.sm} color={theme.colors.actionPrimary} />
-        </Pressable>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.stripScroll}
+          contentContainerStyle={[styles.stripRow, styles.stripContent]}
+        >
+          {members.map((m, i) => (
+            <FamilyStripCell
+              key={m.name}
+              name={m.name}
+              you={i === youIndex}
+              selected={i === selectedIndex}
+              onPress={() => onSelect?.(i)}
+            />
+          ))}
+        </ScrollView>
       </View>
     </SoftCard>
   );

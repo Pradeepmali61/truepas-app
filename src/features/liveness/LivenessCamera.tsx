@@ -1,5 +1,5 @@
 ﻿import { useRouter } from 'expo-router';
-import { Camera as CameraIcon, CircleCheck, CircleHelp, Eye, ScanFace, TriangleAlert, X } from 'lucide-react-native';
+import { CircleCheck, CircleHelp, Eye, ScanFace, TriangleAlert, X } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -18,7 +18,7 @@ import { runOnJS } from 'react-native-worklets';
 
 import { toApiError } from '@/api/errors';
 import { Alert, Card, CardContent, FlowSteps, ScreenHeader } from '@/components/composite';
-import { LivenessGuideDial, LivenessStepsCard, StepDots } from '@/components/truepas';
+import { LivenessGuideDial, StepDots } from '@/components/truepas';
 import { Badge, CoreButton, FadeUp, IconButton, PopIn, Pulse, RowIcon, ScanLine, Spinner, Typography } from '@/components/ui';
 import { useEnrollFace, useUpdateFace } from '@/features/auth/mutations';
 import { faceEnrollmentCompleted } from '@/features/auth/slice';
@@ -133,9 +133,8 @@ export function LivenessCamera({ mode, personId, onSuccess }: LivenessCameraProp
   const { hasPermission, requestPermission } = useCameraPermission();
   const theme = useThemeTokens();
   const [capturing, setCapturing] = useState(false);
-  // Challenge is created on mount; the intro screen renders until the user
-  // taps "Start verification" — then the camera mounts and detection begins.
-  const [started, setStarted] = useState(false);
+  // Challenge is created on mount; the guided dial renders as soon as the
+  // challenge arrives and detection begins immediately (no intro gate).
   const [enrolling, setEnrolling] = useState(false);
   // Camera preview is stopped briefly before navigating away â€” unmounting an
   // ACTIVE Camera on the new architecture (Fabric) can dispatch a
@@ -606,61 +605,6 @@ export function LivenessCamera({ mode, personId, onSuccess }: LivenessCameraProp
     );
   }
 
-  // Intro — challenge created. Render the server-provided challenge_sequence
-  // + ui_copy in returned order (never hard-coded); camera starts on tap.
-  if (liveness.phase === 'challenging' && !started) {
-    const sequence = liveness.challenge?.challenge_sequence ?? [];
-    return (
-      <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: theme.colors.background }}>
-        <ScreenHeader title="Face verification" onBack={() => router.back()} />
-        <View style={{ flex: 1, padding: theme.spacing[4], gap: theme.spacing[4] }}>
-          <View style={{ alignItems: 'center', gap: theme.spacing[2] }}>
-            <RowIcon tone="primary" icon={<ScanFace size={iconSize.xl} color={theme.colors.actionPrimary} />} />
-            <Typography variant="h3" center>Prove it&apos;s really you</Typography>
-            <Typography variant="body" color="secondary" center>
-              We&apos;ll ask you to do {sequence.length} quick {sequence.length === 1 ? 'action' : 'actions'} on camera. It takes about 10 seconds.
-            </Typography>
-          </View>
-          <LivenessStepsCard
-            steps={sequence.map((step) => ({
-              label: liveness.challenge?.ui_copy[step] ?? step,
-              state: 'pending' as const,
-            }))}
-            secondsLeft={liveness.challenge?.expires_in_seconds ?? 0}
-            total={sequence.length}
-            current={0}
-            style={{ width: '100%' }}
-          />
-          <Alert variant="info" title="Good conditions help">
-            Even lighting, hold the phone at eye level, remove hats and glasses.
-          </Alert>
-        </View>
-        <View
-          style={{
-            padding: theme.spacing[4],
-            paddingTop: theme.spacing[3],
-            paddingBottom: theme.spacing[4] + insets.bottom,
-            borderTopWidth: theme.sizes.fieldBorderWidth,
-            borderTopColor: theme.colors.borderSubtle,
-            backgroundColor: theme.colors.surface,
-          }}>
-          <CoreButton
-            fullWidth
-            size="lg"
-            accessibilityLabel="Start verification"
-            iconLeft={<CameraIcon size={iconSize.sm} color={theme.colors.onActionPrimary} />}
-            onPress={() => {
-              // Restart step timing — evidence duration must not include the
-              // time spent reading this intro.
-              beginStep();
-              setStarted(true);
-            }}>
-            Start verification
-          </CoreButton>
-        </View>
-      </SafeAreaView>
-    );
-  }
   const isFinalizing = liveness.phase === 'finalizing';
   const steps = liveness.challenge?.challenge_sequence ?? [];
   const action = liveness.currentChallenge;

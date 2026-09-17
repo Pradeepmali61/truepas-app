@@ -1,16 +1,12 @@
 import { useQueryClient, type InfiniteData } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
-import { CircleHelp, Clock, FileText, Home, ScanFace, Users } from 'lucide-react-native';
-import { useState } from 'react';
-import { Text, View } from 'react-native';
+import { ScanFace } from 'lucide-react-native';
 
 import {
     AppHeader,
-    NavigationDrawer,
     NotificationCenter,
     UserMenu,
     type AppNotification,
-    type NavSection,
 } from '@/components/complex';
 import { useLogout } from '@/features/auth/mutations';
 import { sessionEnded } from '@/features/auth/slice';
@@ -38,12 +34,10 @@ function toAppNotification(n: Notification, onPress: () => void): AppNotificatio
 }
 
 /** Home chrome — repo AppHeader composition (design-repo ChromeSection):
- *  hamburger → navigation drawer, brand lockup, bell with unread badge,
- *  account avatar chip. */
+ *  brand lockup, bell with unread badge, account avatar chip. */
 export function AppChrome() {
     const theme = useThemeTokens();
     const router = useRouter();
-    const [drawerOpen, setDrawerOpen] = useState(false);
 
     const user = useAppSelector((state) => state.auth.user);
     const dispatch = useAppDispatch();
@@ -81,75 +75,27 @@ export function AppChrome() {
         toast.show('success', 'Logged out successfully');
     };
 
-    const drawerSections: NavSection[] = [
-        {
-            items: [
-                { key: 'home', label: 'Home', icon: <Home size={iconSize.sm} color={theme.colors.textSecondary} />, active: true },
-                {
-                    key: 'docs',
-                    label: 'Documents',
-                    icon: <FileText size={iconSize.sm} color={theme.colors.textSecondary} />,
-                    onPress: () => router.push('/(tabs)/documents' as never),
-                },
-                {
-                    key: 'family',
-                    label: 'Family',
-                    icon: <Users size={iconSize.sm} color={theme.colors.textSecondary} />,
-                    onPress: () => router.push('/(tabs)/family' as never),
-                },
-                {
-                    key: 'history',
-                    label: 'History',
-                    icon: <Clock size={iconSize.sm} color={theme.colors.textSecondary} />,
-                    onPress: () => router.push('/(tabs)/history' as never),
-                },
-                {
-                    key: 'help',
-                    label: 'Help & FAQ',
-                    icon: <CircleHelp size={iconSize.sm} color={theme.colors.textSecondary} />,
-                    onPress: () => router.push('/help' as never),
-                },
-            ],
-        },
-    ];
-
     return (
-        <>
-            <AppHeader
-                onMenuPress={() => setDrawerOpen(true)}
-                left={<ScanFace size={iconSize.lg} color={theme.colors.actionPrimary} />}
-                title="Truepas"
-                actions={
-                    <>
-                        <NotificationCenter
-                            notifications={notifications}
-                            loading={notifLoading}
-                            onMarkAllRead={markAllRead}
-                        />
-                        <UserMenu
-                            name={user?.fullName ?? 'User'}
-                            email={user?.email}
-                            avatarUri={avatarUri ?? undefined}
-                            onProfile={() => router.push('/profile' as never)}
-                            onSettings={() => router.push('/settings' as never)}
-                            onLogout={handleLogout}
-                        />
-                    </>
-                }
-            />
-            <NavigationDrawer
-                visible={drawerOpen}
-                onClose={() => setDrawerOpen(false)}
-                header={
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing[2] }}>
-                        <ScanFace size={iconSize.md} color={theme.colors.actionPrimary} />
-                        <Text style={{ fontWeight: theme.fontWeight.semibold, color: theme.colors.textPrimary }}>
-                            Truepas
-                        </Text>
-                    </View>
-                }
-                sections={drawerSections}
-            />
-        </>
+        <AppHeader
+            left={<ScanFace size={iconSize.xl} color={theme.colors.actionPrimary} />}
+            title="Truepas"
+            actions={
+                <>
+                    <NotificationCenter
+                        notifications={notifications}
+                        loading={notifLoading}
+                        onMarkAllRead={markAllRead}
+                    />
+                    <UserMenu
+                        name={user?.fullName ?? 'User'}
+                        email={user?.email}
+                        avatarUri={avatarUri ?? undefined}
+                        onProfile={() => router.push('/profile' as never)}
+                        onSettings={() => router.push('/settings' as never)}
+                        onLogout={handleLogout}
+                    />
+                </>
+            }
+        />
     );
 }

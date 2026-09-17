@@ -7,7 +7,6 @@ import { clearRegistrationToken } from '@/api/client';
 import { OtpVerification } from '@/features/auth/components/OtpVerification';
 import { sessionStarted } from '@/features/auth/slice';
 import { accountDetailsStore } from '@/services/accountDetailsStore';
-import { secureStorage } from '@/services/secureStorage';
 import { useAppDispatch } from '@/store';
 import { useThemeTokens } from '@/theme';
 import { iconSize } from '@/theme/tokens';
@@ -70,11 +69,11 @@ export default function VerifyEmailScreen() {
         // Email verification during registration returns AuthResponse fields
         // (user, accessToken, refreshToken) embedded in VerifyOtpResponse.
         if (response.user && response.accessToken) {
-          await secureStorage.setRefreshToken(response.refreshToken ?? '');
           dispatch(
             sessionStarted({
               user: response.user,
               accessToken: response.accessToken,
+              refreshToken: response.refreshToken,
             }),
           );
         }

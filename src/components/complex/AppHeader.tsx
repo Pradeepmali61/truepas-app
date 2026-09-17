@@ -1,6 +1,6 @@
+import { Menu } from "lucide-react-native";
 import type { ReactNode } from "react";
 import { Text, View, type StyleProp, type ViewStyle } from "react-native";
-import { Menu } from "lucide-react-native";
 import { makeStyles, useThemeTokens } from "../../theme";
 import { iconSize } from "../../theme/tokens";
 import { IconButton } from "../ui/IconButton";
@@ -48,16 +48,16 @@ const useStyles = makeStyles((t) => ({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    gap: t.spacing[2],
-    minHeight: t.sizes.headerHeight,
-    paddingHorizontal: t.spacing[2],
+    gap: t.spacing[3],
+    minHeight: t.spacing[16],
+    paddingHorizontal: t.spacing[4],
     backgroundColor: t.colors.surface,
     borderBottomWidth: t.sizes.fieldBorderWidth,
     borderBottomColor: t.colors.borderSubtle,
   },
-  left: { flexDirection: "row", alignItems: "center", gap: t.spacing[1] },
+  left: { flexDirection: "row", alignItems: "center", gap: t.spacing[2] },
   center: { flex: 1 },
-  title: { fontSize: t.fontSize.lg, fontWeight: t.fontWeight.semibold, color: t.colors.textPrimary },
+  title: { fontSize: t.fontSize.xl, fontWeight: t.fontWeight.semibold, color: t.colors.textPrimary },
   subtitle: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
-  right: { flexDirection: "row", alignItems: "center", gap: t.spacing[1] },
+  right: { flexDirection: "row", alignItems: "center", gap: t.spacing[2] },
 }));

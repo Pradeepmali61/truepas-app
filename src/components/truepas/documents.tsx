@@ -12,9 +12,10 @@ import {
     FileText,
     Globe,
     Landmark,
+    Plus,
     RefreshCw,
     Share,
-    ShieldCheck,
+    ShieldCheck
 } from "lucide-react-native";
 import { useState } from "react";
 import { Pressable, Text, View, type StyleProp, type ViewStyle } from "react-native";
@@ -239,5 +240,23 @@ export function DocumentVerifyCard({ doc }: { doc: ProductDocument }) {
         </View>
       </View>
     </SoftCard>
+  );
+}
+
+/** Add row — full-width outline CTA below a document list
+ *  (design-repo identity.tsx "Documents wallet" sticky action, inlined for scroll). */
+export function AddDocumentButton({ onPress, label = "Add document", style }: { onPress?: () => void; label?: string; style?: StyleProp<ViewStyle> }) {
+  const theme = useThemeTokens();
+  return (
+    <Button
+      fullWidth
+      variant="outline"
+      accessibilityLabel={label}
+      onPress={onPress}
+      iconLeft={<Plus size={iconSize.sm} color={theme.colors.actionPrimary} />}
+      style={style}
+    >
+      {label}
+    </Button>
   );
 }

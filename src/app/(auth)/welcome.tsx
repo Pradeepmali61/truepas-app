@@ -17,11 +17,12 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Typography } from '@/components/ui';
-import { makeStyles } from '@/theme';
+import { alpha, makeStyles, mix } from '@/theme';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const CARD_HEIGHT = SCREEN_HEIGHT * 0.42;
 const IMAGE_OVERLAP = 74;
+const TSHIRT_BLUE = '#0164C0';
 
 type Slide = {
   id: string;
@@ -61,8 +62,12 @@ export default function WelcomeScreen() {
   const [activeIndex, setActiveIndex] = useState(0);
   const insets = useSafeAreaInsets();
 
-  // Solid login violet — same as the login "Sign in" button (actionPrimary)
-  const cardGradient = ['#5b2ff4', '#5b2ff4'] as const;
+  // Royal blue sampled from the t-shirt in the onboarding artwork.
+  // Card gradient runs light version (top) → dark version (bottom).
+  const cardGradient = [
+    mix(TSHIRT_BLUE, '#ffffff', 0.7),
+    mix(TSHIRT_BLUE, '#041a3a', 0.6),
+  ] as const;
 
   const handleFinish = useCallback(() => {
     router.push('/(auth)/login');
@@ -96,7 +101,7 @@ export default function WelcomeScreen() {
 
         <LinearGradient
           colors={cardGradient}
-          locations={[0, 0.36, 1]}
+          locations={[0, 1]}
           start={{ x: 0.5, y: 0 }}
           end={{ x: 0.5, y: 1 }}
           style={[styles.bottomCard, { marginTop: -IMAGE_OVERLAP }]}>
@@ -179,7 +184,7 @@ const useStyles = makeStyles((t) => ({
   container: { flex: 1 },
   skipWrapper: { position: 'absolute', right: t.spacing[5], zIndex: 30 },
   skipText: {
-    color: 'rgba(91, 47, 244, 0.75)',
+    color: alpha(TSHIRT_BLUE, 0.75),
     fontSize: t.fontSize.md,
     fontWeight: t.fontWeight.bold,
     textDecorationLine: 'underline',
@@ -241,10 +246,10 @@ const useStyles = makeStyles((t) => ({
     ...t.shadows.lg,
   },
   ctaText: {
-    color: '#5b2ff4',
+    color: mix(TSHIRT_BLUE, '#041a3a', 0.6),
     fontSize: t.fontSize.md,
     fontWeight: t.fontWeight.bold,
     letterSpacing: t.letterSpacing.wide,
   },
-  bottomBar: { backgroundColor: '#5b2ff4' },
+  bottomBar: { backgroundColor: mix(TSHIRT_BLUE, '#041a3a', 0.6) },
 }));

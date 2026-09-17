@@ -1,117 +1,81 @@
 import { useRouter } from 'expo-router';
-import { Clock, FileText, ScanFace, Ticket, User, Users } from 'lucide-react-native';
-import type { ReactNode } from 'react';
-import { Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
+import { CalendarDays } from 'lucide-react-native';
+import { useState } from 'react';
+import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppChrome } from '@/components/app/AppChrome';
-import { useKitStyles } from '@/components/truepas';
-import {
-    Badge,
-    CoreCard,
-    CoreIcon,
-    Divider,
-    ErrorState,
-    LoadingState,
-    Progress,
-    type BadgeVariant
-} from '@/components/ui';
+import { AddDocumentButton, CheckInRow, DocumentRow, EmptyStateCard, FamilyStrip, type FamilyMemberRef } from '@/components/truepas';
+import { EmptyState, ErrorState, LoadingState, Typography } from '@/components/ui';
 import { useDocuments } from '@/features/documents/hooks';
 import { useFamily } from '@/features/family/hooks';
 import { useBookings } from '@/features/history/hooks';
-import { useIdentitySummary } from '@/features/identity/hooks';
-import { makeStyles, useThemeTokens, type Theme } from '@/theme';
+import { useAppSelector } from '@/store';
+import { makeStyles, useThemeTokens } from '@/theme';
 import { iconSize } from '@/theme/tokens';
-import type { VerificationStatus } from '@/types/domain';
 
 /** Height of the custom bottom tab bar (see (tabs)/_layout.tsx). */
 const TAB_BAR_HEIGHT = 88;
 
-const STEP_STATUS: Record<VerificationStatus, { label: string; variant: BadgeVariant }> = {
-    verified: { label: 'Verified', variant: 'success' },
-    pending: { label: 'Pending', variant: 'warning' },
-    missing: { label: 'Missing', variant: 'neutral' },
-    failed: { label: 'Failed', variant: 'error' },
-};
-
-const STEPS: { key: 'face' | 'document' | 'selfieMatch'; label: string; icon: ReactNode }[] = [
-    { key: 'face', label: 'Face enrollment', icon: <ScanFace /> },
-    { key: 'document', label: 'Identity document', icon: <FileText /> },
-    { key: 'selfieMatch', label: 'Selfie match', icon: <User /> },
-];
-
-function stepColors(t: Theme, status: VerificationStatus): { bg: string; fg: string } {
-    switch (status) {
-        case 'verified':
-            return { bg: t.colors.successSubtle, fg: t.colors.onSuccessSubtle };
-        case 'pending':
-            return { bg: t.colors.warningSubtle, fg: t.colors.onWarningSubtle };
-        case 'failed':
-            return { bg: t.colors.errorSubtle, fg: t.colors.onErrorSubtle };
-        default:
-            return { bg: t.colors.actionSecondary, fg: t.colors.textMuted };
-    }
+function formatDate(value: string): string {
+    const d = new Date(value);
+    return Number.isNaN(d.getTime())
+        ? value
+        : d.toLocaleDateString(undefined, { year: 'numeric', month: 'numeric', day: 'numeric' });
 }
 
-/** Home tab — V2 Dashboard composition (design-repo truepas/home.tsx):
- *  greeting chrome → status panel with confidence → 2×2 quick tiles →
- *  steps checklist (while incomplete).
- *  Data: GET /cb/identity/summary + documents + family + bookings. */
+/** Home tab — app header + family members strip (design-repo truepas/family.tsx).
+ *  The selected person's documents list below; index 0 is self ("You"),
+ *  i ≥ 1 maps to family members. */
 export default function HomeScreen() {
-    const router = useRouter();
-    const insets = useSafeAreaInsets();
-    const t = useThemeTokens();
-    const kit = useKitStyles();
     const styles = useStyles();
-    const { data: summary, isPending, isError, isRefetching, refetch } = useIdentitySummary();
-    const { data: documents } = useDocuments();
+    const t = useThemeTokens();
+    const insets = useSafeAreaInsets();
+    const router = useRouter();
+    const user = useAppSelector((state) => state.auth.user);
     const { data: members } = useFamily();
-    const { data: bookings } = useBookings();
+    const [selected, setSelected] = useState(0);
 
-    const isVerified = summary?.status === 'verified';
-    const scrollBottom = TAB_BAR_HEIGHT + insets.bottom + t.spacing[4];
+    // No personId = the signed-in user's own documents ("You").
+    const selectedMember = selected === 0 ? undefined : members?.[selected - 1];
+    const selectedPersonId = selectedMember?.id;
+    const { data: documents, isPending, isError, isRefetching, refetch } = useDocuments(selectedPersonId);
 
-    const docCount = documents?.length ?? 0;
-    const memberCount = members?.length ?? 0;
-    const upcomingBookings = (bookings ?? []).filter((b) => b.status === 'upcoming').length;
-    const activityCount = summary?.activity.length ?? 0;
+    // Possessive labels — "Your documents" for self, "Manju's documents" for members.
+    const firstName = selectedMember?.name.split(' ')[0];
+    const documentsHeading = selectedMember ? `${firstName}'s documents` : 'Your documents';
+    const addDocumentLabel = selectedMember ? `Add ${firstName}'s documents` : 'Add your documents';
 
-    // Confidence = best verified document match score; when nothing was scored
-    // yet, fall back to the share of completed verification steps.
-    const scored = (documents ?? [])
-        .map((d) => d.matchScore)
-        .filter((s): s is number => s != null);
-    const stepsDone = STEPS.filter((s) => summary?.[s.key] === 'verified').length;
-    const confidence = scored.length
-        ? Math.round(Math.max(...scored) * 100)
-        : Math.round((stepsDone / STEPS.length) * 100);
+    // Previous check-ins are account-level — the bookings projection has no
+    // personId scope yet. Upcoming stays out; latest 2 shown.
+    const { data: bookings, isPending: bookingsPending, isError: bookingsError } = useBookings();
+    const allCheckIns = (bookings ?? []).filter((b) => b.status !== 'upcoming');
+    const previousCheckIns = allCheckIns.slice(0, 2);
 
-    const tiles = [
-        {
-            label: 'Documents',
-            sub: `${docCount} stored`,
-            Icon: FileText,
-            onPress: () => router.push('/(tabs)/documents' as never),
-        },
-        {
-            label: 'Family',
-            sub: `${memberCount} member${memberCount === 1 ? '' : 's'}`,
-            Icon: Users,
-            onPress: () => router.push('/(tabs)/family' as never),
-        },
-        {
-            label: 'Check-ins',
-            sub: `${upcomingBookings} upcoming`,
-            Icon: Ticket,
-            onPress: () => router.push('/(tabs)/history' as never),
-        },
-        {
-            label: 'History',
-            sub: `${activityCount} events`,
-            Icon: Clock,
-            onPress: () => router.push('/(tabs)/history' as never),
-        },
+    // Same add-document flow as family/[id].tsx — family params scope the
+    // scan to the selected member; index 0 ("You") adds for the signed-in user.
+    const handleAddDocument = () => {
+        if (selectedMember) {
+            router.push({
+                pathname: '/document/select-type',
+                params: {
+                    family: '1',
+                    personId: selectedMember.id,
+                    memberName: selectedMember.name,
+                    band: selectedMember.ageBand,
+                },
+            } as never);
+        } else {
+            router.push('/document/select-type' as never);
+        }
+    };
+
+    const stripMembers: FamilyMemberRef[] = [
+        { name: user?.fullName ?? 'You' },
+        ...(members ?? []).map((m) => ({ name: m.name })),
     ];
+
+    const scrollBottom = TAB_BAR_HEIGHT + insets.bottom + t.spacing[4];
 
     return (
         <View style={styles.screen}>
@@ -120,94 +84,109 @@ export default function HomeScreen() {
             </SafeAreaView>
             <ScrollView
                 style={styles.flex}
-                contentContainerStyle={[
-                    styles.scroll,
-                    { paddingBottom: scrollBottom },
-                ]}
+                contentContainerStyle={[styles.body, { paddingBottom: scrollBottom }]}
                 showsVerticalScrollIndicator={false}
                 refreshControl={
                     <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={t.colors.actionPrimary} />
                 }>
+                <FamilyStrip
+                    members={stripMembers}
+                    selectedIndex={selected}
+                    onSelect={setSelected}
+                    onAdd={() => router.push('/family/add' as never)}
+                    style={styles.strip}
+                />
+                <View style={styles.sectionHead}>
+                    <Typography variant="label" color="muted">{documentsHeading}</Typography>
+                    {(documents?.length ?? 0) > 2 && (
+                        <Pressable
+                            accessibilityRole="button"
+                            accessibilityLabel="See all documents"
+                            onPress={() =>
+                                router.push(
+                                    (selectedMember ? `/family/${selectedMember.id}` : '/(tabs)/documents') as never,
+                                )
+                            }
+                            style={({ pressed }) => pressed && { opacity: 0.6 }}>
+                            <Typography variant="body-sm" style={{ color: t.colors.actionPrimary }}>
+                                See all
+                            </Typography>
+                        </Pressable>
+                    )}
+                </View>
                 {isPending ? (
-                    <LoadingState fullPage label="Loading identity…" />
-                ) : isError || !summary ? (
+                    <LoadingState label="Loading documents…" />
+                ) : isError ? (
                     <ErrorState
-                        title="Couldn't load identity status"
+                        title="Couldn't load documents"
                         message="Please check your connection and try again."
                         onRetry={refetch}
                     />
+                ) : !documents?.length ? (
+                    <EmptyState
+                        title="No documents yet"
+                        description="Documents for this member will appear here."
+                    />
                 ) : (
-                    <>
-                        {/* V2 status panel — sunken surface, confidence metric, progress */}
-                        <View style={kit.homePanel}>
-                            <View style={kit.rowBetween}>
-                                <Text style={kit.cardTitle}>
-                                    {isVerified ? 'Identity verified' : 'Finish verification'}
-                                </Text>
-                                <Badge variant={isVerified ? 'success' : 'warning'}>
-                                    {isVerified ? 'Verified' : 'Incomplete'}
-                                </Badge>
-                            </View>
-                            <View style={kit.rowBetween}>
-                                <Text style={kit.metric}>{confidence}%</Text>
-                                <Text style={kit.helper}>
-                                    {scored.length ? 'match confidence' : 'steps complete'}
-                                </Text>
-                            </View>
-                            <Progress value={confidence} variant={isVerified ? 'success' : 'primary'} />
+                    documents.slice(0, 2).map((doc) => (
+                        <DocumentRow
+                            key={doc.id}
+                            doc={{
+                                label: doc.label,
+                                number: doc.number,
+                                status: doc.status,
+                                expiresAt: doc.expiresAt ? doc.expiresAt.split('T')[0] : null,
+                                matchScore: doc.matchScore,
+                                type: doc.type,
+                            }}
+                            onPress={() => router.push(`/document/${doc.id}` as never)}
+                            style={styles.docRow}
+                        />
+                    ))
+                )}
+                {!isPending && !isError && (
+                    <AddDocumentButton onPress={handleAddDocument} label={addDocumentLabel} style={styles.docRow} />
+                )}
+                {!bookingsPending && !bookingsError && (
+                    <View style={styles.checkInSection}>
+                        <View style={styles.sectionHead}>
+                            <Typography variant="label" color="muted">Previous check-ins</Typography>
+                            {allCheckIns.length > 2 && (
+                                <Pressable
+                                    accessibilityRole="button"
+                                    accessibilityLabel="See all check-ins"
+                                    onPress={() => router.push('/(tabs)/history' as never)}
+                                    style={({ pressed }) => pressed && { opacity: 0.6 }}>
+                                    <Typography variant="body-sm" style={{ color: t.colors.actionPrimary }}>
+                                        See all
+                                    </Typography>
+                                </Pressable>
+                            )}
                         </View>
-
-                        {/* V2 quick tiles — 2×2 nav grid */}
-                        <View style={styles.tileGrid}>
-                            {[tiles.slice(0, 2), tiles.slice(2, 4)].map((row, rowIndex) => (
-                                <View key={rowIndex} style={styles.tileRow}>
-                                    {row.map((tile) => (
-                                        <Pressable
-                                            key={tile.label}
-                                            accessibilityRole="button"
-                                            accessibilityLabel={`${tile.label}, ${tile.sub}`}
-                                            onPress={tile.onPress}
-                                            style={({ pressed }) => [styles.tile, pressed && kit.pressed]}>
-                                            <View style={[styles.tileIcon, { backgroundColor: t.colors.brandSubtle }]}>
-                                                <tile.Icon size={iconSize.md} color={t.colors.onBrandSubtle} />
-                                            </View>
-                                            <Text style={kit.cardTitle}>{tile.label}</Text>
-                                            <Text style={kit.helper}>{tile.sub}</Text>
-                                        </Pressable>
-                                    ))}
-                                </View>
-                            ))}
-                        </View>
-
-                        {/* Steps checklist — only while verification is incomplete */}
-                        {!isVerified && (
-                            <CoreCard noPadding>
-                                {STEPS.map((step, index) => {
-                                    const status = summary[step.key];
-                                    const meta = STEP_STATUS[status];
-                                    const tone = stepColors(t, status);
-                                    return (
-                                        <View key={step.key}>
-                                            {index > 0 ? <Divider /> : null}
-                                            <View style={styles.stepRow}>
-                                                <View style={[styles.stepIconWrap, { backgroundColor: tone.bg }]}>
-                                                    <CoreIcon size="md" color={tone.fg}>
-                                                        {step.icon}
-                                                    </CoreIcon>
-                                                </View>
-                                                <Text style={[kit.cardTitle, styles.stepLabel]}>
-                                                    {step.label}
-                                                </Text>
-                                                <Badge variant={meta.variant} size="sm">
-                                                    {meta.label}
-                                                </Badge>
-                                            </View>
-                                        </View>
-                                    );
-                                })}
-                            </CoreCard>
+                        {previousCheckIns.length > 0 ? (
+                            previousCheckIns.map((b) => (
+                                <CheckInRow
+                                    key={b.id}
+                                    booking={{
+                                        venue: b.venue,
+                                        location: b.location,
+                                        type: b.type,
+                                        status: b.status,
+                                        checkIn: formatDate(b.checkIn),
+                                    }}
+                                    onPress={() => router.push(`/booking/${b.id}` as never)}
+                                    style={styles.docRow}
+                                />
+                            ))
+                        ) : (
+                            <EmptyStateCard
+                                title="No check-ins yet"
+                                description="When you check in at a venue with Truepas, it shows up here."
+                                icon={<CalendarDays size={iconSize.lg} color={t.colors.textMuted} />}
+                                style={styles.emptyCard}
+                            />
                         )}
-                    </>
+                    </View>
                 )}
             </ScrollView>
         </View>
@@ -217,41 +196,21 @@ export default function HomeScreen() {
 const useStyles = makeStyles((t) => ({
     screen: { flex: 1, backgroundColor: t.colors.surface },
     flex: { flex: 1 },
-    scroll: {
+    body: {
         paddingHorizontal: t.spacing[5],
         paddingTop: t.spacing[2],
         gap: t.spacing[4],
     },
-    /* 2×2 quick tiles — two explicit rows, tiles flex to half width */
-    tileGrid: { gap: t.spacing[3] },
-    tileRow: { flexDirection: 'row', gap: t.spacing[3] },
-    tile: {
-        flex: 1,
-        backgroundColor: t.colors.surfaceSunken,
-        borderRadius: t.radii.lg,
-        padding: t.spacing[3],
-        gap: t.spacing[2],
-    },
-    tileIcon: {
-        width: 44,
-        height: 44,
-        borderRadius: t.radii.full,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    stepRow: {
+    strip: { width: '100%' },
+    docRow: { width: '100%' },
+    checkInSection: { width: '100%', gap: t.spacing[3] },
+    // Full-width empty card, taller than a row so the section reads as a
+    // real block next to the document list.
+    emptyCard: { width: '100%', paddingVertical: t.spacing[8] },
+    sectionHead: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: t.spacing[3],
-        paddingHorizontal: t.spacing[4],
-        paddingVertical: 14,
+        justifyContent: 'space-between',
+        paddingHorizontal: t.spacing[1],
     },
-    stepIconWrap: {
-        width: 36,
-        height: 36,
-        borderRadius: t.radii.lg,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    stepLabel: { flex: 1, minWidth: 0 },
 }));

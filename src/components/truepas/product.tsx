@@ -12,6 +12,7 @@ import {
     CircleCheck,
     Clock,
     FileText,
+    Hotel,
     Lock,
     MapPin,
     ShieldCheck,
@@ -467,6 +468,49 @@ export function HistoryRow({
   );
 }
 
+/** Check-in row — compact booking row (design-repo bookings.tsx history row)
+ *  on the app's list-row shape so it matches DocumentRow above it. */
+export function CheckInRow({
+  booking,
+  onPress,
+  style,
+}: {
+  booking: Pick<ProductBooking, "venue" | "location" | "status" | "checkIn"> & { type?: string };
+  onPress?: () => void;
+  style?: StyleProp<ViewStyle>;
+}) {
+  const styles = useStyles();
+  const theme = useThemeTokens();
+  const status = BOOKING_STATUS[booking.status] ?? { variant: "neutral" as const, label: booking.status };
+  const Icon = booking.type?.toLowerCase() === "hotel" ? Hotel : Ticket;
+  return (
+    <SoftCard style={[styles.productCard, style]}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`${booking.venue}, ${status.label}`}
+        onPress={onPress}
+        style={({ pressed }) => pressed && styles.pressed}
+      >
+        <View style={styles.rowBetween}>
+          <View style={styles.rowCenter}>
+            <View style={[styles.productIcon, { backgroundColor: theme.colors.brandSubtle, width: 48, height: 48 }]}>
+              <Icon size={iconSize.lg} color={theme.colors.onBrandSubtle} />
+            </View>
+            <View style={{ gap: 2, flexShrink: 1 }}>
+              <Text style={styles.cardTitle} numberOfLines={1}>{booking.venue}</Text>
+              <Text style={styles.helper} numberOfLines={1}>{booking.location} · {booking.checkIn}</Text>
+            </View>
+          </View>
+          <View style={styles.rowCenter}>
+            <Badge variant={status.variant} style={{ height: 28 }}>{status.label}</Badge>
+            <ChevronRight size={iconSize.md} color={theme.colors.textSecondary} />
+          </View>
+        </View>
+      </Pressable>
+    </SoftCard>
+  );
+}
+
 /** Liveness challenge progress card. */
 export function LivenessStepsCard({
   steps,
@@ -638,12 +682,15 @@ export function EmptyStateCard({
   title = "No documents yet",
   description = "Add a passport or licence to unlock contactless check-in.",
   actionLabel = "Add document",
+  icon,
   onAction,
   style,
 }: {
   title?: string;
   description?: string;
   actionLabel?: string;
+  /** Overrides the default FileText glyph (e.g. CalendarDays for check-ins). */
+  icon?: ReactNode;
   onAction?: () => void;
   style?: StyleProp<ViewStyle>;
 }) {
@@ -652,7 +699,7 @@ export function EmptyStateCard({
   return (
     <SoftCard style={[styles.productCard, style]}>
       <View style={styles.centerCol}>
-        <CircleButton icon={<FileText size={iconSize.md} color={theme.colors.actionPrimary} />} />
+        <CircleButton icon={icon ?? <FileText size={iconSize.md} color={theme.colors.actionPrimary} />} />
         <Text style={styles.cardTitle}>{title}</Text>
         <Text style={[styles.helper, styles.centerText]}>{description}</Text>
         {onAction && (

@@ -43,7 +43,7 @@ export function UserMenu({ name, email, avatarUri, onProfile, onSettings, onBill
         onPress={() => setOpen(true)}
         style={({ pressed }) => [styles.trigger, pressed && { opacity: 0.8 }]}
       >
-        {trigger ?? <Avatar uri={avatarUri} name={name} size="sm" />}
+        {trigger ?? <Avatar uri={avatarUri} name={name} size="md" />}
       </Pressable>
       <ActionSheet
         visible={open}

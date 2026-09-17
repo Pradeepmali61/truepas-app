@@ -13,6 +13,7 @@ const RELATIONSHIPS: SelectOption[] = [
   { value: 'Spouse', label: 'Spouse' },
   { value: 'Parent', label: 'Parent' },
   { value: 'Guardian', label: 'Guardian' },
+  { value: 'Sibling', label: 'Sibling' },
   { value: 'Other', label: 'Other' },
 ];
 

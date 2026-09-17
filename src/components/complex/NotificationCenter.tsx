@@ -47,7 +47,8 @@ export function NotificationCenter({ notifications, loading, onMarkAllRead, trig
         <View>
           <IconButton
             accessibilityLabel={unread ? `Notifications, ${unread} unread` : "Notifications"}
-            icon={<Bell size={iconSize.md} color={theme.colors.textPrimary} />}
+            icon={<Bell size={iconSize.lg} color={theme.colors.textPrimary} />}
+            size="lg"
             onPress={() => setOpen(true)}
           />
           {unread > 0 && (

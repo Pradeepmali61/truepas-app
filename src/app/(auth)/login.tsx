@@ -93,16 +93,13 @@ export default function LoginScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.background }} edges={['top', 'bottom']}>
       <ScrollView
-        contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: theme.spacing[4] }}
+        contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: theme.spacing[5] }}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}>
-        <SoftCard style={[kit.loginCard, { width: '100%' }]}>
+        <SoftCard style={[kit.loginCard, { width: '100%', gap: theme.spacing[6], padding: theme.spacing[6] }]}>
           <View style={kit.loginHead}>
-            <BrandMark compact />
-            <View style={{ gap: 6 }}>
-              <Typography variant="h2">Welcome back</Typography>
-              <Typography color="secondary">Sign in with your phone or email.</Typography>
-            </View>
+            <BrandMark />
+            <Typography variant="h1">Welcome back</Typography>
           </View>
 
           <View
@@ -111,7 +108,7 @@ export default function LoginScreen() {
               flexDirection: 'row',
               backgroundColor: theme.colors.surfaceSunken,
               borderRadius: theme.radii.lg,
-              padding: theme.spacing[1],
+              padding: theme.spacing[1.5],
             }}>
             {(['phone', 'email'] as const).map((m) => {
               const active = method === m;
@@ -124,14 +121,14 @@ export default function LoginScreen() {
                   onPress={() => switchMethod(m)}
                   style={{
                     flex: 1,
-                    height: theme.sizes.heightSm,
+                    height: theme.sizes.touchTarget,
                     alignItems: 'center',
                     justifyContent: 'center',
                     borderRadius: theme.radii.md,
                     backgroundColor: active ? theme.colors.actionPrimary : 'transparent',
                   }}>
                   <Typography
-                    variant="body"
+                    variant="body-lg"
                     color={active ? 'inverse' : 'secondary'}
                     style={{ fontWeight: active ? theme.fontWeight.semibold : theme.fontWeight.medium }}>
                     {m === 'phone' ? 'Phone' : 'Email'}
@@ -141,7 +138,7 @@ export default function LoginScreen() {
             })}
           </View>
 
-          <View style={{ gap: 16 }}>
+          <View style={{ gap: theme.spacing[5] }}>
             {method === 'phone' ? (
               <Controller
                 control={control}
@@ -150,10 +147,10 @@ export default function LoginScreen() {
                   <FormField label="Mobile number" error={fieldState.error?.message}>
                     <View style={{ flexDirection: 'row', gap: theme.spacing[2] }}>
                       <Select
-                        size="md"
+                        size="lg"
                         title="Country code"
                         accessibilityLabel="Country code"
-                        style={{ width: 108 }}
+                        style={{ width: 124 }}
                         value={countryCode}
                         onValueChange={setCountryCode}
                         options={COUNTRIES.map((c) => ({
@@ -163,13 +160,14 @@ export default function LoginScreen() {
                         }))}
                       />
                       <Input
+                        size="lg"
                         containerStyle={{ flex: 1 }}
                         value={value}
                         onChangeText={onChange}
                         placeholder="98765 43210"
                         keyboardType="phone-pad"
                         autoCorrect={false}
-                        iconLeft={<Phone size={iconSize.md} color={theme.colors.actionPrimary} />}
+                        iconLeft={<Phone size={iconSize.lg} color={theme.colors.actionPrimary} />}
                       />
                     </View>
                   </FormField>
@@ -182,13 +180,14 @@ export default function LoginScreen() {
                 render={({ field: { onChange, value }, fieldState }) => (
                   <FormField label="Email" error={fieldState.error?.message}>
                     <Input
+                      size="lg"
                       value={value}
                       onChangeText={onChange}
                       placeholder="you@example.com"
                       keyboardType="email-address"
                       autoCapitalize="none"
                       autoCorrect={false}
-                      iconLeft={<Mail size={iconSize.md} color={theme.colors.actionPrimary} />}
+                      iconLeft={<Mail size={iconSize.lg} color={theme.colors.actionPrimary} />}
                     />
                   </FormField>
                 )}
@@ -200,13 +199,14 @@ export default function LoginScreen() {
               render={({ field: { onChange, value }, fieldState }) => (
                 <FormField label="Password" error={fieldState.error?.message}>
                   <Input
+                    size="lg"
                     value={value}
                     onChangeText={onChange}
                     placeholder="Enter your password"
                     secureTextEntry={!showPassword}
                     autoCapitalize="none"
                     autoCorrect={false}
-                    iconLeft={<Lock size={iconSize.md} color={theme.colors.actionPrimary} />}
+                    iconLeft={<Lock size={iconSize.lg} color={theme.colors.actionPrimary} />}
                     iconRight={
                       <Pressable
                         accessibilityRole="button"
@@ -214,9 +214,9 @@ export default function LoginScreen() {
                         onPress={() => setShowPassword((s) => !s)}
                         hitSlop={8}>
                         {showPassword ? (
-                          <EyeOff size={iconSize.md} color={theme.colors.actionPrimary} />
+                          <EyeOff size={iconSize.lg} color={theme.colors.actionPrimary} />
                         ) : (
-                          <Eye size={iconSize.md} color={theme.colors.actionPrimary} />
+                          <Eye size={iconSize.lg} color={theme.colors.actionPrimary} />
                         )}
                       </Pressable>
                     }
@@ -227,12 +227,16 @@ export default function LoginScreen() {
           </View>
 
           <View style={kit.rowBetween}>
-            <Checkbox checked={remember} onCheckedChange={setRemember} label="Remember me" />
+            <Checkbox
+              checked={remember}
+              onCheckedChange={setRemember}
+              label={<Typography variant="body-lg">Remember me</Typography>}
+            />
             <Link
               variant="quiet"
               onPress={() => router.push('/(auth)/forgot-password' as never)}
               accessibilityLabel="Forgot password"
-              style={{ fontSize: theme.fontSize.sm, fontWeight: theme.fontWeight.medium, flexShrink: 0 }}>
+              style={{ fontSize: theme.fontSize.base, fontWeight: theme.fontWeight.medium, flexShrink: 0 }}>
               Forgot password?
             </Link>
           </View>
@@ -247,13 +251,13 @@ export default function LoginScreen() {
             Sign in
           </Button>
 
-          <Typography variant="body-sm" color="muted" center>
+          <Typography variant="body" color="muted" center>
             New to TruePas?{' '}
             <Link
               variant="quiet"
               onPress={() => router.push('/(auth)/register')}
               accessibilityLabel="Create account"
-              style={{ fontSize: theme.fontSize.sm, fontWeight: theme.fontWeight.medium }}>
+              style={{ fontSize: theme.fontSize.base, fontWeight: theme.fontWeight.medium }}>
               Create an account
             </Link>
           </Typography>
