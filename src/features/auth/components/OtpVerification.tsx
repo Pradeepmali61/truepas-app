@@ -46,8 +46,7 @@ const RESEND_SECONDS = 30;
 /** Backend contract: max 5 wrong attempts, OTP expires after 10 minutes. */
 const MAX_OTP_ATTEMPTS = 5;
 const OTP_TTL_SECONDS = 10 * 60;
-/** Demo pill only when the app is actually running on the mock API. */
-const MOCK_API = process.env.EXPO_PUBLIC_USE_MOCK_API === 'true';
+
 
 /** Reads a server-provided attempts-remaining count if the backend sends one. */
 function attemptsRemainingFrom(err: unknown): number | null {
@@ -242,7 +241,7 @@ export function OtpVerification({
               />
             </Animated.View>
 
-            {__DEV__ && MOCK_API ? (
+            {__DEV__ ? (
               <NeuWell radius={theme.radii.full} style={styles.demoPill}>
                 <Typography variant="caption" color="muted" style={styles.mono}>
                   Example code: 123456

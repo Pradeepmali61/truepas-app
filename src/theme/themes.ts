@@ -229,7 +229,7 @@ export function darkColors(brand: BrandRamp, opts: ColorOptions = {}): SemanticC
 
     background: neutral?.darkBg ?? palette.gray950,
     surface: neutral?.darkSurface ?? palette.gray900,
-    surfaceRaised: neutral ? mix(neutral.darkSurface, palette.white, 0.06) : palette.gray800,
+    surfaceRaised: neutral ? mix(neutral.darkSurface, palette.white, 0.94) : palette.gray800,
     surfaceSunken: neutral?.darkSunken ?? palette.gray950,
     overlay: alpha(palette.black, 0.65),
     scrim: alpha(palette.black, 0.55),
@@ -251,9 +251,9 @@ export function darkColors(brand: BrandRamp, opts: ColorOptions = {}): SemanticC
     textLink: brand.b500,
     textLinkPressed: brand.b200,
 
-    border: neutral ? mix(neutral.darkSurface, palette.white, 0.16) : palette.gray700,
-    borderSubtle: neutral ? mix(neutral.darkSurface, palette.white, 0.09) : palette.gray800,
-    borderStrong: neutral ? mix(neutral.darkSurface, palette.white, 0.32) : palette.gray500,
+    border: neutral ? mix(neutral.darkSurface, palette.white, 0.84) : palette.gray700,
+    borderSubtle: neutral ? mix(neutral.darkSurface, palette.white, 0.91) : palette.gray800,
+    borderStrong: neutral ? mix(neutral.darkSurface, palette.white, 0.68) : palette.gray500,
     borderFocus: cta.b500,
 
     success: fb?.success?.b600 ?? palette.green600,
