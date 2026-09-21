@@ -244,7 +244,7 @@ export function OtpVerification({
             {__DEV__ ? (
               <NeuWell radius={theme.radii.full} style={styles.demoPill}>
                 <Typography variant="caption" color="muted" style={styles.mono}>
-                  Example code: 123456
+                  Demo code: 123456
                 </Typography>
               </NeuWell>
             ) : null}

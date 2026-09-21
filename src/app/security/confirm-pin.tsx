@@ -1,11 +1,13 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ShieldCheck } from 'lucide-react-native';
-import { Alert as RNAlert, View } from 'react-native';
+import { Alert as RNAlert, ScrollView, View } from 'react-native';
 
-import { Alert, OtpInput, ScreenHeader } from '@/components/composite';
+import { isMockApi } from '@/api';
+import { MOCK_PIN } from '@/api/mock';
+import { Alert, FormField, OtpInput, ScreenHeader } from '@/components/composite';
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
-import { Button, Link, Typography } from '@/components/ui';
+import { Button, Link, NeuBox, Typography } from '@/components/ui';
 import { sessionEnded } from '@/features/auth/slice';
 import { PIN_LENGTH, usePinVerification } from '@/features/auth/usePinVerification';
 import { formatCountdown } from '@/hooks/useCountdown';
@@ -20,6 +22,9 @@ import { iconSize } from '@/theme/tokens';
  * replaces to the `next` route passed as a query param. The verified PIN is
  * stashed in pinStore (not a route param — params can leak into logs) for
  * change-pin's currentPin.
+ * Visuals ported 1:1 from UI-design-repo screens/settings/VerifyPinScreen.tsx;
+ * the attempt lockout alert and Forgot-PIN escape hatch are real backend
+ * contract features kept on top.
  */
 export default function ConfirmPinScreen() {
   const router = useRouter();
@@ -61,24 +66,28 @@ export default function ConfirmPinScreen() {
   return (
     <ScreenContainer scroll={false} background={false}>
       <ScreenHeader title="Confirm it's you" onBack={router.back} />
-      <View style={{ flex: 1, padding: theme.spacing[4], gap: theme.spacing[4] }}>
-        <View
-          style={{
-            alignItems: 'center',
-            gap: theme.spacing[2],
-            paddingTop: theme.spacing[6],
-          }}>
-          <View
+      <ScrollView
+        contentContainerStyle={{
+          padding: theme.spacing[4],
+          paddingTop: theme.spacing[4],
+          gap: theme.spacing[6],
+        }}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}>
+        <View style={{ alignItems: 'center', gap: theme.spacing[1] }}>
+          <NeuBox
+            variant="raised"
+            radius={theme.radii.full}
+            depth={4}
             style={{
-              width: 56,
-              height: 56,
-              borderRadius: theme.radii.lg,
-              backgroundColor: theme.colors.actionPrimarySubtle,
+              width: 64,
+              height: 64,
               alignItems: 'center',
               justifyContent: 'center',
+              marginBottom: theme.spacing[2],
             }}>
             <ShieldCheck size={iconSize.lg} color={theme.colors.actionPrimary} />
-          </View>
+          </NeuBox>
           <Typography variant="h3" center>
             Enter your PIN
           </Typography>
@@ -87,16 +96,18 @@ export default function ConfirmPinScreen() {
           </Typography>
         </View>
 
-        <OtpInput
-          length={PIN_LENGTH}
-          value={gate.pin}
-          onChange={gate.setPin}
-          onComplete={submit}
-          state={gate.error ? 'error' : 'default'}
-          disabled={gate.locked}
-          autoFocus
-          accessibilityLabel="Account PIN"
-        />
+        <FormField error={gate.error ?? undefined}>
+          <OtpInput
+            length={PIN_LENGTH}
+            value={gate.pin}
+            onChange={gate.setPin}
+            onComplete={submit}
+            error={gate.error != null}
+            disabled={gate.locked}
+            autoFocus
+            accessibilityLabel="Account PIN"
+          />
+        </FormField>
 
         {gate.locked ? (
           <Alert variant="error" title="PIN locked">
@@ -122,17 +133,23 @@ export default function ConfirmPinScreen() {
             Forgot PIN?
           </Link>
         </View>
-      </View>
+
+        {__DEV__ && isMockApi() && (
+          <Typography variant="caption" color="muted" center>
+            Demo PIN: {MOCK_PIN}
+          </Typography>
+        )}
+      </ScrollView>
 
       <View
         style={{
-          padding: theme.spacing[4],
-          borderTopWidth: theme.sizes.fieldBorderWidth,
-          borderTopColor: theme.colors.borderSubtle,
-          backgroundColor: theme.colors.surface,
+          paddingHorizontal: theme.spacing[4],
+          paddingTop: theme.spacing[4],
+          paddingBottom: theme.spacing[4],
+          gap: theme.spacing[2],
         }}>
         <Button
-          label="Continue"
+          label="Verify"
           size="lg"
           loading={gate.isPending}
           disabled={gate.pin.length !== PIN_LENGTH || gate.locked}

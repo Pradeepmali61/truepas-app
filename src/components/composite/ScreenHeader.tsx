@@ -7,7 +7,7 @@ import { IconButton } from "../ui/IconButton";
 import { Typography } from "../ui/Typography";
 
 export interface ScreenHeaderProps {
-  title: ReactNode;
+  title?: ReactNode;
   subtitle?: ReactNode;
   /** Shows a back chevron — wire to your navigator */
   onBack?: () => void;
@@ -35,9 +35,11 @@ export function ScreenHeader({ title, subtitle, onBack, actions, style }: Screen
         <View style={styles.headerSpacer} />
       )}
       <View style={styles.titles}>
-        <Typography variant="h4" numberOfLines={1}>
-          {title}
-        </Typography>
+        {title != null && (
+          <Typography variant="h4" numberOfLines={1}>
+            {title}
+          </Typography>
+        )}
         {subtitle != null && (
           <Typography variant="caption" color="muted" numberOfLines={1}>
             {subtitle}

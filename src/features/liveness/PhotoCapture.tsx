@@ -1,8 +1,8 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Camera as CameraIcon, ScanFace, SwitchCamera } from 'lucide-react-native';
+import { Baby, Camera as CameraIcon, SwitchCamera } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
-import { Text, View } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import {
     Camera,
     useCameraDevice,
@@ -13,19 +13,22 @@ import {
 
 import { toApiError } from '@/api/errors';
 import { Alert, ScreenHeader } from '@/components/composite';
-import { CoreButton, IconButton, LoadingState, Pulse, ScanLine, Typography } from '@/components/ui';
+import { CoreButton, IconButton, LoadingState, NeuBox, NeuWell, SoftIconButton, Typography } from '@/components/ui';
 import { useEnrollFace } from '@/features/auth/mutations';
-import { useThemeTokens } from '@/theme';
+import { makeStyles, useThemeTokens } from '@/theme';
 import { iconSize } from '@/theme/tokens';
 
 /** Add family — photo enrollment for under-5 members (POST /cb/face/enroll).
  *  Under-5 members can't run liveness — one clear photo is sent as
  *  { selfieBase64, personId } instead of liveness session credentials.
+ *  Layout mirrors UI-design-repo FamilyEnrollScreen photo mode: a carded
+ *  photo frame with the live camera inside, camera note + capture button in
+ *  the frame footer.
  *  Never imported statically by routes — loaded via cameraModule.loadPhotoCapture()
  *  so builds without NitroModules degrade to <CameraUnavailable />. */
 export function PhotoCapture() {
+  const styles = useStyles();
   const theme = useThemeTokens();
-  const insets = useSafeAreaInsets();
   const router = useRouter();
   const { name, age, personId } = useLocalSearchParams<{ name?: string; age?: string; personId?: string }>();
 
@@ -77,11 +80,26 @@ export function PhotoCapture() {
     }
   };
 
+  const header = (
+    <ScreenHeader
+      title={name ?? 'Face enrollment'}
+      subtitle={age ? `Age ${age} · photo enrollment` : 'Photo enrollment'}
+      onBack={() => router.back()}
+      actions={
+        <IconButton
+          accessibilityLabel={cameraPosition === 'front' ? 'Switch to back camera' : 'Switch to front camera'}
+          icon={<SwitchCamera size={iconSize.md} color={theme.colors.actionPrimary} />}
+          onPress={() => setCameraPosition((p) => (p === 'front' ? 'back' : 'front'))}
+        />
+      }
+    />
+  );
+
   if (!hasPermission) {
     return (
-      <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: theme.colors.background }}>
-        <ScreenHeader title={`Add ${name ?? 'child'}'s photo`} onBack={() => router.back()} />
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: theme.spacing[6], gap: theme.spacing[3] }}>
+      <SafeAreaView edges={['top']} style={styles.safe}>
+        {header}
+        <View style={styles.centered}>
           <Typography variant="body" center>
             Camera permission is required to take the enrollment photo.
           </Typography>
@@ -95,108 +113,88 @@ export function PhotoCapture() {
 
   if (!device) {
     return (
-      <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: theme.colors.background }}>
-        <ScreenHeader title={`Add ${name ?? 'child'}'s photo`} onBack={() => router.back()} />
+      <SafeAreaView edges={['top']} style={styles.safe}>
+        {header}
         <LoadingState fullPage label="Loading camera…" />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: theme.colors.background }}>
-      <ScreenHeader
-        title={`Add ${name ?? 'child'}'s photo`}
-        subtitle={age ? `Age ${age} · photo enrollment` : 'Photo enrollment'}
-        onBack={() => router.back()}
-        actions={
-          <IconButton
-            accessibilityLabel={cameraPosition === 'front' ? 'Switch to back camera' : 'Switch to front camera'}
-            icon={<SwitchCamera size={iconSize.md} color={theme.colors.textPrimary} />}
-            onPress={() => setCameraPosition((p) => (p === 'front' ? 'back' : 'front'))}
-          />
-        }
-      />
-      <View style={{ flex: 1, padding: theme.spacing[4], gap: theme.spacing[3] }}>
-        <View
-          style={{
-            aspectRatio: 3 / 4,
-            borderRadius: theme.radii.xl,
-            backgroundColor: theme.colors.textPrimary,
-            overflow: 'hidden',
-          }}>
-          <Camera
-            ref={cameraRef}
-            style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
-            device={device}
-            isActive
-            outputs={[photoOutput]}
-            mirrorMode="auto"
-          />
-          <ScanLine color={theme.colors.accent} ms={2400} />
-          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: theme.spacing[8] }}>
-            <Pulse to={1.03} ms={1200}>
-              <View
-                style={{
-                  width: 168,
-                  height: 208,
-                  borderRadius: 104,
-                  borderWidth: 3,
-                  borderColor: theme.colors.actionPrimary,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}>
-                <ScanFace size={56} color={theme.colors.onActionPrimary} />
-              </View>
-            </Pulse>
-            <View
-              style={{
-                paddingHorizontal: theme.spacing[4],
-                paddingVertical: theme.spacing[2],
-                borderRadius: theme.radii.full,
-                backgroundColor: theme.colors.actionPrimary,
-                maxWidth: '88%',
-              }}>
-              <Text style={{ color: theme.colors.onActionPrimary, fontFamily: theme.fontFamily.sans.semibold, fontSize: theme.fontSize.base }}>
-                Hold still — one clear photo
-              </Text>
-            </View>
+    <SafeAreaView edges={['top']} style={styles.safe}>
+      {header}
+      <View style={styles.body}>
+        <NeuBox variant="raised" depth={6} color={theme.colors.surface} style={styles.card}>
+          <View style={styles.cardHead}>
+            <Baby size={iconSize.md} color={theme.colors.actionPrimary} />
+            <Typography variant="h4">Photo enrollment</Typography>
           </View>
-        </View>
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: theme.spacing[2],
-            alignSelf: 'center',
-            paddingHorizontal: theme.spacing[3],
-            paddingVertical: theme.spacing[1],
-            borderRadius: theme.radii.full,
-            backgroundColor: theme.colors.surfaceSunken,
-          }}>
-          <CameraIcon size={iconSize.sm} color={theme.colors.textSecondary} />
           <Typography variant="body-sm" color="secondary">
-            {cameraPosition === 'front' ? 'Front camera' : 'Back camera'} — flip icon above to switch
+            Members under 5 enroll with one clear photo — no liveness check needed.
           </Typography>
-        </View>
+          <NeuWell radius={theme.radii.xl} style={styles.photoFrame}>
+            <View style={styles.photoGuide}>
+              <Camera
+                ref={cameraRef}
+                style={styles.camera}
+                device={device}
+                isActive
+                outputs={[photoOutput]}
+                mirrorMode="auto"
+              />
+            </View>
+            <View style={styles.photoFooter}>
+              <Typography variant="caption" color="muted" style={styles.cameraNote}>
+                {cameraPosition === 'front' ? 'Front camera' : 'Back camera'}
+              </Typography>
+              <SoftIconButton
+                icon={CameraIcon}
+                size={56}
+                solid
+                disabled={capturing}
+                onPress={() => void capture()}
+                accessibilityLabel="Capture photo"
+              />
+            </View>
+          </NeuWell>
+        </NeuBox>
+
         {error ? (
           <Alert variant="error" title="Photo enrollment failed">
             {error}
           </Alert>
         ) : null}
       </View>
-      <View
-        style={{
-          padding: theme.spacing[4],
-          paddingTop: theme.spacing[3],
-          paddingBottom: theme.spacing[4] + insets.bottom,
-          borderTopWidth: theme.sizes.fieldBorderWidth,
-          borderTopColor: theme.colors.borderSubtle,
-          backgroundColor: theme.colors.surface,
-        }}>
-        <CoreButton fullWidth size="lg" loading={capturing} accessibilityLabel="Capture photo" onPress={capture}>
-          Capture photo
-        </CoreButton>
-      </View>
     </SafeAreaView>
   );
 }
+
+const useStyles = makeStyles((t) => ({
+  safe: { flex: 1, backgroundColor: t.colors.background },
+  centered: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: t.spacing[6],
+    gap: t.spacing[3],
+  },
+  body: { flex: 1, padding: t.spacing[4], gap: t.spacing[4] },
+  card: { padding: t.spacing[4], gap: t.spacing[3] },
+  cardHead: { flexDirection: 'row', alignItems: 'center', gap: t.spacing[2] },
+  photoFrame: { padding: t.spacing[3], gap: t.spacing[3] },
+  photoGuide: {
+    height: 260,
+    borderRadius: t.radii.lg,
+    borderWidth: t.sizes.fieldBorderWidth,
+    borderColor: t.colors.borderStrong,
+    overflow: 'hidden',
+  },
+  camera: { flex: 1 },
+  photoFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    minHeight: 56,
+  },
+  cameraNote: { flexShrink: 1 },
+}));

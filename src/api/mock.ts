@@ -75,7 +75,9 @@ const nextId = (prefix: string) => `${prefix}${uid++}`;
 // ── In-memory state (initialized from JSON fixtures) ──────────────────
 let user: User = { ...(userData as User) };
 let userPassword = 'password123';
-let userPin = '1234';
+/** Initial mock PIN — surfaced on the Security screen as a dev hint. */
+export const MOCK_PIN = '1234';
+let userPin = MOCK_PIN;
 let biometricConsentAccepted = false;
 
 const identitySummary: IdentitySummary = identitySummaryData as IdentitySummary;

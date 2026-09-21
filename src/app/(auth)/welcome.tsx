@@ -1,255 +1,158 @@
-/** @jsxImportSource react */
-import { LinearGradient } from 'expo-linear-gradient';
+/**
+ * Welcome — brand hero + the two entry points (register / login).
+ * Concentric soft-UI badge with a breathing pulse, staggered entrances.
+ * No back button: this is the root of the signed-out stack.
+ * Ported 1:1 from UI-design-repo src/app/screens/auth/WelcomeScreen.tsx.
+ */
 import { useRouter } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import { useCallback, useRef, useState } from 'react';
-import {
-    Dimensions,
-    FlatList,
-    Image,
-    ImageSourcePropType,
-    ListRenderItemInfo,
-    NativeScrollEvent,
-    NativeSyntheticEvent,
-    Pressable,
-    View,
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { IdCard, ScanFace, ShieldCheck, Users, type LucideIcon } from 'lucide-react-native';
+import { ScrollView, View } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Typography } from '@/components/ui';
-import { alpha, makeStyles, mix } from '@/theme';
+import { CoreButton, FadeUp, Link, NeuBox, NeuWell, PopIn, Pulse, ScanFrame, ScanLine, Typography } from '@/components/ui';
+import { alpha, makeStyles, useThemeTokens } from '@/theme';
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
-const CARD_HEIGHT = SCREEN_HEIGHT * 0.42;
-const IMAGE_OVERLAP = 74;
-const TSHIRT_BLUE = '#0164C0';
-
-type Slide = {
-  id: string;
-  title: string;
-  description: string;
-  image: ImageSourcePropType;
-};
-
-const SLIDES: Slide[] = [
-  {
-    id: 'identity',
-    title: 'Your Face is\nYour Identity.',
-    description:
-      'Enroll once with your face and government ID — securely verified, always trusted.',
-    image: require('@/assets/onboarding/1_1.png'),
-  },
-  {
-    id: 'verified',
-    title: 'Verified Once,\nTrusted Everywhere.',
-    description:
-      'Your face and document are matched and stored securely — no repeat KYC.',
-    image: require('@/assets/onboarding/2_1.png'),
-  },
-  {
-    id: 'family',
-    title: 'Protect Your\nWhole Family.',
-    description:
-      'Add and verify identities for dependents — all managed from one account.',
-    image: require('@/assets/onboarding/3_1.png'),
-  },
+const FEATURES: { icon: LucideIcon; title: string; body: string }[] = [
+  { icon: ScanFace, title: 'Face check-in', body: 'A glance is all it takes to get in.' },
+  { icon: Users, title: 'Family profiles', body: 'Add your kids and manage entry together.' },
+  { icon: IdCard, title: 'Verified documents', body: 'Your IDs, checked once and ready anywhere.' },
 ];
 
 export default function WelcomeScreen() {
-  const router = useRouter();
   const styles = useStyles();
-  const listRef = useRef<FlatList<Slide>>(null);
-  const [activeIndex, setActiveIndex] = useState(0);
+  const t = useThemeTokens();
+  const router = useRouter();
   const insets = useSafeAreaInsets();
 
-  // Royal blue sampled from the t-shirt in the onboarding artwork.
-  // Card gradient runs light version (top) → dark version (bottom).
-  const cardGradient = [
-    mix(TSHIRT_BLUE, '#ffffff', 0.7),
-    mix(TSHIRT_BLUE, '#041a3a', 0.6),
-  ] as const;
-
-  const handleFinish = useCallback(() => {
-    router.push('/(auth)/login');
-  }, [router]);
-
-  const handleNext = useCallback(() => {
-    if (activeIndex === SLIDES.length - 1) {
-      handleFinish();
-      return;
-    }
-    listRef.current?.scrollToIndex({ index: activeIndex + 1, animated: true });
-  }, [activeIndex, handleFinish]);
-
-  const handleMomentumEnd = useCallback(
-    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-      setActiveIndex(Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH));
-    },
-    [],
-  );
-
-  const renderItem = useCallback(
-    ({ item }: ListRenderItemInfo<Slide>) => (
-      <View style={styles.slide}>
-        <View
-          style={[
-            styles.imageArea,
-            { height: SCREEN_HEIGHT - CARD_HEIGHT + IMAGE_OVERLAP },
-          ]}>
-          <Image source={item.image} style={styles.image} resizeMode="cover" />
+  return (
+    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: t.colors.background }}>
+      <ScrollView
+        contentContainerStyle={{
+          padding: t.spacing[4],
+          paddingTop: t.spacing[4],
+          gap: t.spacing[6],
+          flexGrow: 1,
+        }}
+        showsVerticalScrollIndicator={false}>
+        <View style={styles.hero}>
+          <ScanFrame padding={12} style={styles.heroFrame}>
+            <PopIn ms={420}>
+              <NeuWell radius={t.radii.full} style={styles.halo}>
+                <Pulse to={1.05} ms={1400}>
+                  <NeuBox variant="raised" radius={t.radii.full} depth={8} style={styles.ring}>
+                    <View style={styles.disc}>
+                      <ScanLine color={alpha(t.colors.onActionPrimary, 0.8)} />
+                      <ScanFace size={t.iconSize.lg} color={t.colors.onActionPrimary} />
+                    </View>
+                  </NeuBox>
+                </Pulse>
+              </NeuWell>
+            </PopIn>
+          </ScanFrame>
+          <FadeUp delay={140}>
+            <Typography variant="display" center>
+              Truepas
+            </Typography>
+          </FadeUp>
+          <FadeUp delay={220}>
+            <Typography variant="body-lg" color="secondary" center>
+              Your face is your ticket — contactless check-in for you and your family.
+            </Typography>
+          </FadeUp>
         </View>
 
-        <LinearGradient
-          colors={cardGradient}
-          locations={[0, 1]}
-          start={{ x: 0.5, y: 0 }}
-          end={{ x: 0.5, y: 1 }}
-          style={[styles.bottomCard, { marginTop: -IMAGE_OVERLAP }]}>
-          <Typography style={styles.title}>{item.title}</Typography>
-          <Typography style={styles.description}>{item.description}</Typography>
-
-          <View style={styles.dotsRow}>
-            {SLIDES.map((s, i) => (
-              <View
-                key={s.id}
-                style={[
-                  styles.dot,
-                  i === activeIndex ? styles.dotActive : styles.dotInactive,
-                ]}
-              />
+        <FadeUp delay={330}>
+          <NeuBox variant="raised" style={styles.featureCard}>
+            {FEATURES.map((f, i) => (
+              <View key={f.title} style={[styles.featureRow, i > 0 && styles.featureDivider]}>
+                <View style={styles.featureIcon}>
+                  <f.icon size={t.iconSize.md} color={t.colors.actionPrimary} />
+                </View>
+                <View style={styles.featureText}>
+                  <Typography variant="body" style={styles.featureTitle}>
+                    {f.title}
+                  </Typography>
+                  <Typography variant="body-sm" color="muted">
+                    {f.body}
+                  </Typography>
+                </View>
+              </View>
             ))}
-          </View>
-
-          <Pressable
-            onPress={handleNext}
-            style={({ pressed }) => [styles.ctaButton, pressed && { opacity: 0.88 }]}
-            accessibilityRole="button"
-            accessibilityLabel={
-              activeIndex === SLIDES.length - 1 ? 'Get Started' : 'Next'
-            }>
-            <Typography style={styles.ctaText}>
-              {activeIndex === SLIDES.length - 1 ? 'Get Started' : 'Next'}
-            </Typography>
-          </Pressable>
-        </LinearGradient>
-      </View>
-    ),
-    [activeIndex, handleNext, cardGradient, styles],
-  );
-
-  return (
-    <LinearGradient
-      colors={['#f0f0ff', '#e8e3ff']}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 0, y: 1 }}
-      style={styles.container}>
-      <StatusBar style="dark" />
-
-      <View style={[styles.skipWrapper, { top: insets.top + 8 }]}>
-        <Pressable
-          onPress={handleFinish}
-          hitSlop={12}
-          accessibilityRole="button"
-          accessibilityLabel="Skip introduction"
-          style={({ pressed }) => pressed && { opacity: 0.7 }}>
-          <Typography style={styles.skipText}>Skip</Typography>
-        </Pressable>
-      </View>
-
-      <FlatList
-        ref={listRef}
-        data={SLIDES}
-        keyExtractor={(item) => item.id}
-        renderItem={renderItem}
-        horizontal
-        pagingEnabled
-        bounces={false}
-        showsHorizontalScrollIndicator={false}
-        scrollEventThrottle={16}
-        onMomentumScrollEnd={handleMomentumEnd}
-        style={styles.flatList}
-      />
+          </NeuBox>
+        </FadeUp>
+      </ScrollView>
 
       <View
-        style={[
-          styles.bottomBar,
-          { height: insets.bottom > 0 ? insets.bottom : 20 },
-        ]}
-      />
-    </LinearGradient>
+        style={{
+          paddingHorizontal: t.spacing[4],
+          paddingTop: t.spacing[4],
+          paddingBottom: t.spacing[4] + insets.bottom,
+          gap: t.spacing[2],
+        }}>
+        <CoreButton
+          fullWidth
+          size="lg"
+          iconLeft={<ShieldCheck size={t.iconSize.md} color={t.colors.onActionPrimary} />}
+          onPress={() => router.push('/(auth)/register')}>
+          Create account
+        </CoreButton>
+        <Typography variant="body-sm" color="muted" center>
+          Already have an account? <Link onPress={() => router.push('/(auth)/login')}>Sign in</Link>
+        </Typography>
+      </View>
+    </SafeAreaView>
   );
 }
 
 const useStyles = makeStyles((t) => ({
-  container: { flex: 1 },
-  skipWrapper: { position: 'absolute', right: t.spacing[5], zIndex: 30 },
-  skipText: {
-    color: alpha(TSHIRT_BLUE, 0.75),
-    fontSize: t.fontSize.md,
-    fontWeight: t.fontWeight.bold,
-    textDecorationLine: 'underline',
-  },
-  flatList: { flex: 1 },
-  slide: {
-    width: SCREEN_WIDTH,
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
-  imageArea: {
-    width: '100%',
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-  },
-  image: { width: '100%', height: '100%' },
-  bottomCard: {
-    height: CARD_HEIGHT,
-    borderTopLeftRadius: t.radii['2xl'] + 8,
-    borderTopRightRadius: t.radii['2xl'] + 8,
-    paddingHorizontal: t.spacing[6],
+  hero: {
+    alignItems: 'center',
+    gap: t.spacing[3],
     paddingTop: t.spacing[8],
-    paddingBottom: t.spacing[6],
-    alignItems: 'center',
+    paddingBottom: t.spacing[4],
   },
-  title: {
-    color: '#FFFFFF',
-    fontSize: 38,
-    fontWeight: t.fontWeight.medium,
-    textAlign: 'center',
-    lineHeight: 50,
-    marginBottom: t.spacing[3],
-  },
-  description: {
-    color: 'rgba(255, 255, 255, 0.78)',
-    fontSize: t.fontSize.lg,
-    lineHeight: 23,
-    textAlign: 'center',
-    flex: 1,
-  },
-  dotsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: t.spacing[2],
-    marginBottom: t.spacing[5],
-  },
-  dot: { height: 4, borderRadius: t.radii.full },
-  dotActive: { width: 32, backgroundColor: '#FFFFFF' },
-  dotInactive: { width: 22, backgroundColor: 'rgba(255, 255, 255, 0.35)' },
-  ctaButton: {
-    width: '100%',
-    height: t.sizes.heightLg,
-    borderRadius: t.radii.full,
-    backgroundColor: '#FFFFFF',
+  heroFrame: { marginBottom: t.spacing[3] },
+  halo: {
+    width: 156,
+    height: 156,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  ring: {
+    width: 116,
+    height: 116,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  disc: {
+    width: 68,
+    height: 68,
+    borderRadius: t.radii.full,
+    backgroundColor: t.colors.actionPrimary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
     ...t.shadows.lg,
   },
-  ctaText: {
-    color: mix(TSHIRT_BLUE, '#041a3a', 0.6),
-    fontSize: t.fontSize.md,
-    fontWeight: t.fontWeight.bold,
-    letterSpacing: t.letterSpacing.wide,
+  featureCard: { padding: t.spacing[2], marginTop: t.spacing[4] },
+  featureRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: t.spacing[3],
+    padding: t.spacing[3],
   },
-  bottomBar: { backgroundColor: mix(TSHIRT_BLUE, '#041a3a', 0.6) },
+  featureDivider: {
+    borderTopWidth: t.sizes.fieldBorderWidth,
+    borderTopColor: t.colors.borderSubtle,
+  },
+  featureIcon: {
+    width: t.sizes.touchTarget,
+    height: t.sizes.touchTarget,
+    borderRadius: t.radii.full,
+    backgroundColor: t.colors.actionPrimarySubtle,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  featureText: { flex: 1, gap: t.spacing[0.5] },
+  featureTitle: { fontWeight: t.fontWeight.semibold },
 }));

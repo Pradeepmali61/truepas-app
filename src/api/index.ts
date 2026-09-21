@@ -56,6 +56,11 @@ export function setDevMockApi(enabled: boolean): void {
   devMockOverride = enabled;
 }
 
+/** True while API calls resolve against mock fixtures (env or dev override). */
+export function isMockApi(): boolean {
+  return useMockApi || devMockOverride;
+}
+
 const realFns = new Map<string, unknown>();
 
 /** The API object used by every hook/screen. */

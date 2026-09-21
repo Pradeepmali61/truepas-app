@@ -184,6 +184,7 @@ export const useStyles = makeStyles((t) => ({
   mono: { fontFamily: t.fontFamily.mono.medium, fontSize: t.fontSize.sm, color: t.colors.textSecondary },
   strong: { fontWeight: t.fontWeight.semibold, color: t.colors.textPrimary },
   rowCenter: { flexDirection: "row", alignItems: "center", gap: t.spacing[2] },
+  rowWrap: { flexDirection: "row", flexWrap: "wrap", gap: t.spacing[2] },
   historyRow: { flexDirection: "row", alignItems: "center", gap: t.spacing[3], paddingVertical: t.spacing[1] },
   stepRow: { flexDirection: "row", alignItems: "center", gap: t.spacing[3], minHeight: 28 },
   stepActive: { width: 16, height: 16, borderRadius: t.radii.full, backgroundColor: t.colors.actionPrimary },

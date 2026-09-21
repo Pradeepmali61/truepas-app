@@ -5,9 +5,9 @@ import { useState } from 'react';
 import { ScrollView, View } from 'react-native';
 
 import { toApiError } from '@/api/errors';
-import { FormField, Alert as InlineAlert, ScreenHeader } from '@/components/composite';
+import { FormField, Alert as InlineAlert, ScreenHeader, Section } from '@/components/composite';
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
-import { Button, Input, Typography } from '@/components/ui';
+import { Button, Input } from '@/components/ui';
 import { useChangePassword } from '@/features/auth/mutations';
 import { newPasswordSchema } from '@/features/auth/schemas';
 import { sessionEnded } from '@/features/auth/slice';
@@ -20,6 +20,8 @@ import { iconSize } from '@/theme/tokens';
  * Change password — POST /auth/change-password { currentPassword, newPassword }.
  * Success revokes refresh sessions and the current access token, so local
  * state is cleared and the user is returned to login.
+ * Ported 1:1 from UI-design-repo screens/settings/ChangePasswordScreen.tsx —
+ * keeps our stricter newPasswordSchema as the field-level error.
  */
 export default function ChangePasswordScreen() {
   const router = useRouter();
@@ -29,89 +31,94 @@ export default function ChangePasswordScreen() {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [error, setError] = useState('');
   const changePassword = useChangePassword();
   const toast = useToast();
 
+  const passwordCheck = newPasswordSchema.safeParse(newPassword);
+  const nextError =
+    newPassword.length > 0 && !passwordCheck.success
+      ? passwordCheck.error.issues[0].message
+      : undefined;
+  const confirmError =
+    confirmPassword.length > 0 && confirmPassword !== newPassword
+      ? "Passwords don't match."
+      : undefined;
+  const canSubmit =
+    currentPassword.length > 0 && passwordCheck.success && confirmPassword === newPassword;
+
   const handleChange = async () => {
-    if (!currentPassword || !newPassword || !confirmPassword) {
-      setError('All fields are required');
-      return;
-    }
-    const passwordCheck = newPasswordSchema.safeParse(newPassword);
-    if (!passwordCheck.success) {
-      setError(passwordCheck.error.issues[0].message);
-      return;
-    }
-    if (newPassword === currentPassword) {
-      setError('New password must be different from the current one');
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      setError('Passwords do not match');
-      return;
-    }
-    setError('');
+    if (!canSubmit || changePassword.isPending) return;
     try {
       await changePassword.mutateAsync({ currentPassword, newPassword });
       // Contract: success revokes refresh sessions and the current access
       // token — clear local state and send the user back to login.
       queryClient.clear();
       dispatch(sessionEnded());
-      toast.show('success', 'Your password has been updated. Please log in again.');
+      toast.show('success', 'Password updated — sign in again.');
       router.replace('/(auth)/login');
     } catch (err: any) {
-      setError(toApiError(err).message || 'Could not update password. Please try again.');
+      toast.show('error', toApiError(err).message || 'Could not update password. Please try again.');
     }
   };
+
+  const lockIcon = <Lock size={iconSize.md} color={theme.colors.actionPrimary} />;
 
   return (
     <ScreenContainer scroll={false} background={false}>
       <ScreenHeader title="Change password" onBack={router.back} />
       <ScrollView
-        contentContainerStyle={{ padding: theme.spacing[4], paddingTop: theme.spacing[6], gap: theme.spacing[4] }}
+        contentContainerStyle={{
+          padding: theme.spacing[4],
+          paddingTop: theme.spacing[4],
+          gap: theme.spacing[6],
+        }}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}>
-        {error ? (
-          <Typography variant="body-sm" color="error">
-            {error}
-          </Typography>
-        ) : null}
-        <FormField label="Current password" required>
-          <Input
-            value={currentPassword}
-            onChangeText={setCurrentPassword}
-            placeholder="Current password"
-            secureTextEntry
-            autoCapitalize="none"
-            autoCorrect={false}
-            iconLeft={<Lock size={iconSize.sm} color={theme.colors.textMuted} />}
-          />
-        </FormField>
+        <Section>
+          <FormField label="Current password" required>
+            <Input
+              value={currentPassword}
+              onChangeText={setCurrentPassword}
+              placeholder="Current password"
+              secureTextEntry
+              autoCapitalize="none"
+              autoCorrect={false}
+              iconLeft={lockIcon}
+            />
+          </FormField>
 
-        <FormField label="New password" required helperText="8+ characters with uppercase, lowercase, number & symbol.">
-          <Input
-            value={newPassword}
-            onChangeText={setNewPassword}
-            placeholder="New password"
-            secureTextEntry
-            autoCapitalize="none"
-            autoCorrect={false}
-            iconLeft={<Lock size={iconSize.sm} color={theme.colors.textMuted} />}
-          />
-        </FormField>
+          <FormField
+            label="New password"
+            required
+            error={nextError}
+            helperText={
+              nextError == null
+                ? '8+ characters with uppercase, lowercase, number & symbol.'
+                : undefined
+            }>
+            <Input
+              value={newPassword}
+              onChangeText={setNewPassword}
+              placeholder="New password"
+              secureTextEntry
+              autoCapitalize="none"
+              autoCorrect={false}
+              iconLeft={lockIcon}
+            />
+          </FormField>
 
-        <FormField label="Confirm new password" required>
-          <Input
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-            placeholder="Repeat password"
-            secureTextEntry
-            autoCapitalize="none"
-            autoCorrect={false}
-            iconLeft={<Lock size={iconSize.sm} color={theme.colors.textMuted} />}
-          />
-        </FormField>
+          <FormField label="Confirm new password" required error={confirmError}>
+            <Input
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+              placeholder="Repeat password"
+              secureTextEntry
+              autoCapitalize="none"
+              autoCorrect={false}
+              iconLeft={lockIcon}
+            />
+          </FormField>
+        </Section>
 
         <InlineAlert variant="warning" title="You'll be signed out">
           All sessions end when the password changes. Sign in again afterwards.
@@ -120,16 +127,17 @@ export default function ChangePasswordScreen() {
 
       <View
         style={{
-          padding: theme.spacing[4],
-          borderTopWidth: theme.sizes.fieldBorderWidth,
-          borderTopColor: theme.colors.borderSubtle,
-          backgroundColor: theme.colors.surface,
+          paddingHorizontal: theme.spacing[4],
+          paddingTop: theme.spacing[4],
+          paddingBottom: theme.spacing[4],
+          gap: theme.spacing[2],
         }}>
         <Button
           label="Update password"
           size="lg"
           loading={changePassword.isPending}
-          onPress={handleChange}
+          disabled={!canSubmit}
+          onPress={() => void handleChange()}
         />
       </View>
     </ScreenContainer>

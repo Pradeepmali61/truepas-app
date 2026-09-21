@@ -71,16 +71,13 @@ export default function AddDocumentScreen() {
       </ScrollView>
       <View
         style={{
-          padding: theme.spacing[4],
-          paddingTop: theme.spacing[3],
+          paddingHorizontal: theme.spacing[4],
+          paddingTop: theme.spacing[4],
           paddingBottom: theme.spacing[4] + insets.bottom,
-          borderTopWidth: theme.sizes.fieldBorderWidth,
-          borderTopColor: theme.colors.borderSubtle,
-          backgroundColor: theme.colors.surface,
           gap: theme.spacing[2],
         }}>
-        <CoreButton fullWidth size="lg" accessibilityLabel="Continue to upload" onPress={continueToUpload}>
-          Continue to upload
+        <CoreButton fullWidth size="lg" accessibilityLabel="Continue" onPress={continueToUpload}>
+          Continue
         </CoreButton>
       </View>
     </SafeAreaView>

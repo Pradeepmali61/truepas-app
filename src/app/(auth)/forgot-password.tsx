@@ -1,13 +1,11 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Lock, Mail } from 'lucide-react-native';
 import { useState } from 'react';
-import { Text, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { toApiError } from '@/api/errors';
-import { BrandMark } from '@/components/app';
-import { FormField, Alert as InlineAlert, ScreenHeader } from '@/components/composite';
-import { ScreenContainer } from '@/components/layout/ScreenContainer';
-import { Field, SoftCard, useKitStyles } from '@/components/truepas';
+import { FormField, Alert as InlineAlert, ScreenHeader, Section } from '@/components/composite';
 import { Button, Input, Typography } from '@/components/ui';
 import { OtpVerification } from '@/features/auth/components/OtpVerification';
 import { useForgotPassword, useResetPassword } from '@/features/auth/mutations';
@@ -22,11 +20,14 @@ type Step = 'email' | 'otp' | 'reset';
  *  1. POST /auth/forgot-password {email} → OTP emailed (always 202)
  *  2. POST /auth/verify-otp {email, otp, purpose:'password_reset'} → OTP validated
  *     before the user types a new password (attempts counted here)
- *  3. POST /auth/reset-password {email, otp, newPassword} → resets, revokes sessions */
+ *  3. POST /auth/reset-password {email, otp, newPassword} → resets, revokes sessions
+ *  Visuals ported 1:1 from UI-design-repo ForgotPasswordScreen +
+ *  ResetPasswordScreen (design splits them across two routes; our real flow
+ *  keeps them as steps inside this screen). */
 export default function ForgotPasswordScreen() {
   const router = useRouter();
   const theme = useThemeTokens();
-  const kit = useKitStyles();
+  const insets = useSafeAreaInsets();
   // `?step=reset` lets the dev screen jump straight to the password form.
   const { step: stepParam } = useLocalSearchParams<{ step?: string }>();
   const [step, setStep] = useState<Step>(stepParam === 'reset' ? 'reset' : 'email');
@@ -34,7 +35,9 @@ export default function ForgotPasswordScreen() {
   const [verifiedOtp, setVerifiedOtp] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [error, setError] = useState('');
+  const [emailError, setEmailError] = useState<string>();
+  const [passwordError, setPasswordError] = useState<string>();
+  const [confirmError, setConfirmError] = useState<string>();
 
   const forgotPassword = useForgotPassword();
   const resetPassword = useResetPassword();
@@ -46,32 +49,44 @@ export default function ForgotPasswordScreen() {
 
   const handleSendOtp = async () => {
     const trimmed = email.trim();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) { setError('Enter a valid email address'); return; }
-    setError('');
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+      setEmailError('Enter a valid email address');
+      return;
+    }
+    setEmailError(undefined);
     setEmail(trimmed);
     try {
       await forgotPassword.mutateAsync({ email: trimmed });
+      toast.show('info', 'Check your inbox — if the account exists, a reset code is on its way.');
       setStep('otp');
     } catch (err: any) {
-      setError(toApiError(err).message || 'Could not send code. Please try again.');
+      toast.show('error', toApiError(err).message || 'Could not send code. Please try again.');
     }
   };
 
   const handleReset = async () => {
     // The OTP is verified on the previous step — landing here without it
     // (dev `?step=reset` jump) means the session is incomplete.
-    if (!email || !verifiedOtp) { setError('Your reset session is incomplete — request a new code.'); return; }
-    if (!newPassword || !confirmPassword) { setError('All fields are required'); return; }
+    if (!email || !verifiedOtp) {
+      toast.show('error', 'Your reset session is incomplete — request a new code.');
+      return;
+    }
     const passwordCheck = newPasswordSchema.safeParse(newPassword);
-    if (!passwordCheck.success) { setError(passwordCheck.error.issues[0].message); return; }
-    if (newPassword !== confirmPassword) { setError('Passwords do not match'); return; }
-    setError('');
+    setPasswordError(
+      !newPassword
+        ? 'Enter a new password'
+        : !passwordCheck.success
+          ? passwordCheck.error.issues[0].message
+          : undefined,
+    );
+    setConfirmError(confirmPassword !== newPassword ? "Passwords don't match" : undefined);
+    if (!newPassword || !passwordCheck.success || confirmPassword !== newPassword) return;
     try {
       await resetPassword.mutateAsync({ email, otp: verifiedOtp, newPassword });
       toast.show('success', 'Your password has been reset successfully.');
       router.replace('/(auth)/login');
     } catch (err: any) {
-      setError(toApiError(err).message || 'Could not reset password. Please try again.');
+      toast.show('error', toApiError(err).message || 'Could not reset password. Please try again.');
     }
   };
 
@@ -90,7 +105,6 @@ export default function ForgotPasswordScreen() {
         }}
         onVerified={(_response, code) => {
           setVerifiedOtp(code);
-          setError('');
           setStep('reset');
         }}
       />
@@ -98,95 +112,125 @@ export default function ForgotPasswordScreen() {
   }
 
   return (
-    <ScreenContainer scroll background={false}>
-      <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
+    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: theme.colors.background }}>
+      <ScreenHeader
+        title={effectiveStep === 'email' ? 'Reset password' : 'Choose a new password'}
+        onBack={router.back}
+      />
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{
+          padding: theme.spacing[4],
+          paddingTop: theme.spacing[4],
+          gap: theme.spacing[6],
+          flexGrow: 1,
+        }}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}>
         {effectiveStep === 'email' && (
-          <View style={{ flex: 1, justifyContent: 'center', padding: theme.spacing[4] }}>
-            <SoftCard style={[kit.loginCard, { width: '100%', maxWidth: 380, alignSelf: 'center' }]}>
-              <View style={kit.loginHead}>
-                <BrandMark compact />
-                <View style={{ gap: 6 }}>
-                  <Typography variant="h2">Forgot password</Typography>
-                  <Typography color="secondary">
-                    Enter the email linked to your account.
-                  </Typography>
-                </View>
-              </View>
+          <>
+            <View style={{ alignItems: 'center', gap: theme.spacing[1] }}>
+              <Typography variant="h3" center>
+                Find your account
+              </Typography>
+              <Typography color="secondary" center>
+                Enter your account email. If it exists, we&apos;ll send a reset code.
+              </Typography>
+            </View>
 
-              <Field label="Email">
-                <Input
-                  value={email}
-                  onChangeText={setEmail}
-                  placeholder="you@example.com"
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  state={error ? 'error' : 'default'}
-                  iconLeft={<Mail size={iconSize.md} color={theme.colors.actionPrimary} />}
-                />
-                {error ? (
-                  <Typography variant="body-sm" color="error">
-                    {error}
-                  </Typography>
-                ) : null}
-              </Field>
-
-              <Button
-                label="Send code"
-                size="lg"
-                loading={forgotPassword.isPending}
-                onPress={handleSendOtp}
+            <FormField label="Email" error={emailError}>
+              <Input
+                value={email}
+                onChangeText={(v) => {
+                  setEmail(v);
+                  setEmailError(undefined);
+                }}
+                placeholder="ada@example.com"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+                autoComplete="email"
+                iconLeft={<Mail size={iconSize.md} color={theme.colors.actionPrimary} />}
               />
-
-              <Text style={[kit.helper, kit.centerText]}>
-                Remembered it?{' '}
-                <Text style={kit.link} onPress={router.back} accessibilityRole="link">
-                  Back to sign in
-                </Text>
-              </Text>
-            </SoftCard>
-          </View>
+            </FormField>
+          </>
         )}
 
         {effectiveStep === 'reset' && (
           <>
-            <ScreenHeader title="Choose a new password" onBack={router.back} />
-            <View style={{ padding: theme.spacing[4], paddingTop: theme.spacing[6], gap: theme.spacing[4] }}>
-              {error ? (
-                <Typography variant="body-sm" color="error">
-                  {error}
-                </Typography>
-              ) : null}
-              <FormField label="New password" required helperText="8+ characters with uppercase, lowercase, number & symbol.">
+            <View style={{ alignItems: 'center', gap: theme.spacing[1] }}>
+              <Typography variant="h3" center>
+                Almost done
+              </Typography>
+              <Typography color="secondary" center>
+                Set a new password for {email || 'your account'}.
+              </Typography>
+            </View>
+
+            <Section>
+              <FormField label="New password" required error={passwordError}>
                 <Input
                   value={newPassword}
-                  onChangeText={setNewPassword}
+                  onChangeText={(v) => {
+                    setNewPassword(v);
+                    setPasswordError(undefined);
+                  }}
                   placeholder="New password"
                   secureTextEntry
                   autoCapitalize="none"
                   autoCorrect={false}
-                  iconLeft={<Lock size={iconSize.sm} color={theme.colors.textMuted} />}
+                  autoComplete="new-password"
+                  iconLeft={<Lock size={iconSize.md} color={theme.colors.actionPrimary} />}
                 />
               </FormField>
-              <FormField label="Confirm new password" required>
+              <FormField label="Confirm new password" required error={confirmError}>
                 <Input
                   value={confirmPassword}
-                  onChangeText={setConfirmPassword}
+                  onChangeText={(v) => {
+                    setConfirmPassword(v);
+                    setConfirmError(undefined);
+                  }}
                   placeholder="Repeat password"
                   secureTextEntry
                   autoCapitalize="none"
                   autoCorrect={false}
-                  iconLeft={<Lock size={iconSize.sm} color={theme.colors.textMuted} />}
+                  iconLeft={<Lock size={iconSize.md} color={theme.colors.actionPrimary} />}
                 />
               </FormField>
-              <InlineAlert variant="warning" title="Sessions revoked">
-                You&apos;ll be signed out of every device after the reset.
-              </InlineAlert>
-              <Button label="Reset password" size="lg" loading={resetPassword.isPending} onPress={handleReset} />
-            </View>
+            </Section>
+
+            <InlineAlert variant="warning" title="Sessions revoked">
+              You&apos;ll be signed out of every device after the reset.
+            </InlineAlert>
           </>
         )}
+      </ScrollView>
+
+      <View
+        style={{
+          paddingHorizontal: theme.spacing[4],
+          paddingTop: theme.spacing[4],
+          paddingBottom: theme.spacing[4] + insets.bottom,
+          gap: theme.spacing[2],
+        }}>
+        {effectiveStep === 'email' ? (
+          <Button
+            label="Send reset code"
+            size="lg"
+            loading={forgotPassword.isPending}
+            disabled={!email.trim()}
+            onPress={() => void handleSendOtp()}
+          />
+        ) : (
+          <Button
+            label="Reset password"
+            size="lg"
+            loading={resetPassword.isPending}
+            disabled={!newPassword || !confirmPassword}
+            onPress={() => void handleReset()}
+          />
+        )}
       </View>
-    </ScreenContainer>
+    </SafeAreaView>
   );
 }

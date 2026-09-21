@@ -1,3 +1,4 @@
+import { Avatar } from "@/components/ui/Avatar";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Pulse } from "@/components/ui/motion";
@@ -79,6 +80,16 @@ export interface ProductUser {
   fullName: string;
   email: string;
   faceEnrolled: boolean;
+}
+export interface ProductMember {
+  name: string;
+  relationship: string;
+  age: number;
+  ageBand: string;
+  verification: string;
+  faceCaptureMode?: string;
+  allowedCameras?: string[];
+  profileImageUrl?: string | null;
 }
 
 export function VerificationStatusCard({
@@ -270,6 +281,35 @@ export function DocumentCard({
       ) : (
         body
       )}
+    </SoftCard>
+  );
+}
+
+/** Family member card — relationship, age band, capture mode. */
+export function FamilyCard({ member, style }: { member: ProductMember; style?: StyleProp<ViewStyle> }) {
+  const styles = useStyles();
+  const verified = member.verification === "verified";
+  return (
+    <SoftCard style={[styles.productCard, style]}>
+      <View style={styles.rowBetween}>
+        <View style={[styles.rowCenter, { flex: 1 }]}>
+          <Avatar name={member.name} uri={member.profileImageUrl ?? undefined} size="lg" tinted />
+          <View style={{ gap: 2, flex: 1 }}>
+            <Text style={styles.cardTitle} numberOfLines={1}>{member.name}</Text>
+            <Text style={styles.helper} numberOfLines={1}>
+              {member.relationship} · age {member.age}
+            </Text>
+          </View>
+        </View>
+        <Badge variant={verified ? "success" : "warning"}>
+          {verified ? "Verified" : "Action needed"}
+        </Badge>
+      </View>
+      <View style={styles.rowWrap}>
+        <Badge variant="neutral">{member.faceCaptureMode === "liveness" ? "Liveness" : "Photo"}</Badge>
+        <Badge variant="neutral">{member.ageBand} yrs</Badge>
+        <Badge variant="neutral">{(member.allowedCameras ?? ["front"]).join(" + ")} cam</Badge>
+      </View>
     </SoftCard>
   );
 }

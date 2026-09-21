@@ -1,278 +1,242 @@
-import { zodResolver } from '@hookform/resolvers/zod';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Lock, Mail, Phone } from 'lucide-react-native';
+import { Lock, Mail, Phone, ScanFace } from 'lucide-react-native';
 import { useState } from 'react';
-import { Controller, useForm } from 'react-hook-form';
-import { Pressable, ScrollView, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { ScrollView, View } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { api } from '@/api';
 import { toApiError } from '@/api/errors';
-import { BrandMark } from '@/components/app';
-import { Alert, FormField } from '@/components/composite';
-import { SoftCard, useKitStyles } from '@/components/truepas';
-import { CoreButton, Input, Link, Select, Switch, Typography } from '@/components/ui';
-import { COUNTRIES, DEFAULT_COUNTRY_CODE } from '@/constants/countries';
-import { LoginForm, loginSchema } from '@/features/auth/schemas';
+import { Alert, FormField, ScreenHeader, Section } from '@/components/composite';
+import { CoreButton, Input, Link, NeuBox, NeuSegmented, Typography } from '@/components/ui';
+import { DEFAULT_COUNTRY_CODE } from '@/constants/countries';
+import { loginSchema } from '@/features/auth/schemas';
 import { sessionStarted } from '@/features/auth/slice';
-import { secureStorage } from '@/services/secureStorage';
 import { useAppDispatch } from '@/store';
-import { useThemeTokens } from '@/theme';
-import { iconSize } from '@/theme/tokens';
+import { makeStyles, useThemeTokens } from '@/theme';
 
-type LoginMethod = 'phone' | 'email';
+type IdentifierMode = 'email' | 'phone';
 
-/** Login — email + password; "Remember me" controls whether the refresh token
- *  is persisted. */
+/**
+ * Login — POST /auth/login { identifier, password } → AuthResponse.
+ * sessionStarted stores tokens + user; the index gate then routes to consent
+ * automatically when faceEnrolled is false.
+ * Ported 1:1 from UI-design-repo src/app/screens/auth/LoginScreen.tsx — the
+ * phone-number normalization, session-expired banner and 429 Retry-After
+ * messaging are our real backend contract, kept on top.
+ */
 export default function LoginScreen() {
+  const styles = useStyles();
+  const t = useThemeTokens();
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const theme = useThemeTokens();
-  const kit = useKitStyles();
+  const insets = useSafeAreaInsets();
   // Set by the session-expired handler in _layout — explains why the user
   // landed here instead of silently dropping them on a bare login form.
   const { reason } = useLocalSearchParams<{ reason?: string }>();
-  const [method, setMethod] = useState<LoginMethod>('phone');
-  const [countryCode, setCountryCode] = useState(DEFAULT_COUNTRY_CODE);
-  const [remember, setRemember] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-  const [loginError, setLoginError] = useState('');
+  const [mode, setMode] = useState<IdentifierMode>('email');
+  const [identifier, setIdentifier] = useState('');
+  const [password, setPassword] = useState('');
+  const [identifierError, setIdentifierError] = useState<string>();
+  const [passwordError, setPasswordError] = useState<string>();
+  const [formError, setFormError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const { control, handleSubmit, setValue } = useForm<LoginForm>({
-    resolver: zodResolver(loginSchema),
-    defaultValues: { identifier: '', password: '' },
-  });
-
-  const switchMethod = (next: LoginMethod) => {
-    if (next === method) return;
-    setMethod(next);
-    setValue('identifier', '');
-    setLoginError('');
-  };
-
-  const onSubmit = handleSubmit(async (values) => {
-    setSubmitting(true);
-    setLoginError('');
+  const submit = async () => {
+    if (loading) return;
+    const parsed = loginSchema.safeParse({ identifier, password });
+    if (!parsed.success) {
+      const fields = parsed.error.flatten().fieldErrors;
+      setIdentifierError(fields.identifier?.[0]);
+      setPasswordError(fields.password?.[0]);
+      return;
+    }
+    setLoading(true);
+    setFormError(null);
     try {
-      let identifier = values.identifier.trim();
-      if (method === 'phone') {
-        const digits = identifier.replace(/\D/g, '');
+      let value = identifier.trim();
+      if (mode === 'phone') {
+        const digits = value.replace(/\D/g, '');
         if (digits.length < 7 || digits.length > 15) {
-          setLoginError('Enter a valid mobile number');
-          setSubmitting(false);
+          setIdentifierError('Enter a valid mobile number');
           return;
         }
-        const cc = countryCode.slice(1);
+        const cc = DEFAULT_COUNTRY_CODE.slice(1);
         // A bare national number is ≤10 digits — always prepend the country
         // code. Only treat it as already-international when it's longer AND
         // starts with the cc digits (a 10-digit number can itself start with
         // '91', e.g. 9198765432, and must still get the +91 prefix).
-        identifier = digits.startsWith(cc) && digits.length > 10 ? `+${digits}` : `${countryCode}${digits}`;
-      } else if (!identifier.includes('@')) {
-        const digits = identifier.replace(/\D/g, '');
-        if (digits.length === 10) {
-          identifier = `${DEFAULT_COUNTRY_CODE}${digits}`;
-        } else if (digits.length > 10) {
-          identifier = `+${digits}`;
-        }
+        value = digits.startsWith(cc) && digits.length > 10 ? `+${digits}` : `${DEFAULT_COUNTRY_CODE}${digits}`;
       }
 
       const { user, accessToken, refreshToken } = await api.login({
-        identifier,
-        password: values.password,
+        identifier: value,
+        password,
       });
 
       if (!accessToken || !refreshToken) {
-        setLoginError('Login incomplete — tokens missing. Please finish registration or contact support.');
-        setSubmitting(false);
+        setFormError(
+          'Login incomplete — tokens missing. Please finish registration or contact support.',
+        );
         return;
       }
 
-      if (!remember) {
-        await secureStorage.clearRefreshToken();
-      }
-      dispatch(sessionStarted({ user, accessToken, refreshToken: remember ? refreshToken : undefined }));
+      dispatch(sessionStarted({ user, accessToken, refreshToken }));
     } catch (error) {
       const apiErr = toApiError(error);
       // Surface the server's Retry-After on 429/lockout so the user knows
       // when the next attempt will work instead of hammering the button.
-      setLoginError(
+      setFormError(
         apiErr.retryAfterSeconds
           ? `${apiErr.message} Try again in ${apiErr.retryAfterSeconds}s.`
           : apiErr.message,
       );
     } finally {
-      setSubmitting(false);
+      setLoading(false);
     }
-  });
+  };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.background }} edges={['top', 'bottom']}>
+    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: t.colors.background }}>
+      <ScreenHeader onBack={() => router.back()} />
       <ScrollView
-        contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: theme.spacing[5] }}
+        contentContainerStyle={{
+          padding: t.spacing[4],
+          paddingTop: t.spacing[4],
+          gap: t.spacing[6],
+          flexGrow: 1,
+        }}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}>
-        <SoftCard style={[kit.loginCard, { width: '100%', gap: theme.spacing[6], padding: theme.spacing[6] }]}>
-          <View style={kit.loginHead}>
-            <BrandMark />
-            <Typography variant="h1">Welcome back</Typography>
-          </View>
+        <View style={styles.brand}>
+          <NeuBox
+            variant="raised"
+            radius={t.radii.lg}
+            depth={4}
+            color={t.colors.actionPrimary}
+            style={styles.brandIcon}>
+            <ScanFace size={t.iconSize.sm} color={t.colors.onActionPrimary} />
+          </NeuBox>
+          <Typography variant="h4">Truepas</Typography>
+        </View>
 
-          {reason === 'session-expired' ? (
-            <Alert variant="warning" title="Session expired">
-              For your security, you were signed out. Please sign in again to continue.
-            </Alert>
-          ) : null}
+        <View style={styles.heading}>
+          <Typography variant="h2" center>
+            Welcome back
+          </Typography>
+          <Typography color="secondary" center>
+            Sign in with your email or phone.
+          </Typography>
+        </View>
 
-          <View
-            accessibilityRole="tablist"
-            style={{
-              flexDirection: 'row',
-              backgroundColor: theme.colors.surfaceSunken,
-              borderRadius: theme.radii.lg,
-              padding: theme.spacing[1.5],
-            }}>
-            {(['phone', 'email'] as const).map((m) => {
-              const active = method === m;
-              return (
-                <Pressable
-                  key={m}
-                  accessibilityRole="tab"
-                  accessibilityState={{ selected: active }}
-                  accessibilityLabel={`Sign in with ${m}`}
-                  onPress={() => switchMethod(m)}
-                  style={{
-                    flex: 1,
-                    height: theme.sizes.touchTarget,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    borderRadius: theme.radii.md,
-                    backgroundColor: active ? theme.colors.actionPrimary : 'transparent',
-                  }}>
-                  <Typography
-                    variant="body-lg"
-                    color={active ? 'inverse' : 'secondary'}
-                    style={{ fontWeight: active ? theme.fontWeight.semibold : theme.fontWeight.medium }}>
-                    {m === 'phone' ? 'Phone' : 'Email'}
-                  </Typography>
-                </Pressable>
-              );
-            })}
-          </View>
+        {reason === 'session-expired' ? (
+          <Alert variant="warning" title="Session expired">
+            For your security, you were signed out. Please sign in again to continue.
+          </Alert>
+        ) : null}
 
-          <View style={{ gap: theme.spacing[5] }}>
-            {method === 'phone' ? (
-              <Controller
-                control={control}
-                name="identifier"
-                render={({ field: { onChange, value }, fieldState }) => (
-                  <FormField label="Mobile number" error={fieldState.error?.message}>
-                    <View style={{ flexDirection: 'row', gap: theme.spacing[2] }}>
-                      <Select
-                        size="lg"
-                        title="Country code"
-                        accessibilityLabel="Country code"
-                        style={{ width: 124 }}
-                        value={countryCode}
-                        onValueChange={setCountryCode}
-                        options={COUNTRIES.map((c) => ({
-                          value: c.code,
-                          label: `${c.flag} ${c.name} (${c.code})`,
-                          fieldLabel: `${c.flag} ${c.code}`,
-                        }))}
-                      />
-                      <Input
-                        size="lg"
-                        containerStyle={{ flex: 1 }}
-                        value={value}
-                        onChangeText={onChange}
-                        placeholder="98765 43210"
-                        keyboardType="phone-pad"
-                        autoCorrect={false}
-                        iconLeft={<Phone size={iconSize.lg} color={theme.colors.actionPrimary} />}
-                      />
-                    </View>
-                  </FormField>
-                )}
-              />
-            ) : (
-              <Controller
-                control={control}
-                name="identifier"
-                render={({ field: { onChange, value }, fieldState }) => (
-                  <FormField label="Email" error={fieldState.error?.message}>
-                    <Input
-                      size="lg"
-                      value={value}
-                      onChangeText={onChange}
-                      placeholder="you@example.com"
-                      keyboardType="email-address"
-                      autoCapitalize="none"
-                      autoCorrect={false}
-                      iconLeft={<Mail size={iconSize.lg} color={theme.colors.actionPrimary} />}
-                    />
-                  </FormField>
-                )}
-              />
-            )}
-            <Controller
-              control={control}
-              name="password"
-              render={({ field: { onChange, value }, fieldState }) => (
-                <FormField label="Password" error={fieldState.error?.message}>
-                  <Input
-                    size="lg"
-                    value={value}
-                    onChangeText={onChange}
-                    placeholder="Enter your password"
-                    secureTextEntry
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                    iconLeft={<Lock size={iconSize.lg} color={theme.colors.actionPrimary} />}
-                  />
-                </FormField>
-              )}
+        <Section>
+          <NeuSegmented
+            label="Sign in method"
+            options={[
+              { value: 'email', label: 'Email', icon: Mail },
+              { value: 'phone', label: 'Phone', icon: Phone },
+            ]}
+            value={mode}
+            onChange={(m) => {
+              setMode(m);
+              setIdentifier('');
+              setIdentifierError(undefined);
+              setFormError(null);
+            }}
+          />
+          <FormField
+            label={mode === 'email' ? 'Email' : 'Phone number'}
+            error={identifierError}>
+            <Input
+              placeholder={mode === 'email' ? 'ada@example.com' : '+1 415 555 0123'}
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType={mode === 'email' ? 'email-address' : 'phone-pad'}
+              value={identifier}
+              onChangeText={(v) => {
+                setIdentifier(v);
+                setIdentifierError(undefined);
+                setFormError(null);
+              }}
+              iconLeft={
+                mode === 'email' ? (
+                  <Mail size={t.iconSize.md} color={t.colors.actionPrimary} />
+                ) : (
+                  <Phone size={t.iconSize.md} color={t.colors.actionPrimary} />
+                )
+              }
             />
-          </View>
-
-          <View style={kit.rowBetween}>
-            <Switch
-              value={remember}
-              onValueChange={setRemember}
-              label={<Typography variant="body-lg">Remember me</Typography>}
-              style={{ flex: 1 }}
+          </FormField>
+          <FormField label="Password" error={passwordError}>
+            <Input
+              placeholder="••••••••••"
+              secureTextEntry
+              value={password}
+              onChangeText={(v) => {
+                setPassword(v);
+                setPasswordError(undefined);
+                setFormError(null);
+              }}
+              iconLeft={<Lock size={t.iconSize.md} color={t.colors.actionPrimary} />}
             />
-            <Link
-              variant="quiet"
-              onPress={() => router.push('/(auth)/forgot-password' as never)}
-              accessibilityLabel="Forgot password"
-              style={{ fontSize: theme.fontSize.base, fontWeight: theme.fontWeight.medium, flexShrink: 0 }}>
+          </FormField>
+
+          {formError && (
+            <Typography variant="caption" color="error" center>
+              {formError}
+            </Typography>
+          )}
+
+          <View style={styles.helperRow}>
+            <Link onPress={() => router.push('/(auth)/forgot-password' as never)}>
               Forgot password?
             </Link>
           </View>
-
-          {loginError ? (
-            <Typography color="error" center>
-              {loginError}
-            </Typography>
-          ) : null}
-
-          <CoreButton fullWidth size="lg" loading={submitting} onPress={onSubmit}>
-            Sign in
-          </CoreButton>
-
-          <Typography variant="body" color="muted" center>
-            New to TruePas?{' '}
-            <Link
-              variant="quiet"
-              onPress={() => router.push('/(auth)/register')}
-              accessibilityLabel="Create account"
-              style={{ fontSize: theme.fontSize.base, fontWeight: theme.fontWeight.medium }}>
-              Create an account
-            </Link>
-          </Typography>
-        </SoftCard>
+        </Section>
       </ScrollView>
+
+      <View
+        style={{
+          paddingHorizontal: t.spacing[4],
+          paddingTop: t.spacing[4],
+          paddingBottom: t.spacing[4] + insets.bottom,
+          gap: t.spacing[2],
+        }}>
+        <CoreButton
+          fullWidth
+          size="lg"
+          loading={loading}
+          disabled={!identifier.trim() || !password}
+          onPress={() => void submit()}>
+          Sign in
+        </CoreButton>
+        <Typography variant="body-sm" color="muted" center>
+          New to Truepas?{' '}
+          <Link onPress={() => router.push('/(auth)/register')}>Create account</Link>
+        </Typography>
+      </View>
     </SafeAreaView>
   );
 }
+
+const useStyles = makeStyles((t) => ({
+  brand: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: t.spacing[2],
+  },
+  brandIcon: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heading: { alignItems: 'center', gap: t.spacing[1] },
+  helperRow: { flexDirection: 'row', justifyContent: 'flex-end' },
+}));

@@ -1,4 +1,5 @@
 import { useRouter } from 'expo-router';
+import { User } from 'lucide-react-native';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -33,19 +34,20 @@ export default function AddFamilyScreen() {
   const [fullName, setFullName] = useState('');
   const [dob, setDob] = useState('');
   const [relationship, setRelationship] = useState('Child');
-  const [errors, setErrors] = useState<{ name?: string; dob?: string }>({});
+  const [errors, setErrors] = useState<{ name?: string; dob?: string; relationship?: string }>({});
 
   const submit = () => {
     const trimmed = fullName.trim();
     const next: typeof errors = {};
-    if (trimmed.length < 2) next.name = 'Enter the full name';
+    if (trimmed.length < 2) next.name = 'Name is required';
     else if (trimmed.length > 100) next.name = 'Name is too long';
-    if (!dob) next.dob = 'Required';
+    if (!dob) next.dob = 'Pick a date of birth';
     else {
       const age = ageFromDob(dob);
       if (!Number.isFinite(age)) next.dob = 'Enter a valid date';
-      else if (age < 0) next.dob = 'Date cannot be in the future';
+      else if (age < 0) next.dob = 'Date of birth must be in the past';
     }
+    if (!relationship) next.relationship = 'Choose a relationship';
     setErrors(next);
     if (Object.keys(next).length > 0) return;
 
@@ -74,6 +76,7 @@ export default function AddFamilyScreen() {
               autoCapitalize="words"
               maxLength={100}
               accessibilityLabel="Full name"
+              iconLeft={<User size={theme.iconSize.md} color={theme.colors.actionPrimary} />}
             />
           </FormField>
           <FormField label="Date of birth" required error={errors.dob}>
@@ -85,7 +88,7 @@ export default function AddFamilyScreen() {
               accessibilityLabel="Date of birth"
             />
           </FormField>
-          <FormField label="Relationship" required>
+          <FormField label="Relationship" required error={errors.relationship}>
             <Select
               options={RELATIONSHIPS}
               value={relationship}
@@ -101,12 +104,10 @@ export default function AddFamilyScreen() {
       </KeyboardAvoidingView>
       <View
         style={{
-          padding: theme.spacing[4],
-          paddingTop: theme.spacing[3],
+          paddingHorizontal: theme.spacing[4],
+          paddingTop: theme.spacing[4],
           paddingBottom: theme.spacing[4] + insets.bottom,
-          borderTopWidth: theme.sizes.fieldBorderWidth,
-          borderTopColor: theme.colors.borderSubtle,
-          backgroundColor: theme.colors.surface,
+          gap: theme.spacing[2],
         }}>
         <CoreButton fullWidth size="lg" accessibilityLabel="Add member" onPress={submit}>
           Add member
