@@ -20,12 +20,21 @@ import {
     User
 } from "lucide-react-native";
 import { useState, type ReactNode } from "react";
-import { Pressable, Text, View, type StyleProp, type ViewStyle } from "react-native";
+import { Image, Pressable, Text, View, type StyleProp, type ViewStyle } from "react-native";
 import Svg, { Circle } from "react-native-svg";
 import { CircleButton, SoftCard, StepDots } from "./core";
 import { useStyles } from "./styles";
 
 /* TruePas product components — verification, documents, family, history. */
+
+/** Design-repo home.tsx formatCheckIn — ISO or date-only → "Mon d, yyyy". */
+export function formatCheckIn(iso: string): string {
+  return new Date(iso.includes("T") ? iso : `${iso}T12:00:00`).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
 
 export interface ProductDocument {
   label: string;
@@ -52,10 +61,12 @@ export interface ProductBooking {
   venue: string;
   location: string;
   status: string;
+  /** ISO date — formatted internally (design-repo formatCheckIn). */
   checkIn: string;
   guests: number;
   amount: number;
   checkedInMembers: unknown[];
+  image?: string;
 }
 export interface ProductNotification {
   title: string;
@@ -300,22 +311,31 @@ const BOOKING_STATUS: Record<string, { variant: "success" | "info" | "neutral" |
 /** Booking / check-in card with the check-in progress. */
 export function BookingCard({
   booking,
-  progress,
   onPress,
   style,
 }: {
   booking: ProductBooking;
-  /** 0–100 fill for the check-in bar; defaults to 100 when completed, 35 otherwise. */
-  progress?: number;
   onPress?: () => void;
   style?: StyleProp<ViewStyle>;
 }) {
   const styles = useStyles();
   const theme = useThemeTokens();
+  const completed = booking.status === "completed";
+  const cancelled = booking.status === "cancelled";
   const status = BOOKING_STATUS[booking.status] ?? { variant: "neutral" as const, label: booking.status };
   const checkedIn = booking.checkedInMembers.length;
   const body = (
     <>
+      {booking.image ? (
+        <Image
+          source={{ uri: booking.image }}
+          style={{
+            width: "100%",
+            height: 96,
+            borderRadius: theme.radii.md,
+          }}
+        />
+      ) : null}
       <View style={styles.rowBetween}>
         <View style={{ gap: 2, flexShrink: 1 }}>
           <Text style={styles.cardTitle} numberOfLines={1}>{booking.venue}</Text>
@@ -329,21 +349,36 @@ export function BookingCard({
       <View style={styles.rowBetween}>
         <View style={{ gap: 2 }}>
           <Text style={styles.helper}>Check-in</Text>
-          <Text style={styles.body}>{booking.checkIn}</Text>
+          <Text style={styles.body} numberOfLines={1}>{formatCheckIn(booking.checkIn)}</Text>
         </View>
         <View style={{ gap: 2 }}>
           <Text style={styles.helper}>Guests</Text>
-          <Text style={styles.body}>{booking.guests}</Text>
+          <Text style={styles.body} numberOfLines={1}>{booking.guests}</Text>
         </View>
         <View style={{ gap: 2, alignItems: "flex-end" }}>
           <Text style={styles.helper}>Total</Text>
-          <Text style={styles.body}>${booking.amount.toFixed(2)}</Text>
+          <Text style={styles.body} numberOfLines={1}>${booking.amount.toFixed(2)}</Text>
         </View>
       </View>
-      <Progress value={progress ?? (booking.guests > 0 ? (checkedIn / booking.guests) * 100 : booking.status === "completed" ? 100 : 35)} />
-      <Text style={styles.helper}>
-        {checkedIn} of {booking.guests} checked in
-      </Text>
+      {!cancelled && (
+        <>
+          <View style={{ gap: theme.spacing[1] }}>
+            <Text
+              style={{
+                fontFamily: theme.fontFamily.mono.semibold,
+                fontSize: theme.fontSize["2xl"],
+                color: theme.colors.textPrimary,
+              }}
+            >
+              {checkedIn}/{booking.guests}
+            </Text>
+            <Text style={styles.helper}>checked in</Text>
+          </View>
+          <Progress
+            value={completed ? 100 : Math.round((checkedIn / Math.max(booking.guests, 1)) * 100)}
+          />
+        </>
+      )}
     </>
   );
   return (

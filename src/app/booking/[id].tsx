@@ -1,171 +1,162 @@
+/**
+ * BookingDetailScreen — a single booking. Hero with venue + location,
+ * then a details grid (dates, guests, amount, status, checked-in count).
+ *
+ * Ported 1:1 from UI-design-repo src/app/screens/main/BookingDetailScreen.tsx.
+ */
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Hotel, MapPin, Ticket } from 'lucide-react-native';
-import { ScrollView, View } from 'react-native';
+import { CalendarDays, Hotel, MapPin, Plane, Ticket, type LucideIcon } from 'lucide-react-native';
+import type { ReactNode } from 'react';
+import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Card, CardContent, CardHeader, CardTitle, ErrorState, ScreenHeader } from '@/components/composite';
-import { HistoryRow } from '@/components/truepas';
-import {
-    Badge,
-    Divider,
-    RowIcon,
-    Skeleton,
-    Typography,
-    type BadgeVariant,
-} from '@/components/ui';
-import { useFamily } from '@/features/family/hooks';
+import { AsyncBlock, ScreenHeader, Section, SectionTitle } from '@/components/composite';
+import { Divider, NeuBox, StatusChip, Typography } from '@/components/ui';
 import { useBooking } from '@/features/history/hooks';
-import { useAppSelector } from '@/store';
-import { useThemeTokens } from '@/theme';
-import { iconSize } from '@/theme/tokens';
+import { makeStyles, useThemeTokens } from '@/theme';
+import type { Booking } from '@/types/domain';
 
-const STATUS: Record<string, { variant: BadgeVariant; label: string }> = {
-  completed: { variant: 'success', label: 'Completed' },
-  upcoming: { variant: 'info', label: 'Upcoming' },
-  cancelled: { variant: 'neutral', label: 'Cancelled' },
-  failed: { variant: 'error', label: 'Failed' },
-};
-
-function KV({ label, value, mono = true }: { label: string; value: string; mono?: boolean }) {
-  const theme = useThemeTokens();
-  return (
-    <View style={{ flex: 1, gap: 2, minWidth: 0 }}>
-      <Typography variant="caption" color="muted" style={{ textTransform: 'uppercase', letterSpacing: 0.5 }}>
-        {label}
-      </Typography>
-      <Typography
-        variant="body"
-        numberOfLines={1}
-        style={mono ? { fontFamily: theme.fontFamily.mono.semibold } : undefined}>
-        {value}
-      </Typography>
-    </View>
-  );
-}
-
-function formatDate(value: string): string {
-  const d = new Date(value);
+function formatDate(s: string): string {
+  const d = new Date(s);
   return Number.isNaN(d.getTime())
-    ? value
-    : d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+    ? s
+    : d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-function formatDateTime(value: string): string {
-  const d = new Date(value);
-  return Number.isNaN(d.getTime())
-    ? value
-    : d.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+function bookingIcon(type: Booking['type']): LucideIcon {
+  switch (type) {
+    case 'hotel':
+      return Hotel;
+    case 'event':
+      return Ticket;
+    case 'flight':
+      return Plane;
+    default:
+      return CalendarDays;
+  }
 }
 
-/** Booking detail — GET /cb/bookings/{bookingId}. checkedInMembers are person
- *  IDs; names resolve via family/user data. */
+/** Booking detail — GET /cb/bookings/{bookingId}. */
 export default function BookingDetailScreen() {
-  const theme = useThemeTokens();
+  const styles = useStyles();
+  const t = useThemeTokens();
   const router = useRouter();
-  const { id } = useLocalSearchParams<{ id: string }>();
-  const { data: booking, isPending, isError, refetch } = useBooking(id);
-  const { data: family } = useFamily();
-  const user = useAppSelector((s) => s.auth.user);
-
-  if (isPending) {
-    return (
-      <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: theme.colors.background }}>
-        <ScreenHeader title="Check-in" onBack={() => router.back()} />
-        <View style={{ padding: theme.spacing[4], gap: theme.spacing[4] }}>
-          <Skeleton height={72} radius={theme.radii.xl} />
-          <Skeleton height={140} radius={theme.radii.xl} />
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  if (isError || !booking) {
-    return (
-      <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: theme.colors.background }}>
-        <ScreenHeader title="Check-in" onBack={() => router.back()} />
-        <ErrorState
-          title="Couldn't load booking"
-          description="This booking may have been removed, or your connection dropped."
-          onRetry={refetch}
-        />
-      </SafeAreaView>
-    );
-  }
-
-  const status = STATUS[booking.status] ?? { variant: 'neutral' as const, label: booking.status };
-  const isHotel = booking.type === 'hotel';
-  const memberIds = booking.checkedInMembers ?? [];
-
-  const resolveName = (personId: string): string => {
-    if (user && personId === user.id) return user.fullName;
-    return family?.find((m) => m.id === personId)?.name ?? 'Family member';
-  };
+  const { id } = useLocalSearchParams<{ id?: string }>();
+  const booking = useBooking(id ?? '');
 
   return (
-    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: theme.colors.background }}>
-      <ScreenHeader title={booking.venue} onBack={() => router.back()} />
+    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: t.colors.background }}>
+      <ScreenHeader title="Booking" onBack={() => router.back()} />
       <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={{ padding: theme.spacing[4], gap: theme.spacing[4], paddingBottom: theme.spacing[8] }}
+        contentContainerStyle={{ padding: t.spacing[4], gap: t.spacing[6], paddingBottom: t.spacing[8] }}
         showsVerticalScrollIndicator={false}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing[3] }}>
-          <RowIcon
-            tone={isHotel ? 'primary' : 'info'}
-            icon={
-              isHotel ? (
-                <Hotel size={iconSize.lg} color={theme.colors.actionPrimary} />
-              ) : (
-                <Ticket size={iconSize.lg} color={theme.colors.onInfoSubtle} />
-              )
-            }
-          />
-          <View style={{ flex: 1, gap: 2, minWidth: 0 }}>
-            <Typography variant="h4" numberOfLines={1}>{booking.venue}</Typography>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing[1] }}>
-              <MapPin size={iconSize.xs} color={theme.colors.textMuted} />
-              <Typography variant="body-sm" color="secondary" numberOfLines={1}>
-                {booking.location}
-              </Typography>
-            </View>
-          </View>
-          <Badge variant={status.variant}>{status.label}</Badge>
-        </View>
+        <AsyncBlock state={booking}>
+          {(b) => {
+            const Icon = bookingIcon(b.type);
+            return (
+              <>
+                {/* ---------- hero ---------- */}
+                <NeuBox variant="raised" style={styles.hero}>
+                  <View style={styles.heroRow}>
+                    <View style={styles.heroIcon}>
+                      <Icon size={t.iconSize.lg} color={t.colors.actionPrimary} />
+                    </View>
+                    <View style={styles.flex}>
+                      <Typography variant="h4" numberOfLines={1}>
+                        {b.venue}
+                      </Typography>
+                      <View style={styles.locRow}>
+                        <MapPin size={t.iconSize.xs} color={t.colors.textMuted} />
+                        <Typography variant="body-sm" color="secondary" numberOfLines={1}>
+                          {b.location}
+                        </Typography>
+                      </View>
+                    </View>
+                    <StatusChip status={b.status} />
+                  </View>
+                </NeuBox>
 
-        <Card>
-          <CardContent style={{ gap: theme.spacing[3] }}>
-            <View style={{ flexDirection: 'row', gap: theme.spacing[3] }}>
-              <KV label="Check-in" value={formatDate(booking.checkIn)} />
-              <KV label="Check-out" value={formatDate(booking.checkOut)} />
-            </View>
-            <Divider />
-            <View style={{ flexDirection: 'row', gap: theme.spacing[3] }}>
-              <KV label="Guests" value={String(booking.guests)} />
-              <KV label="Total" value={`$${booking.amount.toFixed(2)}`} />
-            </View>
-          </CardContent>
-        </Card>
-
-        {memberIds.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Checked-in members</CardTitle>
-            </CardHeader>
-            <CardContent style={{ gap: theme.spacing[3] }}>
-              {memberIds.map((personId, i) => (
-                <View key={personId}>
-                  {i > 0 && <Divider style={{ marginBottom: theme.spacing[3] }} />}
-                  <HistoryRow
-                    title={resolveName(personId)}
-                    meta="Face check-in"
-                    outcome="success"
-                    when={formatDateTime(booking.checkIn)}
-                  />
-                </View>
-              ))}
-            </CardContent>
-          </Card>
-        )}
+                {/* ---------- details ---------- */}
+                <Section>
+                  <SectionTitle>Details</SectionTitle>
+                  <NeuBox variant="raised" style={styles.card}>
+                    <View style={styles.row2}>
+                      <KV label="Check-in" value={formatDate(b.checkIn)} mono />
+                      <KV label="Check-out" value={formatDate(b.checkOut)} mono />
+                    </View>
+                    <Divider />
+                    <View style={styles.row2}>
+                      <KV label="Guests" value={String(b.guests)} mono />
+                      <KV label="Amount" value={`$${b.amount.toFixed(2)}`} mono />
+                    </View>
+                    <Divider />
+                    <View style={styles.row2}>
+                      <KV label="Status">
+                        <StatusChip status={b.status} />
+                      </KV>
+                      <KV
+                        label="Checked-in members"
+                        value={String((b.checkedInMembers ?? []).length)}
+                        mono
+                      />
+                    </View>
+                  </NeuBox>
+                </Section>
+              </>
+            );
+          }}
+        </AsyncBlock>
       </ScrollView>
     </SafeAreaView>
   );
 }
+
+function KV({
+  label,
+  value,
+  mono,
+  children,
+}: {
+  label: string;
+  value?: string;
+  mono?: boolean;
+  children?: ReactNode;
+}) {
+  const styles = useStyles();
+  return (
+    <View style={styles.kvCell}>
+      <Text style={styles.kvLabel}>{label}</Text>
+      {children ?? (
+        <Text style={[styles.kvValue, mono && styles.mono]} numberOfLines={2}>
+          {value}
+        </Text>
+      )}
+    </View>
+  );
+}
+
+const useStyles = makeStyles((t) => ({
+  flex: { flex: 1 },
+  hero: { padding: t.spacing[4] },
+  heroRow: { flexDirection: 'row', alignItems: 'center', gap: t.spacing[3] },
+  heroIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: t.radii.xl,
+    backgroundColor: t.colors.actionPrimarySubtle,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  locRow: { flexDirection: 'row', alignItems: 'center', gap: t.spacing[1] },
+  card: { padding: t.spacing[4], gap: t.spacing[3] },
+  row2: { flexDirection: 'row', gap: t.spacing[4] },
+  kvCell: { flex: 1, gap: t.spacing[1] },
+  kvLabel: {
+    fontSize: t.fontSize.xs,
+    color: t.colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: t.letterSpacing.caps,
+  },
+  kvValue: { fontSize: t.fontSize.base, fontWeight: t.fontWeight.medium, color: t.colors.textPrimary },
+  mono: { fontFamily: t.fontFamily.mono.semibold },
+}));

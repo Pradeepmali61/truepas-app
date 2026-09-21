@@ -18,7 +18,7 @@ import {
 } from "lucide-react-native";
 import { useState } from "react";
 import { Pressable, Text, View, type StyleProp, type ViewStyle } from "react-native";
-import { SoftCard, VariantTag } from "./core";
+import { SoftCard } from "./core";
 import type { ProductDocument } from "./product";
 import { useStyles } from "./styles";
 
@@ -141,7 +141,6 @@ export function DocumentDetailCard({ doc }: { doc: ProductDocument }) {
   ];
   return (
     <SoftCard style={styles.productCard}>
-      <VariantTag>C · Detail</VariantTag>
       <View style={styles.rowBetween}>
         <View style={styles.rowCenter}>
           <View style={[styles.productIcon, { backgroundColor: theme.colors.brandSubtle }]}>
@@ -193,13 +192,22 @@ export function DocumentDetailCard({ doc }: { doc: ProductDocument }) {
 }
 
 /** D · Verify — match score and re-verify action up front. */
-export function DocumentVerifyCard({ doc }: { doc: ProductDocument }) {
+export function DocumentVerifyCard({
+  doc,
+  onShare,
+  onReverify,
+}: {
+  doc: ProductDocument;
+  /** Share handler — the Share button renders only when provided. */
+  onShare?: () => void;
+  /** Re-verify handler — the Re-verify button renders only when provided. */
+  onReverify?: () => void;
+}) {
   const styles = useStyles();
   const theme = useThemeTokens();
   const pct = doc.matchScore != null ? Math.round(doc.matchScore * 100) : null;
   return (
     <SoftCard style={styles.productCard}>
-      <VariantTag>D · Verify</VariantTag>
       <View style={styles.rowBetween}>
         <View style={styles.rowCenter}>
           <View style={[styles.productIcon, { backgroundColor: theme.colors.brandSubtle }]}>
@@ -219,25 +227,33 @@ export function DocumentVerifyCard({ doc }: { doc: ProductDocument }) {
         </View>
         {pct != null && <Progress value={pct} />}
       </View>
-      <View style={styles.sheetActions}>
-        <View style={{ flex: 1 }}>
-          <Button
-            fullWidth
-            variant="secondary"
-            iconLeft={<Share size={iconSize.sm} color={theme.colors.actionPrimary} />}
-          >
-            Share
-          </Button>
+      {(onShare || onReverify) && (
+        <View style={styles.sheetActions}>
+          {onShare && (
+            <View style={{ flex: 1 }}>
+              <Button
+                fullWidth
+                variant="secondary"
+                onPress={onShare}
+                iconLeft={<Share size={iconSize.sm} color={theme.colors.actionPrimary} />}
+              >
+                Share
+              </Button>
+            </View>
+          )}
+          {onReverify && (
+            <View style={{ flex: 1 }}>
+              <Button
+                fullWidth
+                onPress={onReverify}
+                iconLeft={<RefreshCw size={iconSize.sm} color={theme.colors.onActionPrimary} />}
+              >
+                Re-verify
+              </Button>
+            </View>
+          )}
         </View>
-        <View style={{ flex: 1 }}>
-          <Button
-            fullWidth
-            iconLeft={<RefreshCw size={iconSize.sm} color={theme.colors.onActionPrimary} />}
-          >
-            Re-verify
-          </Button>
-        </View>
-      </View>
+      )}
     </SoftCard>
   );
 }

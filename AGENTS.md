@@ -9,6 +9,8 @@ Screen layouts mirror the design repo **1:1**:
 - App screens: `src/app/screens/**` (e.g. `verify/LivenessScreen.tsx` = our `(onboarding)/face-scan.tsx` intro)
 - Design primitives there (`AppScreen`, `Section`, `NeuBox`, `NeuWell`, `ScanFrame`, `Pulse`/`Blink` motion) map to our `src/components/ui` + `ScreenHeader`/`SafeAreaView` patterns.
 - When rebuilding a screen, read the matching design file first — don't guess the layout.
+- `src/components/ui/ScanFrame.tsx` — corner-bracket viewfinder ported from the design repo. In `LivenessCamera` the challenge stage mounts the live `Camera` INSIDE the ScanFrame square (`resizeMode="cover"`); during `finalizing`/`passed` the same `cameraView` element mounts off-screen at `-2000` (required for `capturePhotoToFile` + the Fabric unmount-crash workaround).
+- Liveness stage UIs are pure presentational components in `src/features/liveness/LivenessStages.tsx` (camera arrives as a ReactNode). Preview them without a native camera via `src/app/dev-liveness.tsx` → dev menu entries "Liveness — challenge/verifying/verified/failed (preview)".
 
 ## Dev screen browser
 

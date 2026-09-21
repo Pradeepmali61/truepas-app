@@ -1,8 +1,14 @@
+import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { CircleCheck, CircleHelp, Eye, ScanFace, SwitchCamera, TriangleAlert, X } from 'lucide-react-native';
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { Linking, Text, View } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+    Animated,
+    Easing,
+    Linking,
+    StyleSheet,
+    View
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import {
     Camera,
     useCameraDevice,
@@ -17,14 +23,17 @@ import {
 import { runOnJS } from 'react-native-worklets';
 
 import { toApiError } from '@/api/errors';
-import { Alert, Card, CardContent, FlowSteps, ScreenHeader } from '@/components/composite';
-import { LivenessGuideDial, StepDots } from '@/components/truepas';
-import { Badge, CoreButton, FadeUp, IconButton, PopIn, Pulse, RowIcon, ScanLine, Spinner, Typography } from '@/components/ui';
+import { Alert, ScreenHeader } from '@/components/composite';
+import {
+    CoreButton,
+    Spinner,
+    Typography
+} from '@/components/ui';
 import { useEnrollFace, useUpdateFace } from '@/features/auth/mutations';
+import { ChallengeStage, FinishingStage, LivenessResultStage } from '@/features/liveness/LivenessStages';
 import { useLivenessSession } from '@/features/liveness/useLivenessSession';
 import { flowGuards } from '@/services/flowGuards';
-import { alpha, useThemeTokens } from '@/theme';
-import { iconSize } from '@/theme/tokens';
+import { useThemeTokens } from '@/theme';
 
 interface LivenessCameraProps {
   /** "enroll" for first-time enrollment, "update" for face update flow. */
@@ -47,76 +56,6 @@ interface LivenessCameraProps {
 const BLINK_CLOSED_THRESHOLD = 0.35;
 const BLINK_OPEN_THRESHOLD = 0.6;
 const YAW_THRESHOLD = 12; // degrees
-
-/** Step preview row for the intro screen — leading chip + title + step label. */
-function StepRow({ leading, title, subtitle }: { leading: ReactNode; title: string; subtitle: string }) {
-  const theme = useThemeTokens();
-  return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing[3], paddingVertical: theme.spacing[2] }}>
-      {leading}
-      <View style={{ flex: 1, gap: 2, minWidth: 0 }}>
-        <Typography variant="body">{title}</Typography>
-        <Typography variant="body-sm" color="secondary">{subtitle}</Typography>
-      </View>
-    </View>
-  );
-}
-
-/** Detection frame — light sunken box + corner brackets + brand glow behind a
- *  filled face ring, scanline sweeping (design: verification.tsx `FaceFrame`).
- *  `camera` renders as an absolute layer under the overlays. */
-function FaceFrame({ camera, pulseMs = 1200 }: { camera?: ReactNode; pulseMs?: number }) {
-  const theme = useThemeTokens();
-  const corner = {
-    position: 'absolute' as const,
-    width: 26,
-    height: 26,
-    borderColor: theme.colors.actionPrimary,
-  };
-  return (
-    <View
-      style={{
-        width: '100%',
-        aspectRatio: 4 / 5,
-        borderRadius: theme.radii['2xl'],
-        backgroundColor: theme.colors.surfaceSunken,
-        overflow: 'hidden',
-      }}>
-      {camera}
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: theme.spacing[8] }}>
-        <View
-          style={{
-            position: 'absolute',
-            width: 190,
-            height: 190,
-            borderRadius: theme.radii.full,
-            backgroundColor: alpha(theme.colors.actionPrimary, 0.18),
-          }}
-        />
-        <ScanLine color={theme.colors.accent} />
-        <Pulse to={1.04} ms={pulseMs}>
-          <View
-            style={{
-              width: 150,
-              height: 190,
-              borderRadius: 95,
-              borderWidth: 3,
-              borderColor: theme.colors.actionPrimary,
-              backgroundColor: theme.colors.actionPrimary,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}>
-            <ScanFace size={56} color={theme.colors.onActionPrimary} />
-          </View>
-        </Pulse>
-      </View>
-      <View style={[corner, { top: 14, left: 14, borderTopWidth: 3, borderLeftWidth: 3, borderTopLeftRadius: 8 }]} />
-      <View style={[corner, { top: 14, right: 14, borderTopWidth: 3, borderRightWidth: 3, borderTopRightRadius: 8 }]} />
-      <View style={[corner, { bottom: 14, left: 14, borderBottomWidth: 3, borderLeftWidth: 3, borderBottomLeftRadius: 8 }]} />
-      <View style={[corner, { bottom: 14, right: 14, borderBottomWidth: 3, borderRightWidth: 3, borderBottomRightRadius: 8 }]} />
-    </View>
-  );
-}
 
 /**
  * Full liveness challenge camera using react-native-vision-camera v5
@@ -148,8 +87,6 @@ export function LivenessCamera({ mode, personId, onSuccess, onError, allowBackCa
   const liveness = useLivenessSession();
   const enrollFace = useEnrollFace();
   const updateFace = useUpdateFace();
-  // Absolute overlays ignore SafeAreaView padding — apply insets manually
-  const insets = useSafeAreaInsets();
 
   // Under-10 members may flip to the rear camera (parent holds the phone);
   // everyone else stays front-only per the age-band spec.
@@ -517,6 +454,30 @@ export function LivenessCamera({ mode, personId, onSuccess, onError, allowBackCa
     }
   }, [sessionLeft, liveness.phase, failSession]);
 
+  // Per-step progress drain (design-repo `capture` anim): the track fill
+  // sweeps from step→step+1 over the server's max step time. Lazy useState
+  // init — a ref read during render trips react-hooks/refs.
+  const [capture] = useState(() => new Animated.Value(0));
+  const stepMs = liveness.challenge?.step_time_limits.max_ms ?? 6000;
+  useEffect(() => {
+    if (liveness.phase !== 'challenging') return;
+    capture.setValue(0);
+    Animated.timing(capture, {
+      toValue: 1,
+      duration: stepMs,
+      easing: Easing.out(Easing.ease),
+      useNativeDriver: false, // width isn't a native-driver property
+    }).start();
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  }, [liveness.phase, liveness.currentStepIndex, capture, stepMs]);
+
+  // Tactile payoff — the verification moment deserves a felt confirmation
+  // (design-repo VerifyResultScreen).
+  useEffect(() => {
+    if (liveness.phase === 'passed') void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    else if (liveness.phase === 'failed') void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+  }, [liveness.phase]);
+
   // Permission not granted
   if (!hasPermission) {
     return (
@@ -599,313 +560,93 @@ export function LivenessCamera({ mode, personId, onSuccess, onError, allowBackCa
     );
   }
 
-  // Face detection — challenge is being created (POST /cb/liveness/v2/challenge).
-  // Static detection frame + scanline while the session prepares.
-  if (liveness.phase === 'creating' || liveness.phase === 'idle') {
-    return (
-      <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: theme.colors.background }}>
-        <ScreenHeader title="Face verification" onBack={() => router.back()} />
-        <View style={{ flex: 1, padding: theme.spacing[4], gap: theme.spacing[3] }}>
-          <FaceFrame />
-          <StepDots total={liveness.challenge?.challenge_sequence?.length || 4} current={0} />
-          <Typography variant="caption" color="muted" center>
-            Center your face in the frame
-          </Typography>
-        </View>
-      </SafeAreaView>
-    );
-  }
+  // Shared camera element — mounted inside the ScanFrame square while
+  // challenging (the user sees their own face in the frame) and kept off-screen
+  // during finalizing/passed so capturePhotoToFile still has a live camera.
+  const cameraView = (
+    <Camera
+      ref={cameraRef}
+      style={StyleSheet.absoluteFill}
+      device={device}
+      isActive={cameraActive}
+      outputs={[photoOutput, faceDetectorOutput]}
+      mirrorMode="auto"
+      resizeMode="cover"
+    />
+  );
 
   // Error state — friendly message (from toApiError) + retry cooldown so a
   // 429 isn't hammered (each immediate retry burns more rate-limit quota).
   if (liveness.phase === 'failed') {
     return (
-      <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: theme.colors.background }}>
-        <View style={{ flex: 1, padding: theme.spacing[4], justifyContent: 'center', gap: theme.spacing[5] }}>
-          <View style={{ alignItems: 'center', gap: theme.spacing[2] }}>
-            <PopIn from={0.5}>
-              <View
-                style={{
-                  width: 88,
-                  height: 88,
-                  borderRadius: theme.radii.full,
-                  backgroundColor: theme.colors.errorSubtle,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  ...theme.shadows.lg,
-                }}>
-                <TriangleAlert size={40} color={theme.colors.onErrorSubtle} />
-              </View>
-            </PopIn>
-            <Typography variant="h2" center>
-              Verification unsuccessful
-            </Typography>
-            <Typography color="secondary" center>
-              {liveness.error ?? 'We couldn’t confidently verify your identity.'}
-            </Typography>
-          </View>
-          <Card>
-            <CardContent style={{ gap: 10 }}>
-              <StepRow
-                leading={
-                  <RowIcon
-                    tone="warning"
-                    icon={<Eye size={iconSize.md} color={theme.colors.onWarningSubtle} />}
-                  />
-                }
-                title="Face not clearly visible"
-                subtitle="Poor lighting or camera movement"
-              />
-              <StepRow
-                leading={
-                  <RowIcon
-                    tone="neutral"
-                    icon={<CircleHelp size={iconSize.md} color={theme.colors.textSecondary} />}
-                  />
-                }
-                title="Why did this happen?"
-                subtitle="Lighting · camera movement · identity mismatch"
-              />
-            </CardContent>
-          </Card>
-        </View>
-        <View
-          style={{
-            padding: theme.spacing[4],
-            paddingTop: theme.spacing[3],
-            paddingBottom: theme.spacing[4] + insets.bottom,
-            borderTopWidth: theme.sizes.fieldBorderWidth,
-            borderTopColor: theme.colors.borderSubtle,
-            backgroundColor: theme.colors.surface,
-            gap: theme.spacing[2],
-          }}>
-          <CoreButton
-            fullWidth
-            size="lg"
-            disabled={cooldownLeft > 0}
-            accessibilityLabel="Restart liveness verification"
-            onPress={() => liveness.reset()}>
-            {cooldownLeft > 0 ? `Try again in ${cooldownLeft}s` : 'Try Again'}
-          </CoreButton>
-          <CoreButton
-            fullWidth
-            variant="ghost"
-            accessibilityLabel="Get help"
-            onPress={() => router.push('/help' as never)}>
-            Get help
-          </CoreButton>
-        </View>
-      </SafeAreaView>
+      <LivenessResultStage
+        outcome="failed"
+        error={liveness.error}
+        primaryLabel={cooldownLeft > 0 ? `Try again in ${cooldownLeft}s` : 'Try again'}
+        primaryDisabled={cooldownLeft > 0}
+        onPrimary={() => liveness.reset()}
+        onBack={() => router.back()}
+      />
     );
   }
 
   const isFinalizing = liveness.phase === 'finalizing';
-  const steps = liveness.challenge?.challenge_sequence ?? [];
-  const action = liveness.currentChallenge;
-  const expiresIn = sessionLeft ?? liveness.challenge?.expires_in_seconds;
-  const sessionLabel = expiresIn != null
-    ? `Session expires in ${Math.floor(expiresIn / 60)}:${String(expiresIn % 60).padStart(2, '0')}`
-    : 'Liveness session';
   const sessionExpiring = sessionLeft != null && sessionLeft > 0 && sessionLeft <= 60;
 
   // Finalize — high-res frame upload + anti-spoof checks. The Camera stays
   // mounted off-screen: photoOutput.capturePhotoToFile still needs it.
+  // Design-repo LivenessScreen "finishing" phase.
   if (isFinalizing) {
-    return (
-      <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: theme.colors.background }}>
-        <ScreenHeader title="Verifying" />
-        <View style={{ flex: 1, padding: theme.spacing[4], gap: theme.spacing[5], justifyContent: 'center' }}>
-          <View style={{ alignItems: 'center', gap: theme.spacing[2] }}>
-            <PopIn>
-              <RowIcon tone="primary" icon={<ScanFace size={iconSize.lg} color={theme.colors.actionPrimary} />} />
-            </PopIn>
-            <Typography variant="h3">Verifying…</Typography>
-          </View>
-          <Card>
-            <CardContent style={{ gap: 14 }}>
-              <FlowSteps
-                steps={[
-                  { label: 'Scanning', state: 'done' },
-                  { label: 'Detecting face', state: 'done' },
-                  { label: 'Checking liveness', state: 'active' },
-                  { label: 'Matching identity', state: 'pending' },
-                ]}
-              />
-            </CardContent>
-          </Card>
-          <Typography variant="caption" color="muted" center>
-            Don&apos;t close the app — this takes a few seconds.
-          </Typography>
-        </View>
-        <View style={{ position: 'absolute', top: -2000, left: -2000, width: 400, height: 533 }}>
-          <Camera
-            ref={cameraRef}
-            style={{ flex: 1 }}
-            device={device}
-            isActive={cameraActive}
-            outputs={[photoOutput, faceDetectorOutput]}
-            mirrorMode="auto"
-          />
-        </View>
-      </SafeAreaView>
-    );
+    return <FinishingStage cameraSlot={cameraView} />;
   }
 
   // Passed — one-time liveness result; user confirms face enrollment.
   // Camera stays mounted off-screen so settleCameraThen can stop it cleanly.
+  // Design-repo VerifyResultScreen "passed" outcome.
   if (liveness.phase === 'passed' && liveness.result) {
-    const result = liveness.result;
-    // antispoof_score is 0–1 from the BFF; render as a percentage.
-    const confidencePct = (result.antispoof_score <= 1 ? result.antispoof_score * 100 : result.antispoof_score).toFixed(1);
     return (
-      <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: theme.colors.background }}>
-        <View style={{ flex: 1, padding: theme.spacing[4], justifyContent: 'center', gap: theme.spacing[5] }}>
-          <View style={{ alignItems: 'center', gap: theme.spacing[2] }}>
-            <PopIn>
-              <View
-                style={{
-                  width: 88,
-                  height: 88,
-                  borderRadius: theme.radii.full,
-                  backgroundColor: theme.colors.success,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  ...theme.shadows.lg,
-                }}>
-                <CircleCheck size={44} color={theme.colors.onActionPrimary} />
-              </View>
-            </PopIn>
-            <Typography variant="h2">You&apos;re verified</Typography>
-            <Typography color="secondary" center>
-              Your identity has been successfully confirmed.
-            </Typography>
-            <Text
-              style={{
-                fontFamily: theme.fontFamily.mono.bold,
-                fontSize: theme.fontSize['4xl'],
-                color: theme.colors.textPrimary,
-                letterSpacing: theme.letterSpacing.tight,
-              }}>
-              {confidencePct}%
-            </Text>
-            <Typography variant="caption" color="muted">
-              Verification confidence
-            </Typography>
-          </View>
-          <FadeUp delay={140}>
-            <Card>
-              <CardContent style={{ gap: 10 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <Typography variant="body">Risk level</Typography>
-                  <Badge variant="success">LOW</Badge>
-                </View>
-                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <Typography variant="body">Liveness</Typography>
-                  <Badge variant="success">PASS</Badge>
-                </View>
-              </CardContent>
-            </Card>
-          </FadeUp>
-        </View>
-        <View
-          style={{
-            padding: theme.spacing[4],
-            paddingTop: theme.spacing[3],
-            paddingBottom: theme.spacing[4] + insets.bottom,
-            borderTopWidth: theme.sizes.fieldBorderWidth,
-            borderTopColor: theme.colors.borderSubtle,
-            backgroundColor: theme.colors.surface,
-          }}>
-          <CoreButton
-            fullWidth
-            size="lg"
-            loading={enrolling}
-            accessibilityLabel={mode === 'enroll' ? 'Enroll my face' : 'Update my face'}
-            onPress={enrollFaceNow}>
-            Continue
-          </CoreButton>
-        </View>
-        <View style={{ position: 'absolute', top: -2000, left: -2000, width: 400, height: 533 }}>
-          <Camera
-            ref={cameraRef}
-            style={{ flex: 1 }}
-            device={device}
-            isActive={cameraActive}
-            outputs={[photoOutput, faceDetectorOutput]}
-            mirrorMode="auto"
-          />
-        </View>
-      </SafeAreaView>
+      <LivenessResultStage
+        outcome="passed"
+        personId={personId}
+        score={liveness.result.antispoof_score}
+        primaryLabel={personId ? 'Done' : 'Continue'}
+        primaryLoading={enrolling}
+        onPrimary={enrollFaceNow}
+        onBack={() => router.back()}
+        cameraSlot={cameraView}
+      />
     );
   }
 
+  // Challenge stage (design-repo LivenessScreen "challenge" phase): instruction
+  // pill, ScanFrame brackets around the LIVE camera square, step label,
+  // progress track, numbered step rail, session countdown.
+  const steps = liveness.challenge?.challenge_sequence ?? [];
+  const labels: Record<string, string> = liveness.challenge?.ui_copy ?? {};
+  const currentAction =
+    liveness.currentStepIndex < steps.length ? steps[liveness.currentStepIndex] : undefined;
+  const instruction =
+    liveness.instruction ||
+    (currentAction ? labels[currentAction] ?? currentAction.replace(/_/g, ' ') : null) ||
+    'Preparing camera…';
+
   return (
-    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: theme.colors.background }}>
-      <ScreenHeader
-        title="Face verification"
-        subtitle={liveness.sessionId ? `Session ${liveness.sessionId}` : undefined}
-        actions={
-          <View style={{ flexDirection: 'row', gap: theme.spacing[1] }}>
-            {allowBackCamera ? (
-              <IconButton
-                accessibilityLabel={cameraPosition === 'front' ? 'Switch to back camera' : 'Switch to front camera'}
-                icon={<SwitchCamera size={iconSize.md} color={theme.colors.textPrimary} />}
-                onPress={() => setCameraPosition((p) => (p === 'front' ? 'back' : 'front'))}
-              />
-            ) : null}
-            <IconButton
-              accessibilityLabel="Close liveness check"
-              icon={<X size={iconSize.md} color={theme.colors.textPrimary} />}
-              onPress={() => router.back()}
-            />
-          </View>
-        }
-      />
-      <View style={{ flex: 1, padding: theme.spacing[4], gap: theme.spacing[3] }}>
-        {/* Guided dial (design-repo E·DIAL) — per-step ring segments, countdown
-            drain and a demonstrator head performing the active challenge. The
-            camera runs off-screen; face-detector output still gets frames. */}
-        <LivenessGuideDial
-          steps={steps}
-          currentIndex={liveness.currentStepIndex}
-          labels={{
-            ...(liveness.challenge?.ui_copy ?? {}),
-            ...(action && liveness.instruction ? { [action]: liveness.instruction } : {}),
-          }}
-          stepMs={liveness.challenge?.step_time_limits.max_ms ?? 6000}
-          style={{ width: '100%' }}
-        />
-        {sessionExpiring ? (
-          <Alert variant="warning" title="Session expiring">
-            Expires in {sessionLeft} seconds.
-          </Alert>
-        ) : null}
-        {multiFace ? (
-          <Typography variant="caption" center style={{ color: theme.colors.error }}>
-            Only one person in the frame
-          </Typography>
-        ) : hint ? (
-          <Typography variant="caption" color="muted" center>
-            {hint}
-          </Typography>
-        ) : null}
-        <Typography variant="caption" color="muted" center>
-          {sessionLabel} · {cameraPosition} camera
-        </Typography>
-      </View>
-      {/* Camera mounted off-screen during the challenge — same trick the
-          finalize/passed phases use so detection + photo capture keep working. */}
-      <View style={{ position: 'absolute', top: -2000, left: -2000, width: 400, height: 533 }}>
-        <Camera
-          ref={cameraRef}
-          style={{ flex: 1 }}
-          device={device}
-          isActive={cameraActive}
-          outputs={[photoOutput, faceDetectorOutput]}
-          mirrorMode="auto"
-        />
-      </View>
-    </SafeAreaView>
+    <ChallengeStage
+      instruction={instruction}
+      steps={steps}
+      stepIndex={liveness.currentStepIndex}
+      labels={labels}
+      stepProgress={capture}
+      expiresIn={sessionLeft ?? liveness.challenge?.expires_in_seconds}
+      sessionExpiring={sessionExpiring}
+      multiFace={multiFace}
+      hint={hint}
+      camera={cameraView}
+      allowBackCamera={allowBackCamera}
+      cameraPosition={cameraPosition}
+      onSwitchCamera={() => setCameraPosition((p) => (p === 'front' ? 'back' : 'front'))}
+      onRestart={() => liveness.reset()}
+    />
   );
 }
 

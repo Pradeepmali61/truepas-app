@@ -102,6 +102,12 @@ const GROUPS: { title: string; screens: ScreenEntry[] }[] = [
         preset: 'auth-no-face',
         prepare: () => flowGuards.grant('onboarding:face-enrolled'),
       },
+      // Liveness stage UIs live inside LivenessCamera (no camera on web) —
+      // these preview them with mock data + a placeholder face target.
+      { label: 'Liveness — challenge (preview)', route: '/dev-liveness?stage=challenge', preset: 'auth-no-face' },
+      { label: 'Liveness — verifying (preview)', route: '/dev-liveness?stage=finishing', preset: 'auth-no-face' },
+      { label: 'Liveness — verified (preview)', route: '/dev-liveness?stage=passed', preset: 'auth-no-face' },
+      { label: 'Liveness — failed (preview)', route: '/dev-liveness?stage=failed', preset: 'auth-no-face' },
     ],
   },
   {
