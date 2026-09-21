@@ -30,6 +30,7 @@ export interface ActivityItem {
 export type DocumentType =
   | 'passport'
   | 'drivingLicense'
+  | 'idCard'
   | 'greenCard'
   | 'birthCertificate'
   | 'usVisa';

@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Baby, BookUser, Camera, Car, FileText, Globe, Landmark, ScanFace, Trash2 } from 'lucide-react-native';
+import { Baby, BookUser, Camera, Car, FileText, Globe, IdCard, Landmark, ScanFace, Trash2 } from 'lucide-react-native';
 import { useEffect, useRef, useState, type ComponentType } from 'react';
 import { Animated, Image, ScrollView, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -16,6 +16,7 @@ import { iconSize } from '@/theme/tokens';
 const DOC_ICONS: Record<string, ComponentType<{ size?: number; color?: string }>> = {
   passport: BookUser,
   drivingLicense: Car,
+  idCard: IdCard,
   greenCard: Landmark,
   usVisa: Globe,
   birthCertificate: Baby,

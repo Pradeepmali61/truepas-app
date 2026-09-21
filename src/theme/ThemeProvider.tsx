@@ -16,6 +16,7 @@ import {
     type PaletteChoice
 } from "./palette";
 import { buildTheme, type Theme } from "./themes";
+import type { TypePreset } from "./tokens";
 
 export type ColorScheme = "light" | "dark" | "system";
 
@@ -63,6 +64,9 @@ interface ThemeContextValue {
   setRatio: (r: ColorRatio) => void;
   radius: RadiusPreset;
   setRadius: (r: RadiusPreset) => void;
+  /** Typeface preset — "inter" | "jakarta" | "grotesk". */
+  typeface: TypePreset;
+  setTypeface: (t: TypePreset) => void;
   theme: Theme;
 }
 
@@ -81,6 +85,8 @@ export interface ThemeProviderProps {
   brandRamp?: BrandRamp;
   /** Color distribution for combo palettes. Default: preset's defaultRatio. */
   ratio?: ColorRatio;
+  /** Typeface preset — "inter" (default) | "jakarta" | "grotesk". */
+  typeface?: TypePreset;
   /** Deep-partial theme overrides applied after scheme+palette resolution */
   tokens?: DeepPartial<Theme>;
   children: ReactNode;
@@ -91,6 +97,7 @@ export function ThemeProvider({
   palette: paletteProp = "blue",
   brandRamp,
   ratio: ratioProp,
+  typeface: typefaceProp = "inter",
   tokens,
   children,
 }: ThemeProviderProps) {
@@ -100,6 +107,7 @@ export function ThemeProvider({
     ratioProp ?? comboPreset(paletteProp)?.defaultRatio ?? "60-30-10",
   );
   const [radius, setRadius] = useState<RadiusPreset>("default");
+  const [typeface, setTypeface] = useState<TypePreset>(typefaceProp);
   const system = useColorScheme();
 
   /** Switching palette snaps to its designed ratio; user can still override. */
@@ -115,14 +123,14 @@ export function ThemeProvider({
   const theme = useMemo(() => {
     const choice = brandRamp ?? palette;
     return deepMerge(
-      deepMerge(buildTheme(resolvedScheme, choice, { ratio }), RADIUS_TOKENS[radius]),
+      deepMerge(buildTheme(resolvedScheme, choice, { ratio, typeface }), RADIUS_TOKENS[radius]),
       tokens,
     );
-  }, [resolvedScheme, palette, brandRamp, ratio, tokens, radius]);
+  }, [resolvedScheme, palette, brandRamp, ratio, typeface, tokens, radius]);
 
   const value = useMemo<ThemeContextValue>(
-    () => ({ scheme, resolvedScheme, setScheme, palette, setPalette, ratio, setRatio, radius, setRadius, theme }),
-    [scheme, resolvedScheme, palette, ratio, theme, radius],
+    () => ({ scheme, resolvedScheme, setScheme, palette, setPalette, ratio, setRatio, radius, setRadius, typeface, setTypeface, theme }),
+    [scheme, resolvedScheme, palette, ratio, typeface, theme, radius],
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;

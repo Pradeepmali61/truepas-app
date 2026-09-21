@@ -19,6 +19,7 @@ export { Input, type InputProps } from "./Input";
 export { Label, type LabelProps } from "./Label";
 export { Link, type LinkProps } from "./Link";
 export { Blink, FadeUp, PopIn, Pulse, ScanLine } from "./motion";
+export { NeuBox, NeuWell, type NeuBoxProps, type NeuVariant } from "./NeuBox";
 export { Progress, type ProgressProps } from "./Progress";
 export { RadioGroup, type RadioGroupProps, type RadioOption } from "./RadioGroup";
 export { RowIcon, type RowIconProps, type RowIconTone } from "./RowIcon";

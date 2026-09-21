@@ -72,6 +72,7 @@ export default function AddFamilyScreen() {
               value={fullName}
               onChangeText={setFullName}
               autoCapitalize="words"
+              maxLength={100}
               accessibilityLabel="Full name"
             />
           </FormField>

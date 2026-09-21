@@ -1,11 +1,12 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useRouter } from 'expo-router';
+import { Redirect, useRouter } from 'expo-router';
 import { Calendar, Eye, EyeOff, Lock, Mail, User } from 'lucide-react-native';
 import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { getRegistrationToken } from '@/api/client';
 import { Alert, BottomSheet, FormField, ScreenHeader } from '@/components/composite';
 import { CoreButton, Input, Progress, Typography } from '@/components/ui';
 import { useCompleteAccountDetails } from '@/features/auth/mutations';
@@ -34,6 +35,10 @@ export default function AccountDetailsScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const completeAccount = useCompleteAccountDetails();
+  // This step submits with the in-memory registration token issued by phone
+  // OTP verification — a deep link without it can only dead-end, so bounce
+  // back to register.
+  const [hasRegistrationToken] = useState(() => getRegistrationToken() !== null);
 
   const { control, handleSubmit, setValue } = useForm<AccountDetailsForm>({
     resolver: zodResolver(accountDetailsSchema),
@@ -87,6 +92,8 @@ export default function AccountDetailsScreen() {
       setSubmitError(err?.message ?? 'Could not save details. Please try again.');
     }
   });
+
+  if (!hasRegistrationToken) return <Redirect href="/(auth)/register" />;
 
   const daysInMonth = getDaysInMonth(selectedYear, selectedMonth);
   const currentYear = new Date().getFullYear();

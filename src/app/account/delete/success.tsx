@@ -1,13 +1,16 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { useRouter } from 'expo-router';
+import { Redirect, useRouter } from 'expo-router';
 import { Check, CircleCheck, Database, Image as ImageIcon, ScanFace } from 'lucide-react-native';
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Card, CardContent } from '@/components/composite';
 import { CoreButton, Divider, PopIn, RowIcon, Typography } from '@/components/ui';
 import { sessionEnded } from '@/features/auth/slice';
+import { clearAllDocumentImages } from '@/services/documentImageStore';
+import { flowGuards } from '@/services/flowGuards';
+import { clearAllProfileImages } from '@/services/profileImageStore';
 import { useAppDispatch } from '@/store';
 import { useThemeTokens } from '@/theme';
 import { iconSize } from '@/theme/tokens';
@@ -19,14 +22,23 @@ export default function DeleteSuccessScreen() {
   const dispatch = useAppDispatch();
   const router = useRouter();
   const queryClient = useQueryClient();
+  // Reaching this screen directly must not wipe the session — the flag only
+  // exists after DELETE /user/me returned success.
+  const [allowed] = useState(() => flowGuards.has('account:deleted'));
 
   // End the session as soon as the deletion is confirmed — the backend has
   // already revoked tokens, so keeping Redux/query state alive until the
   // "Close App" tap would let the user back into authenticated screens.
   useEffect(() => {
+    if (!allowed) return;
+    flowGuards.consume('account:deleted');
     queryClient.clear();
+    void clearAllDocumentImages();
+    void clearAllProfileImages();
     dispatch(sessionEnded());
-  }, [queryClient, dispatch]);
+  }, [queryClient, dispatch, allowed]);
+
+  if (!allowed) return <Redirect href="/" />;
 
   const systems: { icon: ReactNode; label: string }[] = [
     { icon: <Database size={iconSize.sm} color={theme.colors.actionPrimary} />, label: 'PostgreSQL' },

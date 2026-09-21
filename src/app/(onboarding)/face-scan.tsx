@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { Redirect, useRouter } from 'expo-router';
 import { Eye, Fingerprint, Lock, ScanFace } from 'lucide-react-native';
 import { useState } from 'react';
 import { ScrollView, View } from 'react-native';
@@ -7,6 +7,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Alert, Card, CardContent, ScreenHeader } from '@/components/composite';
 import { CoreButton, Progress, Pulse, RowIcon, Typography } from '@/components/ui';
 import { CameraUnavailable, loadLivenessCamera } from '@/features/liveness/cameraModule';
+import { useAppSelector } from '@/store';
 import { useThemeTokens } from '@/theme';
 import { iconSize } from '@/theme/tokens';
 
@@ -21,7 +22,11 @@ export default function FaceScanScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const [started, setStarted] = useState(false);
+  // Liveness only runs after explicit biometric consent — a deep link to this
+  // screen must go through the consent step first.
+  const biometricConsent = useAppSelector((state) => state.auth.biometricConsent);
 
+  if (!biometricConsent) return <Redirect href="/(onboarding)/consent" />;
   if (!LivenessCamera) return <CameraUnavailable />;
 
   if (!started) {

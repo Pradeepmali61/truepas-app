@@ -42,14 +42,30 @@ const authSlice = createSlice({
     },
     /** Merge a server-returned User into the session (PUT /user/me response)
      *  so every screen reading state.auth.user sees fresh data immediately —
-     *  without it, edits only surfaced on the next app boot. */
+     *  without it, edits only surfaced on the next app boot. Also syncs the
+     *  consent/face flags so changes made on another device propagate here. */
     profileUpdated(state, action: PayloadAction<User>) {
       if (state.user) {
         state.user = { ...state.user, ...action.payload };
+        state.faceEnrolled = action.payload.faceEnrolled;
+        state.biometricConsent = action.payload.biometricConsentAt !== null;
       }
     },
     biometricConsentGiven(state) {
       state.biometricConsent = true;
+      if (state.user) {
+        state.user.biometricConsentAt = new Date().toISOString();
+      }
+    },
+    /** Consent withdrawn — the server invalidates the face template, so the
+     *  local session must drop faceEnrolled too and force re-enrollment. */
+    biometricConsentRevoked(state) {
+      state.biometricConsent = false;
+      state.faceEnrolled = false;
+      if (state.user) {
+        state.user.biometricConsentAt = null;
+        state.user.faceEnrolled = false;
+      }
     },
     faceEnrollmentCompleted(state) {
       state.faceEnrolled = true;
@@ -73,6 +89,12 @@ const authSlice = createSlice({
   },
 });
 
-export const { sessionStarted, profileUpdated, biometricConsentGiven, faceEnrollmentCompleted, sessionEnded } =
-  authSlice.actions;
+export const {
+  sessionStarted,
+  profileUpdated,
+  biometricConsentGiven,
+  biometricConsentRevoked,
+  faceEnrollmentCompleted,
+  sessionEnded,
+} = authSlice.actions;
 export const authReducer = authSlice.reducer;

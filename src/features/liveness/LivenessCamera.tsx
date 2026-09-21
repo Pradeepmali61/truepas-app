@@ -21,9 +21,8 @@ import { Alert, Card, CardContent, FlowSteps, ScreenHeader } from '@/components/
 import { LivenessGuideDial, StepDots } from '@/components/truepas';
 import { Badge, CoreButton, FadeUp, IconButton, PopIn, Pulse, RowIcon, ScanLine, Spinner, Typography } from '@/components/ui';
 import { useEnrollFace, useUpdateFace } from '@/features/auth/mutations';
-import { faceEnrollmentCompleted } from '@/features/auth/slice';
 import { useLivenessSession } from '@/features/liveness/useLivenessSession';
-import { useAppDispatch } from '@/store';
+import { flowGuards } from '@/services/flowGuards';
 import { alpha, useThemeTokens } from '@/theme';
 import { iconSize } from '@/theme/tokens';
 
@@ -44,7 +43,7 @@ interface LivenessCameraProps {
   allowBackCamera?: boolean;
 }
 
-// Calibration thresholds (per guide Â§4.5 â€” tune on real devices)
+// Calibration thresholds (per guide §4.5 — tune on real devices)
 const BLINK_CLOSED_THRESHOLD = 0.35;
 const BLINK_OPEN_THRESHOLD = 0.6;
 const YAW_THRESHOLD = 12; // degrees
@@ -123,15 +122,15 @@ function FaceFrame({ camera, pulseMs = 1200 }: { camera?: ReactNode; pulseMs?: n
  * Full liveness challenge camera using react-native-vision-camera v5
  * + ML Kit face detector.
  *
- * Flow (per REACT_NATIVE_KYC_INTEGRATION_GUIDE.md Â§4):
+ * Flow (per REACT_NATIVE_KYC_INTEGRATION_GUIDE.md §4):
  *  1. Request camera permissions
  *  2. Create liveness challenge (server-provided sequence)
  *  3. Frame processor auto-detects blink/turn via ML Kit face landmarks
- *  4. When action detected â†’ automatically submit evidence (metadata only, NO image)
- *  5. After all steps: capture high-res photo â†’ finalize
+ *  4. When action detected → automatically submit evidence (metadata only, NO image)
+ *  5. After all steps: capture high-res photo → finalize
  *  6. Call face enroll/update with session credentials
  *
- * NO manual button press â€” detection is fully automatic.
+ * NO manual button press — detection is fully automatic.
  */
 export function LivenessCamera({ mode, personId, onSuccess, onError, allowBackCamera }: LivenessCameraProps) {
   const { hasPermission, requestPermission } = useCameraPermission();
@@ -140,17 +139,16 @@ export function LivenessCamera({ mode, personId, onSuccess, onError, allowBackCa
   // Challenge is created on mount; the guided dial renders as soon as the
   // challenge arrives and detection begins immediately (no intro gate).
   const [enrolling, setEnrolling] = useState(false);
-  // Camera preview is stopped briefly before navigating away â€” unmounting an
+  // Camera preview is stopped briefly before navigating away — unmounting an
   // ACTIVE Camera on the new architecture (Fabric) can dispatch a
   // topCameraReady event after the JS view is gone, which crashes the app.
   const [cameraActive, setCameraActive] = useState(true);
-  const dispatch = useAppDispatch();
   const router = useRouter();
 
   const liveness = useLivenessSession();
   const enrollFace = useEnrollFace();
   const updateFace = useUpdateFace();
-  // Absolute overlays ignore SafeAreaView padding â€” apply insets manually
+  // Absolute overlays ignore SafeAreaView padding — apply insets manually
   const insets = useSafeAreaInsets();
 
   // Under-10 members may flip to the rear camera (parent holds the phone);
@@ -174,6 +172,15 @@ export function LivenessCamera({ mode, personId, onSuccess, onError, allowBackCa
   const [multiFace, setMultiFace] = useState(false);
   // True once requestPermission() comes back denied - shows a Settings button
   const [permDenied, setPermDenied] = useState(false);
+  // No camera after a few seconds = device has none / it's busy — don't leave
+  // the user staring at "Loading camera..." forever.
+  const [deviceTimedOut, setDeviceTimedOut] = useState(false);
+
+  useEffect(() => {
+    if (device || deviceTimedOut) return;
+    const t = setTimeout(() => setDeviceTimedOut(true), 6000);
+    return () => clearTimeout(t);
+  }, [device, deviceTimedOut]);
 
   // Request camera permission on mount
   useEffect(() => {
@@ -187,14 +194,14 @@ export function LivenessCamera({ mode, personId, onSuccess, onError, allowBackCa
     if (hintTimer.current) clearTimeout(hintTimer.current);
   }, []);
 
-  // â”€â”€ In-place failure handling (fixes the 429 retry loop) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── In-place failure handling (fixes the 429 retry loop) ─────────────
   // Failures fail the session LOCALLY instead of navigating away:
-  //  1. phase leaves 'challenging' immediately â†’ the frame processor's
+  //  1. phase leaves 'challenging' immediately → the frame processor's
   //     onFaceSample guard stops re-submitting evidence (previously a 429
   //     on evidence kept the phase 'challenging' and resubmitted every
   //     ~100ms during the 400ms navigation settle window).
   //  2. The built-in failed UI shows toApiError's friendly copy with a
-  //     retry cooldown â€” 10s after a 429 (retrying sooner only burns more
+  //     retry cooldown — 10s after a 429 (retrying sooner only burns more
   //     rate-limit quota), 3s for other failures.
   const { failSession } = liveness;
   const [cooldownLeft, setCooldownLeft] = useState(0);
@@ -214,7 +221,7 @@ export function LivenessCamera({ mode, personId, onSuccess, onError, allowBackCa
   }, [liveness.phase, cooldownLeft]);
 
   // Start liveness challenge when permission is granted, and restart after
-  // reset (Try Again) â€” depends on phase so idleâ†’start works every time.
+  // reset (Try Again) — depends on phase so idle→start works every time.
   useEffect(() => {
     if (hasPermission && liveness.phase === 'idle') {
       liveness.startSession(personId).catch((err) => {
@@ -246,7 +253,7 @@ export function LivenessCamera({ mode, personId, onSuccess, onError, allowBackCa
     }
   }, [liveness.phase, liveness.currentStepIndex, beginStep]);
 
-  // Handle face sample â€” auto-detect actions (called from JS thread via Worklets)
+  // Handle face sample — auto-detect actions (called from JS thread via Worklets)
   const onFaceSample = useCallback(async (leftEyeOpen: number, rightEyeOpen: number, yaw: number) => {
     if (liveness.phase !== 'challenging' || !liveness.challenge || submittingRef.current) return;
     const action = liveness.currentChallenge;
@@ -264,12 +271,12 @@ export function LivenessCamera({ mode, personId, onSuccess, onError, allowBackCa
       if (!eyesWereClosed.current || leftEyeOpen < BLINK_OPEN_THRESHOLD || rightEyeOpen < BLINK_OPEN_THRESHOLD) {
         return; // eyes not yet fully open after closing
       }
-      console.log('[Liveness] Blink: eyes REOPENED â€” blink complete!');
+      console.log('[Liveness] Blink: eyes REOPENED — blink complete!');
     } else if (action === 'turn_left' || action === 'turn_right') {
       // ML Kit yaw: positive = subject turns to their LEFT, negative = to their RIGHT
       if (action === 'turn_right' && yaw > -YAW_THRESHOLD) return;
       if (action === 'turn_left' && yaw < YAW_THRESHOLD) return;
-      console.log(`[Liveness] Turn detected: yaw=${yaw.toFixed(1)}Â° crossed threshold ${YAW_THRESHOLD}Â°`);
+      console.log(`[Liveness] Turn detected: yaw=${yaw.toFixed(1)}° crossed threshold ${YAW_THRESHOLD}°`);
     } else {
       // Unknown challenge type from the server - never submit evidence for an
       // action we didn't actually detect (any turn would otherwise "pass" it).
@@ -278,7 +285,7 @@ export function LivenessCamera({ mode, personId, onSuccess, onError, allowBackCa
       return;
     }
 
-    // Action detected â€” check timing
+    // Action detected — check timing
     const durationMs = Date.now() - stepStartedAt.current;
     const { min_ms, max_ms } = liveness.challenge.step_time_limits;
     console.log(`[Liveness] Action detected: duration=${durationMs}ms (limits: ${min_ms}-${max_ms}ms)`);
@@ -291,7 +298,7 @@ export function LivenessCamera({ mode, personId, onSuccess, onError, allowBackCa
       return;
     }
     if (durationMs > max_ms) {
-      // too slow â€” fail the session locally so the retry UI shows and
+      // too slow — fail the session locally so the retry UI shows and
       // sample processing stops (phase leaves 'challenging').
       console.error('[Liveness] Step timed out:', durationMs, '>', max_ms);
       liveness.failSession('Time limit exceeded. Please try again.');
@@ -302,11 +309,11 @@ export function LivenessCamera({ mode, personId, onSuccess, onError, allowBackCa
     const clientTsMs = Math.max(Date.now(), lastClientTs.current + 1);
     lastClientTs.current = clientTsMs;
 
-    // Submit evidence â€” metadata only, NO image (per guide Â§4.2)
+    // Submit evidence — metadata only, NO image (per guide §4.2)
     submittingRef.current = true;
     try {
       console.log(`[Liveness] Submitting evidence for step ${liveness.currentStepIndex}: ${action}`);
-      await liveness.submitEvidence(durationMs);
+      await liveness.submitEvidence(durationMs, clientTsMs);
       console.log('[Liveness] Evidence accepted');
     } catch (err: any) {
       console.error('[Liveness] Evidence submit failed:', err?.message, JSON.stringify(err?.response?.data));
@@ -316,7 +323,7 @@ export function LivenessCamera({ mode, personId, onSuccess, onError, allowBackCa
         data: err?.config?.data,
         contentType: err?.config?.headers?.['Content-Type'] ?? err?.config?.headers?.get?.('Content-Type'),
       }));
-      // Fail in place â€” leaves 'challenging' so the frame processor stops
+      // Fail in place — leaves 'challenging' so the frame processor stops
       // resubmitting evidence (the old navigation path left the phase
       // unchanged and caused a 429 resubmission storm).
       failWithCooldown(err, 'Liveness step rejected');
@@ -326,7 +333,7 @@ export function LivenessCamera({ mode, personId, onSuccess, onError, allowBackCa
   }, [liveness, failWithCooldown]);
 
   // Create a runOnJS wrapper for the face sample handler.
-  // IMPORTANT: runOnJS(fn) binds fn at creation time â€” passing onFaceSample directly
+  // IMPORTANT: runOnJS(fn) binds fn at creation time — passing onFaceSample directly
   // would forever call the FIRST-render closure with stale liveness state
   // (phase 'idle'), so no action would ever be detected. Route through a ref
   // so the wrapper always invokes the latest callback.
@@ -346,7 +353,7 @@ export function LivenessCamera({ mode, personId, onSuccess, onError, allowBackCa
 
   // Face detection via a dedicated CameraOutput (NOT a frame processor).
   // The library manages its own YUV output stream so ML Kit always gets a
-  // supported frame format â€” the useFrameOutput + detectFaces(frame) path
+  // supported frame format — the useFrameOutput + detectFaces(frame) path
   // crashes on Android with "Only JPEG and YUV_420_888 are supported now"
   // because frame output buffers are RGBA.
   // The handler only touches refs + the stable runOnJS wrapper, so a plain
@@ -365,7 +372,7 @@ export function LivenessCamera({ mode, personId, onSuccess, onError, allowBackCa
     const leftEye = face.leftEyeOpenProbability ?? 1;
     const rightEye = face.rightEyeOpenProbability ?? 1;
     const yaw = face.yawAngle ?? 0;
-    console.log(`[Liveness] Sample: leftEye=${leftEye.toFixed(2)} rightEye=${rightEye.toFixed(2)} yaw=${yaw.toFixed(1)}Â°`);
+    console.log(`[Liveness] Sample: leftEye=${leftEye.toFixed(2)} rightEye=${rightEye.toFixed(2)} yaw=${yaw.toFixed(1)}°`);
 
     onFaceSampleJS(leftEye, rightEye, yaw);
   }, [onFaceSampleJS]);
@@ -420,7 +427,7 @@ export function LivenessCamera({ mode, personId, onSuccess, onError, allowBackCa
 
       if (result.status !== 'passed') {
         console.error('[Liveness] Finalize not passed:', result.status, result.message);
-        // finalize() already flipped the phase to 'failed' â€” just set the
+        // finalize() already flipped the phase to 'failed' — just set the
         // retry cooldown and stay in place (no navigation).
         setCooldownLeft(3);
         return;
@@ -454,7 +461,10 @@ export function LivenessCamera({ mode, personId, onSuccess, onError, allowBackCa
       if (mode === 'enroll') {
         await enrollFace.mutateAsync(facePayload);
         if (!personId) {
-          dispatch(faceEnrollmentCompleted());
+          // Don't flip faceEnrolled yet — face-enrolled must actually render
+          // (the onboarding layout redirects the moment it goes true) and the
+          // flag proves the success screen followed a real enrollment.
+          flowGuards.grant('onboarding:face-enrolled');
         }
       } else {
         await updateFace.mutateAsync(facePayload);
@@ -470,7 +480,7 @@ export function LivenessCamera({ mode, personId, onSuccess, onError, allowBackCa
     } finally {
       setEnrolling(false);
     }
-  }, [enrolling, liveness, mode, personId, enrollFace, updateFace, dispatch, onSuccess, settleCameraThen, failWithCooldown]);
+  }, [enrolling, liveness, mode, personId, enrollFace, updateFace, onSuccess, settleCameraThen, failWithCooldown]);
 
   // Auto-finalize when phase becomes 'finalizing'
   useEffect(() => {
@@ -482,7 +492,7 @@ export function LivenessCamera({ mode, personId, onSuccess, onError, allowBackCa
     }
   }, [liveness.phase, capturing, captureAndFinalize]);
 
-  // â”€â”€ UI animation hooks (MUST be before any early return) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── UI animation hooks (MUST be before any early return) ──────────────
   // Session countdown — expires_in_seconds is a snapshot at challenge
   // creation; tick it down locally so the expiring-session warning is real.
   const [sessionLeft, setSessionLeft] = useState<number | null>(null);
@@ -547,6 +557,31 @@ export function LivenessCamera({ mode, personId, onSuccess, onError, allowBackCa
 
   // No camera device
   if (!device) {
+    if (deviceTimedOut) {
+      return (
+        <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: theme.colors.background }}>
+          <ScreenHeader title="Face verification" onBack={() => router.back()} />
+          <View
+            style={{
+              flex: 1,
+              justifyContent: 'center',
+              padding: theme.spacing[4],
+              gap: theme.spacing[4],
+            }}>
+            <Alert variant="error" title="Camera unavailable">
+              No usable camera was found — it may be busy in another app or unavailable on this device.
+            </Alert>
+            <CoreButton
+              fullWidth
+              size="lg"
+              accessibilityLabel="Go back"
+              onPress={() => router.back()}>
+              Go Back
+            </CoreButton>
+          </View>
+        </SafeAreaView>
+      );
+    }
     return (
       <SafeAreaView
         style={{
@@ -581,7 +616,7 @@ export function LivenessCamera({ mode, personId, onSuccess, onError, allowBackCa
     );
   }
 
-  // Error state â€” friendly message (from toApiError) + retry cooldown so a
+  // Error state — friendly message (from toApiError) + retry cooldown so a
   // 429 isn't hammered (each immediate retry burns more rate-limit quota).
   if (liveness.phase === 'failed') {
     return (

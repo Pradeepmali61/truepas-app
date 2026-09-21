@@ -6,6 +6,7 @@ import { ScreenContainer } from '@/components/layout/ScreenContainer';
 import { Typography } from '@/components/ui';
 import { PIN_LENGTH, usePinVerification } from '@/features/auth/usePinVerification';
 import { formatCountdown } from '@/hooks/useCountdown';
+import { flowGuards } from '@/services/flowGuards';
 import { useThemeTokens } from '@/theme';
 
 /** Update face — PIN verification (PRD FR-04: PIN required for face updates).
@@ -21,6 +22,7 @@ export default function FaceUpdatePinScreen() {
   const handleComplete = async (value: string) => {
     const code = await gate.submit(value);
     if (!code) return;
+    flowGuards.grant('face-update:camera');
     router.push({
       pathname: '/face-update/camera',
       params: personId ? { personId, ...(age ? { age } : {}) } : {},

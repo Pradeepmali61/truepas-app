@@ -87,25 +87,62 @@ export const letterSpacing: Record<"tight" | "normal" | "wide" | "caps", number>
   caps: 0.9,
 };
 
+type FontWeights = Record<"regular" | "medium" | "semibold" | "bold", string>;
+
 /**
- * Font stacks — one family per weight so iOS/Android resolve the exact face
- * (Inter for UI, JetBrains Mono for codes/amounts/IDs). The families below
- * must be registered at runtime — see useTruepasFonts() in fonts.ts.
+ * A typography pairing — sans (UI body), display (headings), mono (codes,
+ * amounts, IDs). One family per weight so iOS/Android resolve the exact
+ * face. Families must be registered at runtime — see useTruepasFonts().
  */
-export const fontFamily: Record<"sans" | "mono", Record<"regular" | "medium" | "semibold" | "bold", string>> = {
-  sans: {
-    regular: "Inter_400Regular",
-    medium: "Inter_500Medium",
-    semibold: "Inter_600SemiBold",
-    bold: "Inter_700Bold",
-  },
-  mono: {
-    regular: "JetBrainsMono_400Regular",
-    medium: "JetBrainsMono_500Medium",
-    semibold: "JetBrainsMono_600SemiBold",
-    bold: "JetBrainsMono_700Bold",
-  },
+export interface TypePairing {
+  sans: FontWeights;
+  display: FontWeights;
+  mono: FontWeights;
+}
+
+const INTER: FontWeights = {
+  regular: "Inter_400Regular",
+  medium: "Inter_500Medium",
+  semibold: "Inter_600SemiBold",
+  bold: "Inter_700Bold",
 };
+
+const JAKARTA: FontWeights = {
+  regular: "PlusJakartaSans_400Regular",
+  medium: "PlusJakartaSans_500Medium",
+  semibold: "PlusJakartaSans_600SemiBold",
+  bold: "PlusJakartaSans_700Bold",
+};
+
+const SPACE_GROTESK: FontWeights = {
+  regular: "SpaceGrotesk_400Regular",
+  medium: "SpaceGrotesk_500Medium",
+  semibold: "SpaceGrotesk_600SemiBold",
+  bold: "SpaceGrotesk_700Bold",
+};
+
+const JETBRAINS_MONO: FontWeights = {
+  regular: "JetBrainsMono_400Regular",
+  medium: "JetBrainsMono_500Medium",
+  semibold: "JetBrainsMono_600SemiBold",
+  bold: "JetBrainsMono_700Bold",
+};
+
+/**
+ * Typeface presets — switch the whole app's voice in one token.
+ *  inter:   Inter everywhere — neutral, utilitarian (default).
+ *  jakarta: Plus Jakarta Sans everywhere — geometric, modern fintech.
+ *  grotesk: Space Grotesk headings + Inter body — editorial contrast.
+ */
+export const TYPE_PRESETS: Record<"inter" | "jakarta" | "grotesk", TypePairing> = {
+  inter: { sans: INTER, display: INTER, mono: JETBRAINS_MONO },
+  jakarta: { sans: JAKARTA, display: JAKARTA, mono: JETBRAINS_MONO },
+  grotesk: { sans: INTER, display: SPACE_GROTESK, mono: JETBRAINS_MONO },
+};
+
+export type TypePreset = keyof typeof TYPE_PRESETS;
+
+export const fontFamily: TypePairing = TYPE_PRESETS.inter;
 
 /** Component metrics — heights in dp */
 export const sizes: Record<

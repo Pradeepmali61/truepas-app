@@ -1,22 +1,33 @@
-import { useRouter } from 'expo-router';
+import { Redirect, useRouter } from 'expo-router';
 import { CircleCheck, ScanFace } from 'lucide-react-native';
+import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Card, CardContent } from '@/components/composite';
 import { Badge, CoreButton, FadeUp, PopIn, RowIcon, Typography } from '@/components/ui';
 import { faceEnrollmentCompleted } from '@/features/auth/slice';
+import { flowGuards } from '@/services/flowGuards';
 import { useAppDispatch } from '@/store';
 import { useThemeTokens } from '@/theme';
 import { iconSize } from '@/theme/tokens';
 
 /** Face enrolled success (POST /cb/face/enroll) — the enroll call already
- *  completed in LivenessCamera; this confirms and leads into the app. */
+ *  completed in LivenessCamera; this confirms and leads into the app.
+ *  Deep-linking here is bounced back to face-scan: only a real enrollment
+ *  may flip faceEnrolled. */
 export default function FaceEnrolledScreen() {
   const theme = useThemeTokens();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const dispatch = useAppDispatch();
+  const [allowed] = useState(() => flowGuards.has('onboarding:face-enrolled'));
+
+  useEffect(() => {
+    if (allowed) flowGuards.consume('onboarding:face-enrolled');
+  }, [allowed]);
+
+  if (!allowed) return <Redirect href="/(onboarding)/face-scan" />;
 
   const handleContinue = () => {
     dispatch(faceEnrollmentCompleted());

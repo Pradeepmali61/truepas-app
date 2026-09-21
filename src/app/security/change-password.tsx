@@ -9,6 +9,7 @@ import { FormField, Alert as InlineAlert, ScreenHeader } from '@/components/comp
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
 import { Button, Input, Typography } from '@/components/ui';
 import { useChangePassword } from '@/features/auth/mutations';
+import { newPasswordSchema } from '@/features/auth/schemas';
 import { sessionEnded } from '@/features/auth/slice';
 import { useToast } from '@/hooks/useToast';
 import { useAppDispatch } from '@/store';
@@ -52,8 +53,9 @@ export default function ChangePasswordScreen() {
       setError('All fields are required');
       return;
     }
-    if (newPassword.length < 8) {
-      setError('New password must be at least 8 characters');
+    const passwordCheck = newPasswordSchema.safeParse(newPassword);
+    if (!passwordCheck.success) {
+      setError(passwordCheck.error.issues[0].message);
       return;
     }
     if (newPassword === currentPassword) {
@@ -103,7 +105,7 @@ export default function ChangePasswordScreen() {
           />
         </FormField>
 
-        <FormField label="New password" required helperText="8+ characters.">
+        <FormField label="New password" required helperText="8+ characters with uppercase, lowercase, number & symbol.">
           <Input
             value={newPassword}
             onChangeText={setNewPassword}

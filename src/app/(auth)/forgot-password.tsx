@@ -11,6 +11,7 @@ import { Field, SoftCard, useKitStyles } from '@/components/truepas';
 import { Button, Input, Typography } from '@/components/ui';
 import { OtpVerification } from '@/features/auth/components/OtpVerification';
 import { useForgotPassword, useResetPassword } from '@/features/auth/mutations';
+import { newPasswordSchema } from '@/features/auth/schemas';
 import { useToast } from '@/hooks/useToast';
 import { useThemeTokens } from '@/theme';
 import { iconSize } from '@/theme/tokens';
@@ -63,7 +64,8 @@ export default function ForgotPasswordScreen() {
     // (dev `?step=reset` jump) means the session is incomplete.
     if (!email || !verifiedOtp) { setError('Your reset session is incomplete — request a new code.'); return; }
     if (!newPassword || !confirmPassword) { setError('All fields are required'); return; }
-    if (newPassword.length < 8) { setError('Password must be at least 8 characters'); return; }
+    const passwordCheck = newPasswordSchema.safeParse(newPassword);
+    if (!passwordCheck.success) { setError(passwordCheck.error.issues[0].message); return; }
     if (newPassword !== confirmPassword) { setError('Passwords do not match'); return; }
     setError('');
     try {
@@ -80,9 +82,8 @@ export default function ForgotPasswordScreen() {
     return (
       <OtpVerification
         title="Reset password"
-        heading="Enter reset code"
-        sentTo={`Code sent to ${email}`}
-        icon={<Mail size={iconSize.lg} color={theme.colors.actionPrimary} />}
+        heading="Check your inbox"
+        sentTo={`We emailed a reset code to ${email}`}
         purpose="password_reset"
         identifier={{ email }}
         onBack={() => setStep('email')}
@@ -158,7 +159,7 @@ export default function ForgotPasswordScreen() {
                   {error}
                 </Typography>
               ) : null}
-              <FormField label="New password" required helperText="8+ characters.">
+              <FormField label="New password" required helperText="8+ characters with uppercase, lowercase, number & symbol.">
                 <Input
                   value={newPassword}
                   onChangeText={setNewPassword}

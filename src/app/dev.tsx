@@ -1,5 +1,5 @@
 /** @jsxImportSource react */
-import { useRouter } from 'expo-router';
+import { Redirect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -149,6 +149,13 @@ function HealthRow({ label, url, status }: { label: string; url: string; status?
 }
 
 export default function DevScreen() {
+  // Dev-menu presets forge auth state locally — the route must not exist
+  // for end users in a release build.
+  if (!__DEV__) return <Redirect href="/" />;
+  return <DevScreenInner />;
+}
+
+function DevScreenInner() {
   const router = useRouter();
   const dispatch = useAppDispatch();
   const theme = useThemeTokens();

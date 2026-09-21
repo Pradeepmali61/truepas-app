@@ -55,6 +55,8 @@ export function useRemoveDocument() {
     mutationFn: (id: string) => api.removeDocument(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: documentKeys.all });
+      // Identity summary derives document state — same invalidation as add.
+      queryClient.invalidateQueries({ queryKey: ['identity'] });
     },
   });
 }

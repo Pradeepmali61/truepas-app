@@ -35,12 +35,6 @@ function StepDots({ total, current }: { total: number; current: number }) {
   );
 }
 
-/** Weak PINs — all-same digit (0000) or a 4-digit run on the keypad
- *  (1234 ascending, 4321 descending). */
-function isWeakPin(pin: string): boolean {
-  return /^(\d)\1{3}$/.test(pin) || '0123456789'.includes(pin) || '9876543210'.includes(pin);
-}
-
 /**
  * Change PIN — create step. The current PIN is verified by the confirm-pin
  * gate and stashed in pinStore; this screen only asks for the new PIN +
@@ -79,10 +73,6 @@ export default function ChangePinScreen() {
       return;
     }
     if (newPin !== confirmPin) { setError('PINs do not match'); return; }
-    if (isWeakPin(newPin)) {
-      setError('Choose a stronger PIN — avoid repeated or sequential digits');
-      return;
-    }
     setError('');
     try {
       await changePin.mutateAsync({ currentPin, newPin });

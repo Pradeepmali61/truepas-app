@@ -64,6 +64,15 @@ export function ageFromDob(dob: string): number {
   const [, a, b, c] = (mdy ?? iso)!;
   const [month, day, year] = mdy ? [a, b, c] : [b, c, a];
   const birth = new Date(Number(year), Number(month) - 1, Number(day));
+  // Reject impossible calendar dates — Date() silently rolls over (e.g.
+  // Feb 30 → Mar 2) and maps 2-digit years to the 1900s.
+  if (
+    birth.getFullYear() !== Number(year) ||
+    birth.getMonth() !== Number(month) - 1 ||
+    birth.getDate() !== Number(day)
+  ) {
+    return NaN;
+  }
   const now = new Date();
   let age = now.getFullYear() - birth.getFullYear();
   const beforeBirthday =

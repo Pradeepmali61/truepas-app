@@ -17,6 +17,17 @@ export const phoneSchema = z.object({
     .regex(/^[0-9()\-\s+]{7,17}$/, 'Enter a valid phone number'),
 });
 
+/** New-password policy — shared by registration, reset and change so all
+ *  three enforce identical complexity before hitting the API. */
+export const newPasswordSchema = z
+  .string()
+  .min(8, 'Password must be at least 8 characters')
+  .max(128, 'Too long')
+  .regex(/[A-Z]/, 'Must contain at least one uppercase letter')
+  .regex(/[a-z]/, 'Must contain at least one lowercase letter')
+  .regex(/[0-9]/, 'Must contain at least one number')
+  .regex(/[^A-Za-z0-9]/, 'Must contain at least one special character');
+
 export const accountDetailsSchema = z.object({
   fullName: z
     .string()
@@ -35,14 +46,7 @@ export const accountDetailsSchema = z.object({
     .min(1, 'Email is required')
     .email('Enter a valid email address')
     .max(254, 'Too long'),
-  password: z
-    .string()
-    .min(8, 'Password must be at least 8 characters')
-    .max(128, 'Too long')
-    .regex(/[A-Z]/, 'Must contain at least one uppercase letter')
-    .regex(/[a-z]/, 'Must contain at least one lowercase letter')
-    .regex(/[0-9]/, 'Must contain at least one number')
-    .regex(/[^A-Za-z0-9]/, 'Must contain at least one special character'),
+  password: newPasswordSchema,
   confirmPassword: z.string().min(1, 'Confirm your password'),
 }).refine((data) => data.password === data.confirmPassword, {
   message: 'Passwords do not match',

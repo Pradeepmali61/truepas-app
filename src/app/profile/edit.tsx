@@ -78,6 +78,7 @@ export default function EditProfileScreen() {
             onChangeText={setFullName}
             placeholder="Ada Example"
             autoCapitalize="words"
+            maxLength={100}
           />
         </FormField>
 
@@ -97,6 +98,7 @@ export default function EditProfileScreen() {
             onChangeText={setAddress}
             placeholder="1 Example Street, Orlando, FL"
             autoCapitalize="words"
+            maxLength={1000}
           />
         </FormField>
 

@@ -10,6 +10,7 @@ import {
     CreditCard,
     FileText,
     Globe,
+    IdCard,
     Landmark,
     RefreshCw,
     Share,
@@ -31,6 +32,7 @@ import { useStyles } from "./styles";
 export const DOC_ICON: Record<string, typeof FileText> = {
   passport: Globe,
   drivingLicense: Car,
+  idCard: IdCard,
   greenCard: CreditCard,
   birthCertificate: FileText,
   usVisa: Landmark,

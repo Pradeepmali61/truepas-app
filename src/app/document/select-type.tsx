@@ -11,6 +11,7 @@ import type { DocumentType } from '@/types/domain';
 const DOC_TYPES: { value: DocumentType; label: string }[] = [
   { value: 'passport', label: 'Passport' },
   { value: 'drivingLicense', label: "Driver's License" },
+  { value: 'idCard', label: 'ID Card' },
   { value: 'greenCard', label: 'US Green Card' },
   { value: 'birthCertificate', label: 'Birth Certificate' },
   { value: 'usVisa', label: 'U.S. Visa' },

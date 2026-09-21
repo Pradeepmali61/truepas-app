@@ -1,34 +1,68 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import { TriangleAlert } from 'lucide-react-native';
 import { ScrollView, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { toApiError } from '@/api/errors';
 import { Alert, Card, CardContent, ScreenHeader } from '@/components/composite';
 import { CoreButton, PopIn, RowIcon, Typography } from '@/components/ui';
+import { useUpdateProfile } from '@/features/auth/mutations';
 import { formatCountdown, useCountdown } from '@/hooks/useCountdown';
+import { useToast } from '@/hooks/useToast';
+import { flowGuards } from '@/services/flowGuards';
 import { useThemeTokens } from '@/theme';
 import { iconSize } from '@/theme/tokens';
 
 const SESSION_TTL_SECONDS = 15 * 60;
 
-/** Profile mismatch session — 15-minute TTL, accept or retry (PRD). */
+/** Profile mismatch session — 15-minute TTL, accept or retry (PRD).
+ *  "Accept" copies the document's extracted name/DOB into the profile so the
+ *  next verification attempt matches. */
 export default function MismatchScreen() {
   const theme = useThemeTokens();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { seconds } = useCountdown(SESSION_TTL_SECONDS);
+  const updateProfile = useUpdateProfile();
+  const toast = useToast();
   const params = useLocalSearchParams<{
+    docId?: string;
     profileName?: string;
     profileDob?: string;
     docName?: string;
     docDob?: string;
     reason?: string;
   }>();
+  // Result screen — deep links without a real verification session are
+  // bounced back to the start of the document flow (ADV-001).
+  const [allowed] = useState(() => flowGuards.has('document:mismatch'));
+
+  useEffect(() => {
+    if (allowed) flowGuards.consume('document:mismatch');
+  }, [allowed]);
 
   const profileName = params.profileName || '—';
   const docName = params.docName || '—';
   const profileDob = params.profileDob || '—';
   const docDob = params.docDob || '—';
+
+  const handleAccept = async () => {
+    try {
+      await updateProfile.mutateAsync({
+        ...(params.docName ? { fullName: params.docName } : {}),
+        ...(params.docDob ? { dateOfBirth: params.docDob } : {}),
+      });
+      if (params.docId) {
+        router.replace({ pathname: '/document/[id]', params: { id: params.docId } } as never);
+      } else {
+        router.dismissTo('/(tabs)');
+      }
+    } catch (err) {
+      toast.show('error', toApiError(err).message || 'Could not update your profile. Please try again.');
+    }
+  };
+
+  if (!allowed) return <Redirect href="/document/select-type" />;
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: theme.colors.background }}>
@@ -118,7 +152,8 @@ export default function MismatchScreen() {
         <CoreButton
           fullWidth
           accessibilityLabel="Accept and update profile"
-          onPress={() => router.replace('/document/verified')}>
+          loading={updateProfile.isPending}
+          onPress={handleAccept}>
           Accept & Update Profile
         </CoreButton>
         <CoreButton

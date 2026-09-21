@@ -7,7 +7,7 @@ import { makeStyles, useThemeTokens } from "../../theme";
  * All primitives run on the native driver (transform/opacity only).
  */
 
-/** Looping scale pulse â€” "live" elements: face ring, scanning targets. */
+/** Looping scale pulse — "live" elements: face ring, scanning targets. */
 export function Pulse({
   children,
   to = 1.05,
@@ -33,7 +33,7 @@ export function Pulse({
   return <Animated.View style={[style, { transform: [{ scale: v }] }]}>{children}</Animated.View>;
 }
 
-/** Opacity blink â€” recording indicator, unread dot. */
+/** Opacity blink — recording indicator, unread dot. */
 export function Blink({
   children,
   ms = 750,
@@ -59,7 +59,7 @@ export function Blink({
   return <Animated.View style={[style, { opacity: v }]}>{children}</Animated.View>;
 }
 
-/** One-shot scale+fade entrance â€” success reveals, hero elements. */
+/** One-shot scale+fade entrance — success reveals, hero elements. */
 export function PopIn({
   children,
   delay = 0,
@@ -98,7 +98,7 @@ export function PopIn({
   );
 }
 
-/** One-shot rise+fade entrance â€” staggered content blocks on screen load. */
+/** One-shot rise+fade entrance — staggered content blocks on screen load. */
 export function FadeUp({
   children,
   delay = 0,
@@ -138,8 +138,8 @@ export function FadeUp({
 }
 
 /**
- * Vertical scan sweep â€” fills its parent (position absolute), a bright line
- * travels topâ†’bottomâ†’top. Drop inside the viewfinder/document-art container.
+ * Vertical scan sweep — fills its parent (position absolute), a bright line
+ * travels top→bottom→top. Drop inside the viewfinder/document-art container.
  */
 export function ScanLine({ ms = 1900, color }: { ms?: number; color?: string }) {
   const styles = useStyles();

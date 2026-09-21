@@ -13,6 +13,7 @@ type DocOption = { id: DocumentType; label: string };
 // Minors can't hold a driving license.
 const OPTIONS_MINOR: DocOption[] = [
   { id: 'passport', label: 'Passport' },
+  { id: 'idCard', label: 'ID Card' },
   { id: 'greenCard', label: 'US Green Card' },
   { id: 'birthCertificate', label: 'Birth Certificate' },
   { id: 'usVisa', label: 'US Visa' },
@@ -22,6 +23,7 @@ const OPTIONS_MINOR: DocOption[] = [
 const OPTIONS_10_PLUS: DocOption[] = [
   { id: 'passport', label: 'Passport' },
   { id: 'drivingLicense', label: "Driver's License" },
+  { id: 'idCard', label: 'ID Card' },
   { id: 'greenCard', label: 'US Green Card' },
   { id: 'usVisa', label: 'US Visa' },
 ];

@@ -10,6 +10,7 @@ import { Alert, StagedFlow } from '@/components/composite';
 import { CoreButton, RowIcon, Spinner, Typography } from '@/components/ui';
 import { documentKeys, useAddDocument } from '@/features/documents/hooks';
 import { clearDocumentImages, saveDocumentImages } from '@/services/documentImageStore';
+import { flowGuards } from '@/services/flowGuards';
 import { clearScanResult, getScanResult } from '@/services/scanStore';
 import { useAppSelector } from '@/store';
 import { useThemeTokens } from '@/theme';
@@ -19,6 +20,7 @@ import type { DocumentType, IdentityDocument } from '@/types/domain';
 const DOC_LABELS: Record<DocumentType, string> = {
   passport: 'Passport',
   drivingLicense: "Driver's License",
+  idCard: 'ID Card',
   greenCard: 'US Green Card',
   birthCertificate: 'Birth Certificate',
   usVisa: 'U.S. Visa',
@@ -39,12 +41,12 @@ const STEP_INDEX: Record<ProcessingStatus, number> = {
 const msg0 = (err: any): string =>
   err?.response?.data?.message ?? err?.message ?? 'Verification failed';
 
-/** Document processing â€” per REACT_NATIVE_KYC_INTEGRATION_GUIDE.md Â§6:
- *  1. POST /documents â†’ documentId
- *  2. POST /documents/{id}/verification-sessions â†’ sessionId
+/** Document processing — per REACT_NATIVE_KYC_INTEGRATION_GUIDE.md §6:
+ *  1. POST /documents → documentId
+ *  2. POST /documents/{id}/verification-sessions → sessionId
  *  3. POST /document-verification-sessions/{sessionId}/verify
- *     with { frontImageBase64, selfieImageBase64? } â†’ SYNCHRONOUS result
- *  4. No polling needed â€” verify returns final outcome directly */
+ *     with { frontImageBase64, selfieImageBase64? } → SYNCHRONOUS result
+ *  4. No polling needed — verify returns final outcome directly */
 export default function DocumentProcessingScreen() {
   const router = useRouter();
   const { type, label, number, expiresAt } = useLocalSearchParams<{
@@ -65,7 +67,7 @@ export default function DocumentProcessingScreen() {
   const [error, setError] = useState<string | null>(null);
   const hasStarted = useRef(false);
   const processRef = useRef<(() => Promise<void>) | null>(null);
-  // Document created by the current attempt â€” reused on Retry so a failed
+  // Document created by the current attempt — reused on Retry so a failed
   // session/API error doesn't pile up duplicate documents.
   const createdDocRef = useRef<IdentityDocument | null>(null);
   const addDocument = useAddDocument();
@@ -77,7 +79,7 @@ export default function DocumentProcessingScreen() {
   // last active step so that step renders as the failed one.
   const [stepIndex, setStepIndex] = useState(STEP_INDEX.adding);
 
-  // Refresh document lists + identity summary AFTER verification completes â€”
+  // Refresh document lists + identity summary AFTER verification completes —
   // the addDocument invalidation fires while the doc is still `pending`, so
   // without this the list shows a stale pre-verify status (e.g. "Failed").
   const refreshDocumentCaches = () => {
@@ -102,10 +104,10 @@ export default function DocumentProcessingScreen() {
       }
 
       try {
-        // Step 1: Add document (metadata only â€” backend will fill in extracted data).
+        // Step 1: Add document (metadata only — backend will fill in extracted data).
         // On Retry, reuse the document created by the previous attempt.
         // NOTE: `number` is a required backend field (min 2 chars) but the real
-        // number comes from server-side OCR during /verify â€” never fabricate a
+        // number comes from server-side OCR during /verify — never fabricate a
         // random one here. "PENDING" is overwritten by the backend after verify.
         let doc = createdDocRef.current;
         if (!doc) {
@@ -132,7 +134,7 @@ export default function DocumentProcessingScreen() {
         }
 
         // Step 2: Create verification session (requestId = idempotency key)
-        // Per guide Â§6.3: omit frontObjectKey/backObjectKey/selfieObjectKey â€”
+        // Per guide §6.3: omit frontObjectKey/backObjectKey/selfieObjectKey —
         // they are reserved for the future signed-upload pipeline and the BFF
         // rejects keys not starting with customers/{customerId}/.
         setStatus('creating_session');
@@ -141,8 +143,8 @@ export default function DocumentProcessingScreen() {
           requestId: `req-${Date.now()}`,
         });
 
-        // Step 3: Verify â€” SYNCHRONOUS result with images as base64
-        // Per guide Â§6.3: frontImageBase64 is required, selfieImageBase64 for face match
+        // Step 3: Verify — SYNCHRONOUS result with images as base64
+        // Per guide §6.3: frontImageBase64 is required, selfieImageBase64 for face match
         setStatus('verifying');
         setStepIndex(STEP_INDEX.verifying);
         const result = await api.startVerificationWithImages(
@@ -156,12 +158,12 @@ export default function DocumentProcessingScreen() {
 
         clearScanResult();
 
-        // Step 4: Handle outcome â€” verify is synchronous, no polling
+        // Step 4: Handle outcome — verify is synchronous, no polling
         if (result.outcome === 'approved' || result.outcome === 'review') {
           // Facepe-style REPLACE: the new document is verified, so remove any
           // previous document of the same type for the main user. GET /documents
           // (self) is already scoped to the account owner by the BFF, so a
-          // plain type match is enough â€” do NOT filter on !personId (the
+          // plain type match is enough — do NOT filter on !personId (the
           // backend fills personId on self docs too, which silently disabled
           // this cleanup and let duplicates pile up).
           try {
@@ -179,7 +181,7 @@ export default function DocumentProcessingScreen() {
               }
             }
           } catch (e) {
-            console.warn('[DocProcessing] Replace lookup failed â€” keeping existing documents:', e);
+            console.warn('[DocProcessing] Replace lookup failed — keeping existing documents:', e);
           }
 
           refreshDocumentCaches();
@@ -188,6 +190,7 @@ export default function DocumentProcessingScreen() {
           // Pass backend-returned extracted data to the verified screen.
           // docNumber comes from the POST-VERIFY document (real masked number),
           // not the pre-verify placeholder.
+          flowGuards.grant('document:verified');
           router.replace({
             pathname: '/document/verified',
             params: {
@@ -209,7 +212,7 @@ export default function DocumentProcessingScreen() {
           setStatus('error');
           setError(result.reasonCode ?? 'Document verification failed');
 
-          // Verification rejected â€” if the user already has a document of this
+          // Verification rejected — if the user already has a document of this
           // type, discard the failed attempt so the old document survives
           // (Facepe-style replace never leaves a failed duplicate behind).
           try {
@@ -228,9 +231,11 @@ export default function DocumentProcessingScreen() {
           }
 
           refreshDocumentCaches();
+          flowGuards.grant('document:mismatch');
           router.replace({
             pathname: '/document/mismatch',
             params: {
+              docId: doc.id,
               profileName,
               profileDob,
               docName: result.extractedName ?? '',
@@ -245,7 +250,7 @@ export default function DocumentProcessingScreen() {
         console.error('[DocProcessing] Failed at step:', status, '|', msg, JSON.stringify(err?.response?.data));
         setError(msg);
         setStatus('error');
-        // Stay on this screen with a Retry button â€” do NOT route to mismatch.
+        // Stay on this screen with a Retry button — do NOT route to mismatch.
         // Mismatch is only for real verification outcomes (rejected/mismatch),
         // not for HTTP/API errors like 404 or 5xx.
       }
@@ -280,14 +285,14 @@ export default function DocumentProcessingScreen() {
             variant="h4"
             accessibilityLiveRegion="polite"
             style={{ color: status === 'error' ? theme.colors.error : theme.colors.textPrimary }}>
-            {status === 'adding' && 'Adding documentâ€¦'}
-            {status === 'creating_session' && 'Creating verification sessionâ€¦'}
-            {status === 'verifying' && 'Verifying documentâ€¦'}
+            {status === 'adding' && 'Adding document…'}
+            {status === 'creating_session' && 'Creating verification session…'}
+            {status === 'verifying' && 'Verifying document…'}
             {status === 'done' && 'Verified!'}
             {status === 'error' && 'Verification failed'}
           </Typography>
           <Typography variant="body-sm" color="secondary" center>
-            {status === 'verifying' ? 'Regula processing â€” this may take a moment' : 'Extracting details & matching your face'}
+            {status === 'verifying' ? 'Regula processing — this may take a moment' : 'Extracting details & matching your face'}
           </Typography>
         </View>
 

@@ -71,7 +71,7 @@ export function useLivenessSession() {
   }, []);
 
   const submitEvidence = useCallback(
-    async (durationMs: number): Promise<LivenessEvidenceResponse> => {
+    async (durationMs: number, clientTsMs: number): Promise<LivenessEvidenceResponse> => {
       if (!state.challenge || !state.currentChallenge) {
         throw new Error('No active liveness session');
       }
@@ -82,7 +82,7 @@ export function useLivenessSession() {
         {
           challenge: state.currentChallenge,
           step_index: state.currentStepIndex,
-          client_ts_ms: Date.now(),
+          client_ts_ms: clientTsMs,
           duration_ms: durationMs,
         },
         state.challenge.session_token,

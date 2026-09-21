@@ -1,20 +1,17 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Smartphone } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 
 import { api } from '@/api';
 import { DEFAULT_COUNTRY_CODE } from '@/constants/countries';
 import { OtpVerification } from '@/features/auth/components/OtpVerification';
-import { useThemeTokens } from '@/theme';
-import { iconSize } from '@/theme/tokens';
 
 /** Verify phone OTP — registration flow step 2. Stores registrationToken and
  *  navigates to account-details (NOT verify-email, per contract v1.1.0).
  *  Resend re-calls POST /auth/register (the backend has no dedicated resend
- *  endpoint) — a fresh registrationId is returned and used for verification. */
+ *  endpoint) — a fresh registrationId is returned and used for verification.
+ *  Layout mirrors UI-design-repo VerifyOtpScreen (purpose: phone) 1:1. */
 export default function VerifyPhoneScreen() {
   const router = useRouter();
-  const theme = useThemeTokens();
   const { phone, countryCode, registrationId } = useLocalSearchParams<{
     phone?: string;
     countryCode?: string;
@@ -39,13 +36,13 @@ export default function VerifyPhoneScreen() {
     return null;
   }
 
+  const maskedPhone = `${countryCode ?? DEFAULT_COUNTRY_CODE} ••• ••• ${phone.replace(/\D/g, '').slice(-4)}`;
+
   return (
     <OtpVerification
-      title="Verify Phone"
-      heading="Enter verification code"
-      sentTo={`Sent to ${countryCode ?? DEFAULT_COUNTRY_CODE} ${phone}`}
-      icon={<Smartphone size={iconSize.lg} color={theme.colors.actionPrimary} />}
-      progress={25}
+      title="Verify your phone"
+      heading="Enter the 6-digit code"
+      sentTo={`Sent by SMS to ${maskedPhone}`}
       purpose="phone"
       identifier={{ registrationId: activeRegistrationId, phone, countryCode: countryCode ?? DEFAULT_COUNTRY_CODE }}
       onResend={async () => {

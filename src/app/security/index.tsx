@@ -5,9 +5,14 @@ import { useState, type ReactNode } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { toApiError } from '@/api/errors';
 import { Card, CardContent, Modal, ScreenHeader } from '@/components/composite';
 import { ConsentCard } from '@/components/truepas';
 import { CoreButton, Divider, RowIcon, Switch, Typography } from '@/components/ui';
+import { useBiometricConsent } from '@/features/auth/mutations';
+import { biometricConsentGiven, biometricConsentRevoked } from '@/features/auth/slice';
+import { useToast } from '@/hooks/useToast';
+import { useAppDispatch, useAppSelector } from '@/store';
 import { useThemeTokens } from '@/theme';
 import { iconSize } from '@/theme/tokens';
 
@@ -16,10 +21,29 @@ export default function SecurityScreen() {
   const router = useRouter();
   const theme = useThemeTokens();
   const insets = useSafeAreaInsets();
+  const dispatch = useAppDispatch();
+  const user = useAppSelector((state) => state.auth.user);
+  const toast = useToast();
+  const consent = useBiometricConsent();
   const [faceIdLogin, setFaceIdLogin] = useState(true);
   const [smsVerification, setSmsVerification] = useState(false);
-  const [consentGranted, setConsentGranted] = useState(true);
   const [consentAction, setConsentAction] = useState<'withdraw' | 'give' | null>(null);
+  // Server truth — reflects the stored user record, not local optimism.
+  const consentGranted = !!user?.biometricConsentAt;
+
+  const handleConsentConfirm = async () => {
+    const grant = consentAction === 'give';
+    try {
+      await consent.mutateAsync({ accepted: grant });
+      dispatch(grant ? biometricConsentGiven() : biometricConsentRevoked());
+      setConsentAction(null);
+      // Withdrawing drops faceEnrolled locally too — the tabs layout routes
+      // the user back through consent + re-enrollment on next entry.
+    } catch (err) {
+      setConsentAction(null);
+      toast.show('error', toApiError(err).message || 'Could not update consent. Please try again.');
+    }
+  };
 
   const sectionLabel = (text: string) => (
     <Typography variant="caption" color="muted" style={{ letterSpacing: theme.letterSpacing.caps }}>
@@ -150,10 +174,8 @@ export default function SecurityScreen() {
             </CoreButton>
             <CoreButton
               variant={consentAction === 'withdraw' ? 'destructive' : 'primary'}
-              onPress={() => {
-                setConsentGranted(consentAction !== 'withdraw');
-                setConsentAction(null);
-              }}>
+              loading={consent.isPending}
+              onPress={handleConsentConfirm}>
               {consentAction === 'withdraw' ? 'Withdraw' : 'Give Consent'}
             </CoreButton>
           </>

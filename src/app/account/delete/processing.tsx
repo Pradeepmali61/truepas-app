@@ -1,10 +1,11 @@
-import { useRouter } from 'expo-router';
+import { Redirect, useRouter } from 'expo-router';
 import { Check, Hourglass } from 'lucide-react-native';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Spinner, Typography } from '@/components/ui';
+import { flowGuards } from '@/services/flowGuards';
 import { useThemeTokens } from '@/theme';
 import { iconSize } from '@/theme/tokens';
 
@@ -15,11 +16,21 @@ export default function DeleteProcessingScreen() {
   const theme = useThemeTokens();
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  // Only reachable after DELETE /user/me succeeded — a deep link here must not
+  // fall through to the session-wiping success screen.
+  const [allowed] = useState(() => flowGuards.has('account:deleting'));
 
   useEffect(() => {
-    const timer = setTimeout(() => router.replace('/account/delete/success'), PROCESSING_MS);
+    if (!allowed) return;
+    const timer = setTimeout(() => {
+      flowGuards.consume('account:deleting');
+      flowGuards.grant('account:deleted');
+      router.replace('/account/delete/success');
+    }, PROCESSING_MS);
     return () => clearTimeout(timer);
-  }, [router]);
+  }, [router, allowed]);
+
+  if (!allowed) return <Redirect href="/" />;
 
   const step = (icon: React.ReactNode, text: string) => (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing[2], paddingVertical: theme.spacing[1.5] }}>

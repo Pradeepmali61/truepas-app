@@ -14,7 +14,6 @@ import {
 import {
     darkShadows,
     duration,
-    fontFamily,
     fontSize,
     fontWeight,
     iconSize,
@@ -28,7 +27,10 @@ import {
     softDarkShadows,
     softShadows,
     spacing,
-    zIndex
+    TYPE_PRESETS,
+    zIndex,
+    type TypePairing,
+    type TypePreset
 } from "./tokens";
 
 /** Simple color mix (srgb) — the RN equivalent of CSS color-mix(). */
@@ -276,6 +278,7 @@ export interface Theme {
   /** The resolved combo when `palette` is a ComboPresetName, else null. */
   combo: ComboPreset | null;
   ratio: ColorRatio;
+  typeface: TypePreset;
   colors: SemanticColors;
   spacing: typeof spacing;
   radii: typeof radii;
@@ -283,7 +286,7 @@ export interface Theme {
   lineHeight: typeof lineHeight;
   fontWeight: typeof fontWeight;
   letterSpacing: typeof letterSpacing;
-  fontFamily: typeof fontFamily;
+  fontFamily: TypePairing;
   sizes: typeof sizes;
   iconSize: typeof iconSize;
   shadows: typeof shadows;
@@ -294,6 +297,7 @@ export interface Theme {
 
 export interface BuildThemeOptions {
   ratio?: ColorRatio;
+  typeface?: TypePreset;
 }
 
 /**
@@ -308,6 +312,8 @@ export function buildTheme(
   paletteChoice: BrandRamp | PaletteChoice = "blue",
   opts: BuildThemeOptions = {},
 ): Theme {
+  const typeface = opts.typeface ?? "inter";
+
   let brand: BrandRamp;
   let combo: ComboPreset | null = null;
   if (typeof paletteChoice === "string" && paletteChoice in COMBO_PRESETS) {
@@ -329,6 +335,7 @@ export function buildTheme(
     brand,
     combo,
     ratio,
+    typeface,
     colors: scheme === "dark" ? darkColors(brand, colorOpts) : lightColors(brand, colorOpts),
     spacing,
     radii: combo ? roundedRadii : radii,
@@ -336,7 +343,7 @@ export function buildTheme(
     lineHeight,
     fontWeight,
     letterSpacing,
-    fontFamily,
+    fontFamily: TYPE_PRESETS[typeface],
     sizes,
     iconSize,
     shadows: combo

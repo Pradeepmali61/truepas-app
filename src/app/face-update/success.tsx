@@ -1,17 +1,27 @@
-import { useRouter } from 'expo-router';
+import { Redirect, useRouter } from 'expo-router';
 import { ShieldCheck, Sparkles } from 'lucide-react-native';
+import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Badge, CoreButton, FadeUp, PopIn, RowIcon, Typography } from '@/components/ui';
+import { flowGuards } from '@/services/flowGuards';
 import { useThemeTokens } from '@/theme';
 import { iconSize } from '@/theme/tokens';
 
-/** Update face — success (ref: Facepe FaceSuccessModal). */
+/** Update face — success (ref: Facepe FaceSuccessModal). Only reachable
+ *  after the camera flow confirmed a server-side face update. */
 export default function FaceUpdateSuccessScreen() {
   const theme = useThemeTokens();
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const [allowed] = useState(() => flowGuards.has('face-update:done'));
+
+  useEffect(() => {
+    if (allowed) flowGuards.consume('face-update:done');
+  }, [allowed]);
+
+  if (!allowed) return <Redirect href="/" />;
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: theme.colors.background }}>

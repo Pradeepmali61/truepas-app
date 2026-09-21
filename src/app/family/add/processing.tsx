@@ -20,6 +20,7 @@ type ProcessingStatus = 'adding' | 'done' | 'error';
 const DOC_LABELS: Record<DocumentType, string> = {
   passport: 'Passport',
   drivingLicense: "Driver's License",
+  idCard: 'ID Card',
   greenCard: 'US Green Card',
   birthCertificate: 'Birth Certificate',
   usVisa: 'U.S. Visa',

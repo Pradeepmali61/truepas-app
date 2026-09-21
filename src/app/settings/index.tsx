@@ -13,11 +13,15 @@ import { useState, type ReactNode } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { toApiError } from '@/api/errors';
 import { Card, CardContent, Modal, ScreenHeader } from '@/components/composite';
 import { Badge, CoreButton, Divider, RowIcon, Select, Switch, Typography } from '@/components/ui';
+import { useBiometricConsent } from '@/features/auth/mutations';
+import { biometricConsentGiven, biometricConsentRevoked } from '@/features/auth/slice';
 import { useLogoutFlow } from '@/features/auth/useLogoutFlow';
 import { useIdentitySummary } from '@/features/identity/hooks';
-import { useAppSelector } from '@/store';
+import { useToast } from '@/hooks/useToast';
+import { useAppDispatch, useAppSelector } from '@/store';
 import { BRAND_PRESETS, useTheme, useThemeTokens, type BrandPreset, type ColorScheme, type RadiusPreset } from '@/theme';
 import { iconSize } from '@/theme/tokens';
 
@@ -29,13 +33,32 @@ export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const { logout: handleLogout, isPending: loggingOut } = useLogoutFlow();
   const { scheme, setScheme, palette, setPalette, radius, setRadius } = useTheme();
+  const dispatch = useAppDispatch();
   const user = useAppSelector((state) => state.auth.user);
+  const toast = useToast();
   // Real verification status (face + document) — faceEnrolled alone is not "Verified".
   const { data: identity } = useIdentitySummary();
+  const consent = useBiometricConsent();
   const [faceIdEnabled, setFaceIdEnabled] = useState(!!user?.faceEnrolled);
-  const [biometricConsent, setBiometricConsent] = useState(!!user?.biometricConsentAt);
   const [alertsEnabled, setAlertsEnabled] = useState(true);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [consentAction, setConsentAction] = useState<'give' | 'withdraw' | null>(null);
+  // Server truth — the switch reflects the stored user, not local optimism.
+  const consentGranted = !!user?.biometricConsentAt;
+
+  const handleConsentConfirm = async () => {
+    const grant = consentAction === 'give';
+    try {
+      await consent.mutateAsync({ accepted: grant });
+      dispatch(grant ? biometricConsentGiven() : biometricConsentRevoked());
+      setConsentAction(null);
+      // Withdrawing drops faceEnrolled locally too — the tabs layout then
+      // routes the user back through consent + re-enrollment on next entry.
+    } catch (err) {
+      setConsentAction(null);
+      toast.show('error', toApiError(err).message || 'Could not update consent. Please try again.');
+    }
+  };
 
 
   const settingRow = (label: string, right: ReactNode) => (
@@ -125,7 +148,11 @@ export default function SettingsScreen() {
             )}
             {settingRow(
               'Biometric consent',
-              <Switch value={biometricConsent} onValueChange={setBiometricConsent} />,
+              <Switch
+                value={consentGranted}
+                disabled={consent.isPending}
+                onValueChange={(v) => setConsentAction(v ? 'give' : 'withdraw')}
+              />,
             )}
             {settingRow(
               'Verification alerts',
@@ -308,6 +335,30 @@ export default function SettingsScreen() {
           Sign out
         </CoreButton>
       </ScrollView>
+
+      <Modal
+        visible={consentAction !== null}
+        onClose={() => setConsentAction(null)}
+        title={consentAction === 'withdraw' ? 'Withdraw Consent?' : 'Give Consent?'}
+        footer={
+          <>
+            <CoreButton variant="ghost" onPress={() => setConsentAction(null)}>
+              Cancel
+            </CoreButton>
+            <CoreButton
+              variant={consentAction === 'withdraw' ? 'destructive' : 'primary'}
+              loading={consent.isPending}
+              onPress={handleConsentConfirm}>
+              {consentAction === 'withdraw' ? 'Withdraw' : 'Give Consent'}
+            </CoreButton>
+          </>
+        }>
+        <Typography variant="body" color="secondary">
+          {consentAction === 'withdraw'
+            ? 'Withdrawing biometric consent will disable face verification. You will need to re-enroll to use face-based features.'
+            : 'Giving biometric consent will enable face verification. You can withdraw at any time.'}
+        </Typography>
+      </Modal>
 
       <Modal
         visible={confirmDelete}

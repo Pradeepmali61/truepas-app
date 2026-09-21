@@ -94,7 +94,14 @@ export default function LoginScreen() {
       }
       dispatch(sessionStarted({ user, accessToken, refreshToken: remember ? refreshToken : undefined }));
     } catch (error) {
-      setLoginError(toApiError(error).message);
+      const apiErr = toApiError(error);
+      // Surface the server's Retry-After on 429/lockout so the user knows
+      // when the next attempt will work instead of hammering the button.
+      setLoginError(
+        apiErr.retryAfterSeconds
+          ? `${apiErr.message} Try again in ${apiErr.retryAfterSeconds}s.`
+          : apiErr.message,
+      );
     } finally {
       setSubmitting(false);
     }

@@ -1,4 +1,4 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import { BadgeCheck, Camera, FileText, ScanFace, TriangleAlert } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Image, ScrollView, View } from 'react-native';
@@ -8,6 +8,7 @@ import { Card, ScreenHeader } from '@/components/composite';
 import { ConfidenceRing, DocumentIdCard } from '@/components/truepas';
 import { CoreButton, PopIn, RowIcon, Typography } from '@/components/ui';
 import { getDocumentImageUri } from '@/services/documentImageStore';
+import { flowGuards } from '@/services/flowGuards';
 import { makeStyles, useThemeTokens, type Theme } from '@/theme';
 import { iconSize } from '@/theme/tokens';
 
@@ -58,6 +59,13 @@ export default function DocumentVerifiedScreen() {
   const [frontImageUri, setFrontImageUri] = useState<string | null>(null);
   const [selfieImageUri, setSelfieImageUri] = useState<string | null>(null);
   const [isFlipped, setIsFlipped] = useState(false);
+  // Result screen — a deep link with no real verification behind it must not
+  // render a fake "verified" card (ADV-001).
+  const [allowed] = useState(() => flowGuards.has('document:verified'));
+
+  useEffect(() => {
+    if (allowed) flowGuards.consume('document:verified');
+  }, [allowed]);
   const flipAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -94,6 +102,8 @@ export default function DocumentVerifiedScreen() {
           return Math.round(n <= 1 ? n * 100 : n);
         })()
       : null;
+
+  if (!allowed) return <Redirect href="/document/select-type" />;
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: theme.colors.background }}>

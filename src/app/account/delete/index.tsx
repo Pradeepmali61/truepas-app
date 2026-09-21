@@ -7,6 +7,7 @@ import { Card, Alert as InlineAlert, OtpInput, ScreenHeader } from '@/components
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
 import { Button, Input, Typography } from '@/components/ui';
 import { useDeleteAccount } from '@/features/auth/mutations';
+import { flowGuards } from '@/services/flowGuards';
 import { useThemeTokens } from '@/theme';
 
 /**
@@ -29,6 +30,7 @@ export default function DeleteAccountScreen() {
     setError('');
     try {
       await deleteAccount.mutateAsync({ confirmation: confirmation.trim(), pin });
+      flowGuards.grant('account:deleting');
       router.push('/account/delete/processing');
     } catch (err: any) {
       // A failed delete must NOT reach the success flow — a wrong PIN or a
