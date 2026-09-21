@@ -52,9 +52,9 @@ export const fontSize: Record<
   "xs" | "sm" | "base" | "md" | "lg" | "xl" | "2xl" | "3xl" | "4xl",
   number
 > = {
-  xs: 12,
-  sm: 13,
-  base: 14,
+  xs: 13,
+  sm: 14,
+  base: 15,
   md: 16,
   lg: 18,
   xl: 20,
@@ -157,12 +157,13 @@ export const sizes: Record<
   | "cardPadding"
   | "sidebarWidth"
   | "headerHeight"
-  | "fieldBorderWidth",
+  | "fieldBorderWidth"
+  | "labelGap",
   number
 > = {
   heightXs: 28,
   heightSm: 32,
-  heightMd: 40,
+  heightMd: 44,
   heightLg: 48,
   touchTarget: 44,
   controlPaddingXSm: 12,
@@ -172,6 +173,7 @@ export const sizes: Record<
   sidebarWidth: 256,
   headerHeight: 56,
   fieldBorderWidth: 1,
+  labelGap: 8,
 };
 
 export const iconSize: Record<"xs" | "sm" | "md" | "lg" | "xl", number> = {

@@ -6,7 +6,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Provider } from 'react-redux';
 
 import { SessionExpiredError, setOnSessionExpired } from '@/api/client';
-import { ToastProvider } from '@/components/composite';
+import { FieldLabelStyleProvider, ToastProvider } from '@/components/composite';
 import { DevFloatingButton } from '@/components/layout/DevFloatingButton';
 import { sessionEnded } from '@/features/auth/slice';
 import { clearAllDocumentImages } from '@/services/documentImageStore';
@@ -67,23 +67,25 @@ export default function RootLayout() {
       <QueryClientProvider client={queryClient}>
         <SafeAreaProvider>
           <ThemeProvider scheme="system" palette="violetLedger" typeface="grotesk">
-            <ToastProvider>
-              <RootShell>
-                <Stack
-                  screenOptions={{
-                    headerShown: false,
-                    animation: 'slide_from_right',
-                    contentStyle: { backgroundColor: '#ffffff' },
-                  }}>
-                  <Stack.Screen name="dev" />
-                  <Stack.Screen name="(auth)" />
-                  <Stack.Screen name="(onboarding)" />
-                  <Stack.Screen name="(tabs)" />
-                </Stack>
-                {/* Dev-only overlay — absent from preview/production builds */}
-                <DevFloatingButton />
-              </RootShell>
-            </ToastProvider>
+            <FieldLabelStyleProvider>
+              <ToastProvider>
+                <RootShell>
+                  <Stack
+                    screenOptions={{
+                      headerShown: false,
+                      animation: 'slide_from_right',
+                      contentStyle: { backgroundColor: '#ffffff' },
+                    }}>
+                    <Stack.Screen name="dev" />
+                    <Stack.Screen name="(auth)" />
+                    <Stack.Screen name="(onboarding)" />
+                    <Stack.Screen name="(tabs)" />
+                  </Stack>
+                  {/* Dev-only overlay — absent from preview/production builds */}
+                  <DevFloatingButton />
+                </RootShell>
+              </ToastProvider>
+            </FieldLabelStyleProvider>
           </ThemeProvider>
         </SafeAreaProvider>
       </QueryClientProvider>

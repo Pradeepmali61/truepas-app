@@ -1,8 +1,8 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
-import { Eye, EyeOff, Lock } from 'lucide-react-native';
+import { Lock } from 'lucide-react-native';
 import { useState } from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 
 import { toApiError } from '@/api/errors';
 import { FormField, Alert as InlineAlert, ScreenHeader } from '@/components/composite';
@@ -29,24 +29,9 @@ export default function ChangePasswordScreen() {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [showCurrent, setShowCurrent] = useState(false);
-  const [showNew, setShowNew] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
   const [error, setError] = useState('');
   const changePassword = useChangePassword();
   const toast = useToast();
-
-  const eye = (visible: boolean, toggle: () => void) => (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={visible ? 'Hide password' : 'Show password'}
-      onPress={toggle}
-      hitSlop={8}>
-      {visible
-        ? <EyeOff size={iconSize.sm} color={theme.colors.textMuted} />
-        : <Eye size={iconSize.sm} color={theme.colors.textMuted} />}
-    </Pressable>
-  );
 
   const handleChange = async () => {
     if (!currentPassword || !newPassword || !confirmPassword) {
@@ -97,11 +82,10 @@ export default function ChangePasswordScreen() {
             value={currentPassword}
             onChangeText={setCurrentPassword}
             placeholder="Current password"
-            secureTextEntry={!showCurrent}
+            secureTextEntry
             autoCapitalize="none"
             autoCorrect={false}
             iconLeft={<Lock size={iconSize.sm} color={theme.colors.textMuted} />}
-            iconRight={eye(showCurrent, () => setShowCurrent((v) => !v))}
           />
         </FormField>
 
@@ -110,11 +94,10 @@ export default function ChangePasswordScreen() {
             value={newPassword}
             onChangeText={setNewPassword}
             placeholder="New password"
-            secureTextEntry={!showNew}
+            secureTextEntry
             autoCapitalize="none"
             autoCorrect={false}
             iconLeft={<Lock size={iconSize.sm} color={theme.colors.textMuted} />}
-            iconRight={eye(showNew, () => setShowNew((v) => !v))}
           />
         </FormField>
 
@@ -123,11 +106,10 @@ export default function ChangePasswordScreen() {
             value={confirmPassword}
             onChangeText={setConfirmPassword}
             placeholder="Repeat password"
-            secureTextEntry={!showConfirm}
+            secureTextEntry
             autoCapitalize="none"
             autoCorrect={false}
             iconLeft={<Lock size={iconSize.sm} color={theme.colors.textMuted} />}
-            iconRight={eye(showConfirm, () => setShowConfirm((v) => !v))}
           />
         </FormField>
 

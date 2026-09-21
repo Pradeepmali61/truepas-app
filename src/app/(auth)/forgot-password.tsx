@@ -1,7 +1,7 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Eye, EyeOff, Lock, Mail } from 'lucide-react-native';
+import { Lock, Mail } from 'lucide-react-native';
 import { useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import { toApiError } from '@/api/errors';
 import { BrandMark } from '@/components/app';
@@ -34,8 +34,6 @@ export default function ForgotPasswordScreen() {
   const [verifiedOtp, setVerifiedOtp] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [showNew, setShowNew] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
   const [error, setError] = useState('');
 
   const forgotPassword = useForgotPassword();
@@ -164,17 +162,10 @@ export default function ForgotPasswordScreen() {
                   value={newPassword}
                   onChangeText={setNewPassword}
                   placeholder="New password"
-                  secureTextEntry={!showNew}
+                  secureTextEntry
                   autoCapitalize="none"
                   autoCorrect={false}
                   iconLeft={<Lock size={iconSize.sm} color={theme.colors.textMuted} />}
-                  iconRight={
-                    <Pressable onPress={() => setShowNew((v) => !v)}>
-                      {showNew
-                        ? <EyeOff size={iconSize.sm} color={theme.colors.textMuted} />
-                        : <Eye size={iconSize.sm} color={theme.colors.textMuted} />}
-                    </Pressable>
-                  }
                 />
               </FormField>
               <FormField label="Confirm new password" required>
@@ -182,17 +173,10 @@ export default function ForgotPasswordScreen() {
                   value={confirmPassword}
                   onChangeText={setConfirmPassword}
                   placeholder="Repeat password"
-                  secureTextEntry={!showConfirm}
+                  secureTextEntry
                   autoCapitalize="none"
                   autoCorrect={false}
                   iconLeft={<Lock size={iconSize.sm} color={theme.colors.textMuted} />}
-                  iconRight={
-                    <Pressable onPress={() => setShowConfirm((v) => !v)}>
-                      {showConfirm
-                        ? <EyeOff size={iconSize.sm} color={theme.colors.textMuted} />
-                        : <Eye size={iconSize.sm} color={theme.colors.textMuted} />}
-                    </Pressable>
-                  }
                 />
               </FormField>
               <InlineAlert variant="warning" title="Sessions revoked">

@@ -7,6 +7,7 @@ export {
     CardTitle, type CardProps
 } from "./Card";
 export { DatePicker, type DatePickerProps } from "./DatePicker";
+export { FieldLabelStyleProvider, useFieldLabelStyle, type FieldLabelStyle } from "./FieldLabelStyle";
 export { FlowStepRow, FlowSteps, StagedFlow, type FlowStepItem, type FlowStepState, type FlowStepStatus } from "./FlowSteps";
 export { FormField, type FormFieldProps } from "./FormField";
 export { Modal, type ModalProps } from "./Modal";

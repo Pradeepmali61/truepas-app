@@ -97,7 +97,7 @@ export function DatePicker({
         onPress={openPicker}
         style={[styles.field, state === "error" && styles.error, disabled && styles.disabled, style]}
       >
-        <Calendar size={iconSize.sm} color={theme.colors.textMuted} />
+        <Calendar size={iconSize.sm} color={theme.colors.actionPrimary} />
         <Text style={[styles.valueText, !value && styles.placeholder]}>{value ? fmt(value) : placeholder}</Text>
       </Pressable>
 
