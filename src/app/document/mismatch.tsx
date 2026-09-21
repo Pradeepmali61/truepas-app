@@ -1,5 +1,6 @@
 import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import { TriangleAlert } from 'lucide-react-native';
+import { useEffect, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 

@@ -44,10 +44,33 @@ function withFallback<K extends keyof typeof realApi>(key: K) {
   };
 }
 
+/**
+ * Dev screen-browser override (src/app/dev.tsx): the presets forge a fake
+ * 'dev-token' session the real BFF rejects — the 401 → session-expired
+ * handler would bounce every authenticated screen to login. While enabled,
+ * calls resolve against the mock fixtures; "Resume Normal Flow" resets it.
+ */
+let devMockOverride = false;
+
+export function setDevMockApi(enabled: boolean): void {
+  devMockOverride = enabled;
+}
+
+const realFns = new Map<string, unknown>();
+
 /** The API object used by every hook/screen. */
-export const api = useMockApi
-  ? mockApi
-  : (Object.keys(realApi).reduce((acc, key) => {
-      (acc as any)[key] = withFallback(key as keyof typeof realApi);
-      return acc;
-    }, {} as typeof realApi));
+export const api: typeof realApi = new Proxy({} as typeof realApi, {
+  get(_, key: keyof typeof realApi) {
+    if (useMockApi || devMockOverride) {
+      const mockFn = (mockApi as Partial<typeof realApi>)[key];
+      if (mockFn) return mockFn;
+    }
+    // Memoized — callers may place api.<fn> in effect dep arrays.
+    let fn = realFns.get(key);
+    if (!fn) {
+      fn = withFallback(key);
+      realFns.set(key, fn);
+    }
+    return fn;
+  },
+});

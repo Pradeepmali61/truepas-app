@@ -4,12 +4,22 @@ import { useCallback, useEffect, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { setDevMockApi } from '@/api';
+import { setRegistrationToken } from '@/api/client';
 import { checkAllHealth } from '@/api/health';
 import { mockUser } from '@/api/mock';
 import { Card, CardContent } from '@/components/composite';
 import { CoreButton, Divider, Typography } from '@/components/ui';
-import { faceEnrollmentCompleted, sessionEnded, sessionStarted } from '@/features/auth/slice';
-import { useAppDispatch } from '@/store';
+import {
+    biometricConsentGiven,
+    faceEnrollmentCompleted,
+    sessionEnded,
+    sessionStarted,
+} from '@/features/auth/slice';
+import { accountDetailsStore } from '@/services/accountDetailsStore';
+import { flowGuards } from '@/services/flowGuards';
+import { setScanResult } from '@/services/scanStore';
+import { useAppDispatch, type AppDispatch } from '@/store';
 import { useThemeTokens } from '@/theme';
 import type { HealthStatus } from '@/types/domain';
 
@@ -19,7 +29,17 @@ interface ScreenEntry {
   label: string;
   route: string;
   preset: AuthPreset;
+  /** Runs after the auth preset and before router.push — grants the
+   *  one-shot flowGuards flags / in-memory tokens the target screen's
+   *  deep-link guard requires, so the entry lands on the screen itself
+   *  instead of being bounced to the start of its flow. */
+  prepare?: (dispatch: AppDispatch) => void;
 }
+
+// 1×1 PNG — stands in for a captured scan so /document/processing runs
+// the verification flow instead of rendering its "no image" error state.
+const DEV_SCAN_IMAGE_B64 =
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
 
 const GROUPS: { title: string; screens: ScreenEntry[] }[] = [
   {
@@ -27,9 +47,39 @@ const GROUPS: { title: string; screens: ScreenEntry[] }[] = [
     screens: [
       { label: 'Welcome carousel', route: '/(auth)/welcome', preset: 'unauth' },
       { label: 'Register — create account', route: '/(auth)/register', preset: 'unauth' },
-      { label: 'Verify phone (OTP)', route: '/(auth)/verify-phone', preset: 'unauth' },
-      { label: 'Verify email (OTP)', route: '/(auth)/verify-email', preset: 'unauth' },
-      { label: 'Account details + PIN', route: '/(auth)/account-details', preset: 'unauth' },
+      {
+        label: 'Verify phone (OTP)',
+        // Screen requires phone + registrationId params — without them it
+        // bounces back to register.
+        route: '/(auth)/verify-phone?phone=5550102938&registrationId=dev-reg-1',
+        preset: 'unauth',
+      },
+      {
+        label: 'Verify email (OTP)',
+        route: '/(auth)/verify-email?email=sarah.kim@example.com',
+        preset: 'unauth',
+        // Resend re-submits the stashed account-details payload with the
+        // registration token — without both, Resend throws.
+        prepare: () => {
+          setRegistrationToken('dev-registration-token');
+          accountDetailsStore.stash({
+            fullName: 'Sarah Kim',
+            dateOfBirth: '04/12/1990',
+            pin: '1234',
+            email: 'sarah.kim@example.com',
+            password: 'password123',
+            confirmPassword: 'password123',
+          });
+        },
+      },
+      {
+        label: 'Account details + PIN',
+        route: '/(auth)/account-details',
+        preset: 'unauth',
+        // Screen submits with the in-memory registration token issued by
+        // phone OTP — without it the deep-link guard bounces to register.
+        prepare: () => setRegistrationToken('dev-registration-token'),
+      },
       { label: 'Login', route: '/(auth)/login', preset: 'unauth' },
       { label: 'Forgot — email', route: '/(auth)/forgot-password', preset: 'unauth' },
       { label: 'Forgot — reset password', route: '/(auth)/forgot-password?step=reset', preset: 'unauth' },
@@ -38,9 +88,20 @@ const GROUPS: { title: string; screens: ScreenEntry[] }[] = [
   {
     title: 'ONBOARDING',
     screens: [
-      { label: 'Biometric consent', route: '/(onboarding)/consent', preset: 'auth-no-face' },
-      { label: 'Face scan intro', route: '/(onboarding)/face-scan', preset: 'auth-no-face' },
-      { label: 'Face enrolled success', route: '/(onboarding)/face-enrolled', preset: 'auth-no-face' },
+      { label: 'Biometric consent — "Faster check-in"', route: '/(onboarding)/consent', preset: 'auth-no-face' },
+      {
+        label: 'Face scan intro',
+        route: '/(onboarding)/face-scan',
+        preset: 'auth-no-face',
+        // Requires biometric consent — the preset alone leaves it false.
+        prepare: (dispatch) => dispatch(biometricConsentGiven()),
+      },
+      {
+        label: 'Face enrolled success',
+        route: '/(onboarding)/face-enrolled',
+        preset: 'auth-no-face',
+        prepare: () => flowGuards.grant('onboarding:face-enrolled'),
+      },
     ],
   },
   {
@@ -66,9 +127,19 @@ const GROUPS: { title: string; screens: ScreenEntry[] }[] = [
     title: 'FACE UPDATE',
     screens: [
       { label: 'PIN verification', route: '/face-update/pin', preset: 'auth-face' },
-      { label: 'Camera capture', route: '/face-update/camera', preset: 'auth-face' },
+      {
+        label: 'Camera capture',
+        route: '/face-update/camera',
+        preset: 'auth-face',
+        prepare: () => flowGuards.grant('face-update:camera'),
+      },
       { label: 'ROC retry error', route: '/face-update/error', preset: 'auth-face' },
-      { label: 'Success', route: '/face-update/success', preset: 'auth-face' },
+      {
+        label: 'Success',
+        route: '/face-update/success',
+        preset: 'auth-face',
+        prepare: () => flowGuards.grant('face-update:done'),
+      },
     ],
   },
   {
@@ -77,17 +148,34 @@ const GROUPS: { title: string; screens: ScreenEntry[] }[] = [
       { label: 'Identity dashboard', route: '/identity', preset: 'auth-face' },
       { label: 'Select document type', route: '/document/select-type', preset: 'auth-face' },
       { label: 'Document scan', route: '/document/scan', preset: 'auth-face' },
-      { label: 'Processing / matching', route: '/document/processing', preset: 'auth-face' },
-      { label: 'Details mismatch', route: '/document/mismatch', preset: 'auth-face' },
-      { label: 'Verified success', route: '/document/verified', preset: 'auth-face' },
+      {
+        label: 'Processing / matching',
+        route: '/document/processing?type=passport&label=Passport',
+        preset: 'auth-face',
+        // Runs the verify flow — needs a captured scan in scanStore.
+        prepare: () =>
+          setScanResult({ documentImageBase64: DEV_SCAN_IMAGE_B64, selfieBase64: DEV_SCAN_IMAGE_B64 }),
+      },
+      {
+        label: 'Details mismatch',
+        route: '/document/mismatch?docId=d1&profileName=Sarah+Kim&profileDob=04%2F12%2F1990&docName=Sara+Kim&docDob=04%2F21%2F1990',
+        preset: 'auth-face',
+        prepare: () => flowGuards.grant('document:mismatch'),
+      },
+      {
+        label: 'Verified success',
+        route: '/document/verified?docId=d1&docLabel=Passport&docType=passport&outcome=approved&matchScore=0.95&extractedName=Sarah+Kim&extractedDob=04%2F12%2F1990',
+        preset: 'auth-face',
+        prepare: () => flowGuards.grant('document:verified'),
+      },
     ],
   },
   {
     title: 'FAMILY',
     screens: [
       { label: 'Add family — basic info', route: '/family/add', preset: 'auth-face' },
-      { label: 'Add family — document (5-9)', route: '/family/add/document?name=Max+Kim&band=5-9', preset: 'auth-face' },
-      { label: 'Add family — document (0-4)', route: '/family/add/document?name=Lily+Kim&band=0-4', preset: 'auth-face' },
+      { label: 'Add family — document (5-9)', route: '/family/add/document?name=Max+Kim&band=5-9&dob=2018-06-15&relationship=Child', preset: 'auth-face' },
+      { label: 'Add family — document (0-4)', route: '/family/add/document?name=Lily+Kim&band=0-4&dob=2023-03-10&relationship=Child', preset: 'auth-face' },
       { label: 'Add family — face capture (5-9)', route: '/family/add/face-capture?name=Max&age=7&personId=f1', preset: 'auth-face' },
       { label: 'Add family — photo capture (0-4)', route: '/family/add/photo-capture?name=Noah&age=3&personId=f1', preset: 'auth-face' },
       { label: 'Family member detail', route: '/family/f1', preset: 'auth-face' },
@@ -103,8 +191,18 @@ const GROUPS: { title: string; screens: ScreenEntry[] }[] = [
     title: 'ACCOUNT & LEGAL',
     screens: [
       { label: 'Delete account — warning', route: '/account/delete', preset: 'auth-face' },
-      { label: 'Delete account — processing', route: '/account/delete/processing', preset: 'auth-face' },
-      { label: 'Delete account — success', route: '/account/delete/success', preset: 'auth-face' },
+      {
+        label: 'Delete account — processing',
+        route: '/account/delete/processing',
+        preset: 'auth-face',
+        prepare: () => flowGuards.grant('account:deleting'),
+      },
+      {
+        label: 'Delete account — success',
+        route: '/account/delete/success',
+        preset: 'auth-face',
+        prepare: () => flowGuards.grant('account:deleted'),
+      },
       { label: 'Data & privacy', route: '/legal/data-privacy', preset: 'auth-face' },
       { label: 'Privacy policy', route: '/legal/privacy-policy', preset: 'auth-face' },
       { label: 'Terms of service', route: '/legal/terms', preset: 'auth-face' },
@@ -171,6 +269,9 @@ function DevScreenInner() {
   }, [refreshHealth]);
 
   const applyPreset = (preset: AuthPreset) => {
+    // The presets forge a fake session — the real BFF rejects 'dev-token'
+    // (401 → session-expired → bounce to login), so browsing runs on mock.
+    setDevMockApi(true);
     if (preset === 'unauth') {
       dispatch(sessionEnded());
     } else if (preset === 'auth-no-face') {
@@ -188,6 +289,7 @@ function DevScreenInner() {
 
   const navigate = (entry: ScreenEntry) => {
     applyPreset(entry.preset);
+    entry.prepare?.(dispatch);
     router.push(entry.route as never);
   };
 
@@ -318,7 +420,10 @@ function DevScreenInner() {
           <CoreButton
             fullWidth
             accessibilityLabel="Resume normal flow"
-            onPress={() => router.replace('/' as never)}>
+            onPress={() => {
+              setDevMockApi(false);
+              router.replace('/' as never);
+            }}>
             Resume Normal Flow
           </CoreButton>
         </View>

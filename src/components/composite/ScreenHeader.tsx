@@ -1,9 +1,10 @@
+import { ArrowLeft } from "lucide-react-native";
 import type { ReactNode } from "react";
-import { Text, View, type StyleProp, type ViewStyle } from "react-native";
-import { ChevronLeft } from "lucide-react-native";
+import { View, type StyleProp, type ViewStyle } from "react-native";
 import { makeStyles, useThemeTokens } from "../../theme";
 import { iconSize } from "../../theme/tokens";
 import { IconButton } from "../ui/IconButton";
+import { Typography } from "../ui/Typography";
 
 export interface ScreenHeaderProps {
   title: ReactNode;
@@ -14,30 +15,36 @@ export interface ScreenHeaderProps {
   style?: StyleProp<ViewStyle>;
 }
 
-/** Top bar for a pushed screen — the mobile analog of breadcrumbs. */
+/** Top bar for a pushed screen — mirrors the design-repo AppScreen header:
+ *  transparent over the screen background (no strip/border), ghost back
+ *  arrow in actionPrimary, centered h4 title kept balanced by equal-width
+ *  side slots. */
 export function ScreenHeader({ title, subtitle, onBack, actions, style }: ScreenHeaderProps) {
   const styles = useStyles();
   const theme = useThemeTokens();
   return (
     <View style={[styles.header, style]}>
-      {onBack && (
+      {onBack ? (
         <IconButton
           accessibilityLabel="Back"
-          icon={<ChevronLeft size={iconSize.md} color={theme.colors.textPrimary} />}
+          variant="ghost"
+          icon={<ArrowLeft size={iconSize.md} color={theme.colors.actionPrimary} />}
           onPress={onBack}
         />
+      ) : (
+        <View style={styles.headerSpacer} />
       )}
       <View style={styles.titles}>
-        <Text style={styles.title} numberOfLines={1} accessibilityRole="header">
+        <Typography variant="h4" numberOfLines={1}>
           {title}
-        </Text>
+        </Typography>
         {subtitle != null && (
-          <Text style={styles.subtitle} numberOfLines={1}>
+          <Typography variant="caption" color="muted" numberOfLines={1}>
             {subtitle}
-          </Text>
+          </Typography>
         )}
       </View>
-      {actions != null && <View style={styles.actions}>{actions}</View>}
+      <View style={styles.actions}>{actions}</View>
     </View>
   );
 }
@@ -48,13 +55,15 @@ const useStyles = makeStyles((t) => ({
     alignItems: "center",
     gap: t.spacing[2],
     minHeight: t.sizes.headerHeight,
-    paddingHorizontal: t.spacing[2],
-    borderBottomWidth: t.sizes.fieldBorderWidth,
-    borderBottomColor: t.colors.borderSubtle,
-    backgroundColor: t.colors.surface,
+    paddingHorizontal: t.spacing[4],
   },
-  titles: { flex: 1 },
-  title: { fontSize: t.fontSize.lg, fontWeight: t.fontWeight.semibold, color: t.colors.textPrimary },
-  subtitle: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
-  actions: { flexDirection: "row", alignItems: "center", gap: t.spacing[1] },
+  headerSpacer: { width: t.sizes.touchTarget },
+  titles: { flex: 1, alignItems: "center", gap: 1 },
+  actions: {
+    minWidth: t.sizes.touchTarget,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    gap: t.spacing[2],
+  },
 }));
