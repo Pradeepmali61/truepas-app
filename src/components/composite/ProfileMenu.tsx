@@ -11,28 +11,32 @@ import { useRouter } from "expo-router";
 import { LogOut, Palette, Pencil, ShieldCheck, Trash2 } from "lucide-react-native";
 import { useState } from "react";
 import { Text, View } from "react-native";
+import { useLogoutFlow } from "../../features/auth/useLogoutFlow";
 import { makeStyles, useThemeTokens } from "../../theme";
 import { iconSize } from "../../theme/tokens";
-import { useLogoutFlow } from "../../features/auth/useLogoutFlow";
 import { Typography } from "../ui/Typography";
 import { ActionSheet } from "./ActionSheet";
 import { ListTile } from "./ListTile";
 import { Section, SectionTitle } from "./Section";
 
-export function ProfileMenu() {
+export function ProfileMenu({ onNavigate }: { onNavigate?: () => void }) {
   const styles = useStyles();
   const t = useThemeTokens();
   const router = useRouter();
   const { logout } = useLogoutFlow();
   const [confirmSignOut, setConfirmSignOut] = useState(false);
+  const go = (href: string) => {
+    onNavigate?.();
+    router.push(href as never);
+  };
 
   return (
     <>
       <Section>
         <SectionTitle>Account</SectionTitle>
-        <ListTile icon={Pencil} tone="brand" title="Edit profile" onPress={() => router.push("/profile/edit")} />
-        <ListTile icon={ShieldCheck} tone="brand" title="Security & sign-in" onPress={() => router.push("/security")} />
-        <ListTile icon={Palette} tone="brand" title="Appearance" onPress={() => router.push("/settings")} />
+        <ListTile icon={Pencil} tone="brand" title="Edit profile" onPress={() => go("/profile/edit")} />
+        <ListTile icon={ShieldCheck} tone="brand" title="Security & sign-in" onPress={() => go("/security")} />
+        <ListTile icon={Palette} tone="brand" title="Appearance" onPress={() => go("/settings")} />
         <ListTile icon={LogOut} tone="brand" title="Sign out" onPress={() => setConfirmSignOut(true)} />
       </Section>
 
@@ -46,7 +50,7 @@ export function ProfileMenu() {
             </Text>
           }
           tone="error"
-          onPress={() => router.push("/account/delete")}
+          onPress={() => go("/account/delete")}
         />
       </Section>
 

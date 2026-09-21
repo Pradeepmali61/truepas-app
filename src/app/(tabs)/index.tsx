@@ -1,16 +1,26 @@
+/**
+ * HomeScreen — dashboard tab. Ported 1:1 from UI-design-repo
+ * `screens/main/HomeScreen.tsx`: brand header (logo + bell + avatar that
+ * opens the profile drawer), next check-in hero, family-members card,
+ * document wallet preview, and previous check-ins.
+ *
+ * Data comes from the real hooks (useFamily / useDocuments / useBookings /
+ * useNotifications) in place of the design's useApiData store.
+ */
 import { useRouter } from 'expo-router';
-import { ChevronRight, CircleCheck, ShieldCheck, Ticket } from 'lucide-react-native';
+import { Bell, CalendarDays, Plus, ScanFace, UserPlus } from 'lucide-react-native';
 import { useState } from 'react';
-import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AppChrome } from '@/components/app/AppChrome';
-import { AddDocumentButton, CheckInRow, DocumentRow, EmptyStateCard, FamilyStrip, type FamilyMemberRef } from '@/components/truepas';
-import { EmptyState, ErrorState, LoadingState, Typography } from '@/components/ui';
+import { AsyncBlock, EmptyState, ProfileDrawer, Section, SectionTitle, SkeletonRows } from '@/components/composite';
+import { BookingCard, DocumentRow, NextCheckinCard } from '@/components/truepas';
+import { Avatar, FadeUp, Link, NeuBox, Skeleton, SoftIconButton, Typography } from '@/components/ui';
 import { useDocuments } from '@/features/documents/hooks';
 import { useFamily } from '@/features/family/hooks';
 import { useBookings } from '@/features/history/hooks';
-import { useIdentitySummary } from '@/features/identity/hooks';
+import { useNotifications } from '@/features/notifications/hooks';
+import { useProfilePicture } from '@/features/profile/hooks';
 import { useAppSelector } from '@/store';
 import { makeStyles, useThemeTokens } from '@/theme';
 import { iconSize } from '@/theme/tokens';
@@ -18,243 +28,359 @@ import { iconSize } from '@/theme/tokens';
 /** Height of the custom bottom tab bar (see (tabs)/_layout.tsx). */
 const TAB_BAR_HEIGHT = 88;
 
-function formatDate(value: string): string {
-    const d = new Date(value);
-    return Number.isNaN(d.getTime())
-        ? value
-        : d.toLocaleDateString(undefined, { year: 'numeric', month: 'numeric', day: 'numeric' });
-}
-
-/** Home tab — app header + family members strip (design-repo truepas/family.tsx).
- *  The selected person's documents list below; index 0 is self ("You"),
- *  i ≥ 1 maps to family members. */
 export default function HomeScreen() {
     const styles = useStyles();
     const t = useThemeTokens();
     const insets = useSafeAreaInsets();
     const router = useRouter();
     const user = useAppSelector((state) => state.auth.user);
-    const { data: members } = useFamily();
-    const [selected, setSelected] = useState(0);
+    const { url: avatarUri } = useProfilePicture();
+    const [drawer, setDrawer] = useState(false);
 
-    // No personId = the signed-in user's own documents ("You").
-    const selectedMember = selected === 0 ? undefined : members?.[selected - 1];
-    const selectedPersonId = selectedMember?.id;
-    const { data: documents, isPending, isError, isRefetching, refetch } = useDocuments(selectedPersonId);
-    // Identity status card — the signed-in user's own summary (face + document).
-    const { data: identity } = useIdentitySummary();
+    const family = useFamily();
+    const documents = useDocuments();
+    const bookings = useBookings();
+    const unread = useNotifications(true);
 
-    // Possessive labels — "Your documents" for self, "Manju's documents" for members.
-    const firstName = selectedMember?.name.split(' ')[0];
-    const documentsHeading = selectedMember ? `${firstName}'s documents` : 'Your documents';
-    const addDocumentLabel = selectedMember ? `Add ${firstName}'s documents` : 'Add your documents';
+    const hasUnread = (unread.data?.pages.flat() ?? []).length > 0;
+    const past = bookings.data?.filter((b) => b.status !== 'upcoming') ?? [];
+    const upcoming = bookings.data?.filter((b) => b.status === 'upcoming') ?? [];
+    const nextUpcoming = upcoming.sort((a, b) => a.checkIn.localeCompare(b.checkIn))[0];
+    const hasDocs = (documents.data?.length ?? 0) > 0;
 
-    // Previous check-ins are account-level — the bookings projection has no
-    // personId scope yet. Upcoming stays out; latest 2 shown.
-    const { data: bookings, isPending: bookingsPending, isError: bookingsError } = useBookings();
-    const allCheckIns = (bookings ?? []).filter((b) => b.status !== 'upcoming');
-    const previousCheckIns = allCheckIns.slice(0, 2);
-
-    // Same add-document flow as family/[id].tsx — family params scope the
-    // scan to the selected member; index 0 ("You") adds for the signed-in user.
-    const handleAddDocument = () => {
-        if (selectedMember) {
-            router.push({
-                pathname: '/document/select-type',
-                params: {
-                    family: '1',
-                    personId: selectedMember.id,
-                    memberName: selectedMember.name,
-                    band: selectedMember.ageBand,
-                },
-            } as never);
-        } else {
-            router.push('/document/select-type' as never);
-        }
+    const refreshing =
+        family.isRefetching || documents.isRefetching || bookings.isRefetching || unread.isRefetching;
+    const onRefresh = () => {
+        void family.refetch();
+        void documents.refetch();
+        void bookings.refetch();
+        void unread.refetch();
     };
-
-    const stripMembers: FamilyMemberRef[] = [
-        { name: user?.fullName ?? 'You' },
-        ...(members ?? []).map((m) => ({
-            name: m.name,
-            statusDot: m.verification === 'verified' ? ('success' as const)
-                : m.verification === 'failed' ? ('error' as const)
-                : ('warning' as const),
-        })),
-    ];
 
     const scrollBottom = TAB_BAR_HEIGHT + insets.bottom + t.spacing[4];
 
     return (
         <View style={styles.screen}>
-            <SafeAreaView edges={['top']}>
-                <AppChrome />
-            </SafeAreaView>
-            <ScrollView
-                style={styles.flex}
-                contentContainerStyle={[styles.body, { paddingBottom: scrollBottom }]}
-                showsVerticalScrollIndicator={false}
-                refreshControl={
-                    <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={t.colors.actionPrimary} />
-                }>
-                <FamilyStrip
-                    members={stripMembers}
-                    selectedIndex={selected}
-                    onSelect={setSelected}
-                    onAdd={() => router.push('/family/add' as never)}
-                    style={styles.strip}
-                />
-                {/* Identity status card (design-repo HomeFeed banner) — opens
-                    the /identity dashboard. Hidden while loading or on error. */}
-                {identity ? (
-                    <Pressable
-                        onPress={() => router.push('/identity' as never)}
-                        accessibilityRole="button"
-                        accessibilityLabel={
-                            identity.status === 'verified' ? 'Identity verified — view details' : 'Identity incomplete — view details'
-                        }
-                        style={{
-                            flexDirection: 'row',
-                            alignItems: 'center',
-                            gap: t.spacing[3],
-                            padding: t.spacing[4],
-                            borderRadius: t.radii.xl,
-                            backgroundColor: identity.status === 'verified' ? t.colors.successSubtle : t.colors.warningSubtle,
-                        }}>
-                        {identity.status === 'verified' ? (
-                            <CircleCheck size={iconSize.md} color={t.colors.success} />
-                        ) : (
-                            <ShieldCheck size={iconSize.md} color={t.colors.onWarningSubtle} />
-                        )}
-                        <View style={{ flex: 1, gap: 2 }}>
-                            <Typography variant="body" style={{ fontFamily: t.fontFamily.sans.semibold }}>
-                                {identity.status === 'verified' ? 'Identity verified' : 'Identity incomplete'}
-                            </Typography>
-                            <Typography variant="body-sm" color="secondary">
-                                {identity.status === 'verified' ? 'Face + document verified' : "Tap to see what's missing"}
-                            </Typography>
+            <SafeAreaView edges={['top']} style={styles.flex}>
+                <ScrollView
+                    style={styles.flex}
+                    contentContainerStyle={[styles.body, { paddingBottom: scrollBottom }]}
+                    showsVerticalScrollIndicator={false}
+                    refreshControl={
+                        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={t.colors.actionPrimary} />
+                    }>
+                    {/* ---------- header: brand + bell + avatar ---------- */}
+                    <View style={styles.header}>
+                        <View style={styles.brand}>
+                            <ScanFace size={iconSize.lg} color={t.colors.actionPrimary} />
+                            <Typography variant="h4">Truepas</Typography>
                         </View>
-                        <ChevronRight
-                            size={iconSize.sm}
-                            color={identity.status === 'verified' ? t.colors.success : t.colors.onWarningSubtle}
-                        />
-                    </Pressable>
-                ) : null}
-                <View style={styles.sectionHead}>
-                    <Typography variant="label" color="muted">{documentsHeading}</Typography>
-                    {(selectedMember != null || (documents?.length ?? 0) > 2) && (
-                        <Pressable
-                            accessibilityRole="button"
-                            accessibilityLabel={selectedMember ? `View ${firstName}'s details` : 'See all documents'}
-                            onPress={() =>
-                                router.push(
-                                    (selectedMember ? `/family/${selectedMember.id}` : '/(tabs)/documents') as never,
-                                )
-                            }
-                            style={({ pressed }) => pressed && { opacity: 0.6 }}>
-                            <Typography variant="body-sm" style={{ color: t.colors.actionPrimary }}>
-                                {selectedMember ? `${firstName}'s details` : 'See all'}
-                            </Typography>
-                        </Pressable>
+                        <View style={styles.headerActions}>
+                            <View>
+                                <SoftIconButton
+                                    icon={Bell}
+                                    accessibilityLabel="Notifications"
+                                    onPress={() => router.push('/notification' as never)}
+                                />
+                                {hasUnread && <View pointerEvents="none" style={styles.unreadDot} />}
+                            </View>
+                            <Pressable
+                                accessibilityRole="button"
+                                accessibilityLabel="Profile"
+                                onPress={() => setDrawer(true)}
+                                style={({ pressed }) => pressed && styles.pressed}>
+                                <Avatar name={user?.fullName} uri={avatarUri ?? undefined} size="md" />
+                            </Pressable>
+                        </View>
+                    </View>
+
+                    {/* ---------- next check-in hero ---------- */}
+                    {nextUpcoming != null && (
+                        <FadeUp>
+                            <NextCheckinCard
+                                booking={{
+                                    venue: nextUpcoming.venue,
+                                    location: nextUpcoming.location,
+                                    status: nextUpcoming.status,
+                                    checkIn: nextUpcoming.checkIn,
+                                    guests: nextUpcoming.guests,
+                                    amount: nextUpcoming.amount,
+                                    checkedInMembers: nextUpcoming.checkedInMembers ?? [],
+                                    image: nextUpcoming.image,
+                                }}
+                                onPress={() => router.push(`/booking/${nextUpcoming.id}` as never)}
+                            />
+                        </FadeUp>
                     )}
-                </View>
-                {isPending ? (
-                    <LoadingState label="Loading documents…" />
-                ) : isError ? (
-                    <ErrorState
-                        title="Couldn't load documents"
-                        message="Please check your connection and try again."
-                        onRetry={refetch}
-                    />
-                ) : !documents?.length ? (
-                    <EmptyState
-                        title="No documents yet"
-                        description="Documents for this member will appear here."
-                    />
-                ) : (
-                    documents.slice(0, 2).map((doc) => (
-                        <DocumentRow
-                            key={doc.id}
-                            doc={{
-                                label: doc.label,
-                                number: doc.number,
-                                status: doc.status,
-                                expiresAt: doc.expiresAt ? doc.expiresAt.split('T')[0] : null,
-                                matchScore: doc.matchScore,
-                                type: doc.type,
-                            }}
-                            onPress={() => router.push(`/document/${doc.id}` as never)}
-                            style={styles.docRow}
-                        />
-                    ))
-                )}
-                {!isPending && !isError && (
-                    <AddDocumentButton onPress={handleAddDocument} label={addDocumentLabel} style={styles.docRow} />
-                )}
-                {!bookingsPending && !bookingsError && (
-                    <View style={styles.checkInSection}>
-                        <View style={styles.sectionHead}>
-                            <Typography variant="label" color="muted">Previous check-ins</Typography>
-                            {allCheckIns.length > 2 && (
+
+                    {/* ---------- family members card ---------- */}
+                    <FadeUp>
+                        <NeuBox variant="raised" style={styles.card}>
+                            <View style={styles.cardHead}>
+                                <Text style={styles.cardLabel}>family members</Text>
+                                <Link accessibilityLabel="See all family members" onPress={() => router.push('/family' as never)}>
+                                    See all
+                                </Link>
+                            </View>
+                            <AsyncBlock
+                                state={{
+                                    data: family.data,
+                                    isPending: family.isPending,
+                                    isError: family.isError,
+                                    error: family.error,
+                                    refetch: () => void family.refetch(),
+                                }}
+                                skeleton={
+                                    <View style={styles.strip}>
+                                        {[0, 1, 2, 3].map((i) => (
+                                            <View key={i} style={styles.stripCell}>
+                                                <Skeleton variant="circle" width={56} height={56} />
+                                                <Skeleton variant="text" width={40} />
+                                            </View>
+                                        ))}
+                                    </View>
+                                }>
+                                {(members) => (
+                                    <ScrollView
+                                        horizontal
+                                        showsHorizontalScrollIndicator={false}
+                                        contentContainerStyle={styles.strip}>
+                                        <Pressable
+                                            accessibilityRole="button"
+                                            accessibilityLabel="Add family member"
+                                            onPress={() => router.push('/family/add' as never)}
+                                            style={({ pressed }) => [styles.stripCell, pressed && styles.pressed]}>
+                                            <View style={styles.stripAdd}>
+                                                <UserPlus size={iconSize.md} color={t.colors.actionPrimary} />
+                                            </View>
+                                            <Text style={styles.stripName}>Add</Text>
+                                        </Pressable>
+                                        <Pressable
+                                            accessibilityRole="button"
+                                            accessibilityLabel="Your profile"
+                                            onPress={() => setDrawer(true)}
+                                            style={({ pressed }) => [styles.stripCell, pressed && styles.pressed]}>
+                                            <View>
+                                                <Avatar name={user?.fullName} uri={avatarUri ?? undefined} size="lg" />
+                                                <View
+                                                    style={[
+                                                        styles.faceDot,
+                                                        { backgroundColor: user?.faceEnrolled ? t.colors.success : t.colors.warning },
+                                                    ]}
+                                                />
+                                            </View>
+                                            <Text style={styles.stripName}>You</Text>
+                                        </Pressable>
+                                        {members.map((m) => (
+                                            <Pressable
+                                                key={m.id}
+                                                accessibilityRole="button"
+                                                accessibilityLabel={m.name}
+                                                onPress={() => router.push(`/family/${m.id}` as never)}
+                                                style={({ pressed }) => [styles.stripCell, pressed && styles.pressed]}>
+                                                <View>
+                                                    <Avatar name={m.name} size="lg" tinted />
+                                                    <View
+                                                        style={[
+                                                            styles.faceDot,
+                                                            { backgroundColor: m.faceEnrolled ? t.colors.success : t.colors.warning },
+                                                        ]}
+                                                    />
+                                                </View>
+                                                <Text style={styles.stripName} numberOfLines={1}>
+                                                    {m.name.split(' ')[0]}
+                                                </Text>
+                                            </Pressable>
+                                        ))}
+                                    </ScrollView>
+                                )}
+                            </AsyncBlock>
+                        </NeuBox>
+                    </FadeUp>
+
+                    {/* ---------- your documents ---------- */}
+                    <FadeUp delay={90}>
+                        <Section>
+                            <SectionTitle
+                                action={
+                                    <Link accessibilityLabel="See all documents" onPress={() => router.push('/(tabs)/documents' as never)}>
+                                        See all
+                                    </Link>
+                                }>
+                                Your documents
+                            </SectionTitle>
+                            <AsyncBlock
+                                state={{
+                                    data: documents.data,
+                                    isPending: documents.isPending,
+                                    isError: documents.isError,
+                                    error: documents.error,
+                                    refetch: () => void documents.refetch(),
+                                }}
+                                empty={(docs) => docs.length === 0}
+                                emptyTitle="No documents yet"
+                                emptyBody="Add a passport, ID card, or license to verify your identity."
+                                skeleton={<SkeletonRows />}>
+                                {(docs) => (
+                                    <Section>
+                                        {docs.map((d, i) => (
+                                            <FadeUp key={d.id} delay={Math.min(i, 8) * 60}>
+                                                <DocumentRow
+                                                    doc={{
+                                                        label: d.label,
+                                                        number: d.number,
+                                                        status: d.status,
+                                                        expiresAt: d.expiresAt ? d.expiresAt.split('T')[0] : null,
+                                                        matchScore: d.matchScore,
+                                                        type: d.type,
+                                                    }}
+                                                    onPress={() => router.push(`/document/${d.id}` as never)}
+                                                />
+                                            </FadeUp>
+                                        ))}
+                                    </Section>
+                                )}
+                            </AsyncBlock>
+                            {!hasDocs && documents.data != null && (
                                 <Pressable
                                     accessibilityRole="button"
-                                    accessibilityLabel="See all check-ins"
-                                    onPress={() => router.push('/(tabs)/history' as never)}
-                                    style={({ pressed }) => pressed && { opacity: 0.6 }}>
-                                    <Typography variant="body-sm" style={{ color: t.colors.actionPrimary }}>
-                                        See all
-                                    </Typography>
+                                    accessibilityLabel="Add your documents"
+                                    onPress={() => router.push('/document/select-type' as never)}
+                                    style={({ pressed }) => pressed && styles.pressed}>
+                                    <NeuBox variant="raised" depth={4} style={styles.addRow}>
+                                        <Plus size={iconSize.md} color={t.colors.actionPrimary} />
+                                        <Text style={styles.addRowText}>Add your documents</Text>
+                                    </NeuBox>
                                 </Pressable>
                             )}
-                        </View>
-                        {previousCheckIns.length > 0 ? (
-                            previousCheckIns.map((b) => (
-                                <CheckInRow
-                                    key={b.id}
-                                    booking={{
-                                        venue: b.venue,
-                                        location: b.location,
-                                        type: b.type,
-                                        status: b.status,
-                                        checkIn: formatDate(b.checkIn),
-                                    }}
-                                    onPress={() => router.push(`/booking/${b.id}` as never)}
-                                    style={styles.docRow}
-                                />
-                            ))
-                        ) : (
-                            <EmptyStateCard
-                                title="No check-ins yet"
-                                description="When you check in at a venue with Truepas, it shows up here."
-                                icon={<Ticket size={iconSize.xl} color={t.colors.actionPrimary} />}
-                                style={styles.emptyCard}
-                            />
-                        )}
-                    </View>
-                )}
-            </ScrollView>
+                        </Section>
+                    </FadeUp>
+
+                    {/* ---------- previous check-ins ---------- */}
+                    <FadeUp delay={170}>
+                        <Section>
+                            <SectionTitle
+                                action={
+                                    <Link accessibilityLabel="See all check-ins" onPress={() => router.push('/(tabs)/history' as never)}>
+                                        See all
+                                    </Link>
+                                }>
+                                Previous check-ins
+                            </SectionTitle>
+                            <AsyncBlock
+                                state={{
+                                    data: bookings.data,
+                                    isPending: bookings.isPending,
+                                    isError: bookings.isError,
+                                    error: bookings.error,
+                                    refetch: () => void bookings.refetch(),
+                                }}
+                                skeleton={<SkeletonRows />}>
+                                {() =>
+                                    past.length === 0 ? (
+                                        <EmptyState
+                                            compact
+                                            title="No check-ins yet"
+                                            description="When you check in at a venue with Truepas, it shows up here."
+                                            icon={<CalendarDays size={iconSize.lg} color={t.colors.textMuted} />}
+                                        />
+                                    ) : (
+                                        <Section>
+                                            {past.map((b, i) => (
+                                                <FadeUp key={b.id} delay={Math.min(i, 8) * 60}>
+                                                    <Pressable
+                                                        accessibilityRole="button"
+                                                        accessibilityLabel={`${b.venue}, ${b.location}`}
+                                                        onPress={() => router.push(`/booking/${b.id}` as never)}
+                                                        style={({ pressed }) => pressed && styles.pressed}>
+                                                        <BookingCard
+                                                            booking={{
+                                                                venue: b.venue,
+                                                                location: b.location,
+                                                                status: b.status,
+                                                                checkIn: b.checkIn,
+                                                                guests: b.guests,
+                                                                amount: b.amount,
+                                                                checkedInMembers: b.checkedInMembers ?? [],
+                                                                image: b.image,
+                                                            }}
+                                                        />
+                                                    </Pressable>
+                                                </FadeUp>
+                                            ))}
+                                        </Section>
+                                    )
+                                }
+                            </AsyncBlock>
+                        </Section>
+                    </FadeUp>
+                </ScrollView>
+            </SafeAreaView>
+
+            <ProfileDrawer visible={drawer} onClose={() => setDrawer(false)} />
         </View>
     );
 }
 
 const useStyles = makeStyles((t) => ({
-    screen: { flex: 1, backgroundColor: t.colors.surface },
+    screen: { flex: 1, backgroundColor: t.colors.background },
     flex: { flex: 1 },
     body: {
-        paddingHorizontal: t.spacing[5],
-        paddingTop: t.spacing[2],
-        gap: t.spacing[4],
+        paddingHorizontal: t.spacing[4],
+        paddingTop: t.spacing[4],
+        gap: t.spacing[6],
     },
-    strip: { width: '100%' },
-    docRow: { width: '100%' },
-    checkInSection: { width: '100%', gap: t.spacing[3] },
-    // Full-width empty card, taller than a row so the section reads as a
-    // real block next to the document list.
-    emptyCard: { width: '100%', paddingVertical: t.spacing[8] },
-    sectionHead: {
+    pressed: { opacity: t.opacity.pressed },
+    header: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingHorizontal: t.spacing[1],
     },
+    brand: { flexDirection: 'row', alignItems: 'center', gap: t.spacing[2] },
+    headerActions: { flexDirection: 'row', alignItems: 'center', gap: t.spacing[3] },
+    unreadDot: {
+        position: 'absolute',
+        top: 4,
+        right: 4,
+        width: 10,
+        height: 10,
+        borderRadius: t.radii.full,
+        backgroundColor: t.colors.actionPrimary,
+        borderWidth: 2,
+        borderColor: t.colors.background,
+    },
+    card: { padding: t.spacing[4], gap: t.spacing[3] },
+    cardHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+    cardLabel: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
+    strip: { flexDirection: 'row', gap: t.spacing[4], paddingRight: t.spacing[4] },
+    stripCell: { alignItems: 'center', gap: t.spacing[1.5], width: 56 },
+    stripName: { fontSize: t.fontSize.xs, color: t.colors.textSecondary },
+    stripAdd: {
+        width: 48,
+        height: 48,
+        borderRadius: t.radii.full,
+        borderWidth: t.sizes.fieldBorderWidth,
+        borderStyle: 'dashed',
+        borderColor: t.colors.borderStrong,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    faceDot: {
+        position: 'absolute',
+        right: -1,
+        bottom: -1,
+        width: 12,
+        height: 12,
+        borderRadius: t.radii.full,
+        borderWidth: 2,
+        borderColor: t.colors.background,
+    },
+    addRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: t.spacing[2],
+        paddingVertical: t.spacing[3],
+    },
+    addRowText: { fontSize: t.fontSize.base, fontWeight: t.fontWeight.medium, color: t.colors.actionPrimary },
 }));

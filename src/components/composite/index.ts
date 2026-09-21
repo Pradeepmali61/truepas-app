@@ -15,6 +15,7 @@ export { ListTile } from "./ListTile";
 export { Modal, type ModalProps } from "./Modal";
 export { OtpInput, type OtpInputProps } from "./OtpInput";
 export { Pagination, type PaginationProps } from "./Pagination";
+export { ProfileDrawer } from "./ProfileDrawer";
 export { ProfileMenu } from "./ProfileMenu";
 export { ScreenHeader, type ScreenHeaderProps } from "./ScreenHeader";
 export { SearchBox, type SearchBoxProps } from "./SearchBox";

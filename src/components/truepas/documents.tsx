@@ -1,4 +1,4 @@
-import { Badge } from "@/components/ui/Badge";
+import { Badge, type BadgeVariant } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Progress } from "@/components/ui/Progress";
 import { useThemeTokens } from "@/theme";
@@ -7,10 +7,10 @@ import {
     Car,
     ChevronDown,
     ChevronRight,
+    Contact,
     CreditCard,
     FileText,
     Globe,
-    IdCard,
     Landmark,
     RefreshCw,
     Share,
@@ -32,7 +32,7 @@ import { useStyles } from "./styles";
 export const DOC_ICON: Record<string, typeof FileText> = {
   passport: Globe,
   drivingLicense: Car,
-  idCard: IdCard,
+  idCard: Contact,
   greenCard: CreditCard,
   birthCertificate: FileText,
   usVisa: Landmark,
@@ -44,16 +44,29 @@ function DocIcon({ doc, onDark = false, size = iconSize.md }: { doc: ProductDocu
   return <Icon size={size} color={onDark ? theme.colors.onActionPrimary : theme.colors.onBrandSubtle} />;
 }
 
-function StatusBadge({ status, style }: { status: string; style?: StyleProp<ViewStyle> }) {
-  const variant = status === "verified" ? "success" : status === "pending" ? "warning" : "error";
-  const label = status === "verified" ? "Verified" : status === "pending" ? "In review" : "Failed";
-  return <Badge variant={variant} style={style}>{label}</Badge>;
+/** Mirrors chrome.tsx StatusChip semantics so kit cards agree with app chips. */
+const STATUS_BADGE: Record<string, { variant: BadgeVariant; label: string }> = {
+  verified: { variant: "success", label: "Verified" },
+  approved: { variant: "success", label: "Approved" },
+  pending: { variant: "warning", label: "Pending" },
+  review: { variant: "warning", label: "In review" },
+  failed: { variant: "error", label: "Failed" },
+  rejected: { variant: "error", label: "Rejected" },
+  expired: { variant: "error", label: "Expired" },
+};
+
+function StatusBadge({ status }: { status: string }) {
+  const s = STATUS_BADGE[status.toLowerCase()] ?? {
+    variant: "neutral" as const,
+    label: status.replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase()),
+  };
+  return <Badge variant={s.variant}>{s.label}</Badge>;
 }
 
 function shortYear(date?: string | null) {
   if (!date) return "—";
   const [y, m] = date.split("-");
-  return `${m}/${y}`;
+  return y && m ? `${m}/${y}` : date;
 }
 
 /** A · List row — the compact one for document lists. */
@@ -66,22 +79,20 @@ export function DocumentRow({ doc, onPress, style }: { doc: ProductDocument; onP
         accessibilityRole="button"
         accessibilityLabel={`${doc.label}, ${doc.status}`}
         onPress={onPress}
-        style={({ pressed }) => pressed && styles.pressed}
+        style={({ pressed }) => [styles.rowBetween, pressed && styles.pressed]}
       >
-        <View style={styles.rowBetween}>
-          <View style={styles.rowCenter}>
-            <View style={[styles.productIcon, { backgroundColor: theme.colors.brandSubtle, width: 48, height: 48 }]}>
-              <DocIcon doc={doc} size={iconSize.xl} />
-            </View>
-            <View style={{ gap: 2, flexShrink: 1 }}>
-              <Text style={styles.idCardTitle} numberOfLines={1}>{doc.label}</Text>
-              <Text style={[styles.mono, { fontSize: theme.fontSize.base }]} numberOfLines={1}>{doc.number}</Text>
-            </View>
+        <View style={[styles.rowCenter, { flex: 1 }]}>
+          <View style={[styles.productIcon, { backgroundColor: theme.colors.brandSubtle }]}>
+            <DocIcon doc={doc} />
           </View>
-          <View style={styles.rowCenter}>
-            <StatusBadge status={doc.status} style={{ height: 28 }} />
-            <ChevronRight size={iconSize.md} color={theme.colors.textSecondary} />
+          <View style={{ gap: 2, flex: 1 }}>
+            <Text style={styles.cardTitle} numberOfLines={1}>{doc.label}</Text>
+            <Text style={styles.mono} numberOfLines={1}>{doc.number}</Text>
           </View>
+        </View>
+        <View style={styles.rowCenter}>
+          <StatusBadge status={doc.status} />
+          <ChevronRight size={iconSize.sm} color={theme.colors.textSecondary} />
         </View>
       </Pressable>
     </SoftCard>
@@ -97,7 +108,7 @@ export function DocumentIdCard({ doc, style }: { doc: ProductDocument; style?: S
     <View style={[styles.card, styles.idCard, style]}>
       <View style={styles.rowBetween}>
         <View style={styles.rowCenter}>
-          <DocIcon doc={doc} onDark size={iconSize.lg} />
+          <DocIcon doc={doc} onDark />
           <Text style={[styles.idCardTitle, { color: on }]}>{doc.label}</Text>
         </View>
         <StatusBadge status={doc.status} />

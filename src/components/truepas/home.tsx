@@ -1,32 +1,33 @@
-import { Text, View } from "react-native";
-import {
-  ArrowRight,
-  Bell,
-  ChevronRight,
-  CircleCheck,
-  Clock,
-  FileText,
-  Home,
-  Lock,
-  ScanFace,
-  Search,
-  ShieldCheck,
-  Ticket,
-  Users,
-  Wallet,
-} from "lucide-react-native";
-import { useThemeTokens } from "@/theme";
-import { iconSize } from "@/theme/tokens";
+import { BrandMark } from "@/components/app/BrandMark";
 import { Avatar } from "@/components/ui/Avatar";
-import { Input } from "@/components/ui/Input";
-import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
 import { Progress } from "@/components/ui/Progress";
 import { Typography } from "@/components/ui/Typography";
-import { BrandMark } from "@/components/app/BrandMark";
-import { SoftCard, CircleButton, VariantTag } from "./core";
+import { alpha, makeStyles, useThemeTokens } from "@/theme";
+import { iconSize } from "@/theme/tokens";
+import {
+    ArrowRight,
+    Bell,
+    ChevronRight,
+    CircleCheck,
+    Clock,
+    FileText,
+    Home,
+    Lock,
+    MapPin,
+    ScanFace,
+    Search,
+    ShieldCheck,
+    Ticket,
+    Users,
+    Wallet
+} from "lucide-react-native";
+import { Image, Pressable, Text, View } from "react-native";
+import { CircleButton, SoftCard, VariantTag } from "./core";
 import { FamilyStripCell, type FamilyMemberRef } from "./family";
-import type { ProductUser } from "./product";
+import { formatCheckIn, type ProductBooking, type ProductUser } from "./product";
 import { useStyles } from "./styles";
 
 /* Home screens — four compositions of the same product primitives. */
@@ -270,3 +271,145 @@ export function HomeCommand({ user }: { user: ProductUser }) {
     </SoftCard>
   );
 }
+
+/**
+ * Next check-in hero — filled actionPrimary card (the deepest surface on the
+ * Home tab). Shows the venue, the party's check-in progress as the standout
+ * mono metric, and pushes to the booking detail on press.
+ * Ported 1:1 from UI-design-repo `components/truepas/home.tsx`.
+ */
+export function NextCheckinCard({
+  booking,
+  onPress,
+}: {
+  booking: ProductBooking & { image?: string | null };
+  onPress?: () => void;
+}) {
+  const styles = useStyles();
+  const hero = useHeroStyles();
+  const theme = useThemeTokens();
+  const onPrimary = theme.colors.onActionPrimary;
+  const checkedIn = booking.checkedInMembers.length;
+  const progress = Math.min(1, checkedIn / Math.max(booking.guests, 1));
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`Next check-in at ${booking.venue}, ${booking.location}`}
+      onPress={onPress}
+      style={({ pressed }) => pressed && styles.pressed}
+    >
+      <View style={hero.card}>
+        <View style={styles.rowBetween}>
+          <Text style={hero.eyebrow}>Next check-in</Text>
+          <View style={hero.statusPill}>
+            <Text style={hero.statusText}>Upcoming</Text>
+          </View>
+        </View>
+        <View style={hero.venueRow}>
+          <View style={hero.venueText}>
+            <Typography variant="h3" style={{ color: onPrimary }} numberOfLines={1}>
+              {booking.venue}
+            </Typography>
+            <View style={hero.locRow}>
+              <MapPin size={iconSize.sm} color={alpha(onPrimary, 0.75)} />
+              <Text style={hero.locText} numberOfLines={1}>
+                {booking.location}
+              </Text>
+            </View>
+          </View>
+          {booking.image != null && /^https?:\/\//.test(booking.image) && <Image source={{ uri: booking.image }} style={hero.thumb} />}
+        </View>
+        <View style={styles.rowBetween}>
+          <View style={hero.metaItem}>
+            <Text style={hero.metaLabel}>Check-in</Text>
+            <Text style={hero.metaValue}>{formatCheckIn(booking.checkIn)}</Text>
+          </View>
+          <View style={hero.metaItem}>
+            <Text style={hero.metaLabel}>Guests</Text>
+            <Text style={hero.metaValue}>{booking.guests}</Text>
+          </View>
+          <View style={[hero.metaItem, hero.metaItemEnd]}>
+            <Text style={hero.metaLabel}>Total</Text>
+            <Text style={hero.metaValue}>${booking.amount.toFixed(2)}</Text>
+          </View>
+        </View>
+        <View style={hero.countBlock}>
+          <View style={hero.countRow}>
+            <Text style={hero.count}>
+              {checkedIn}
+              <Text style={hero.countTotal}>/{booking.guests}</Text>
+            </Text>
+            <Text style={hero.countLabel}>checked in</Text>
+          </View>
+          <View style={hero.track}>
+            <View style={[hero.fill, { width: `${progress * 100}%` }]} />
+          </View>
+        </View>
+      </View>
+    </Pressable>
+  );
+}
+
+/* Hero-card styles live here (not the shared sheet) — the violet fill
+   inverts every color, so none of the shared surface styles apply. */
+const useHeroStyles = makeStyles((t) => ({
+  card: {
+    backgroundColor: t.colors.actionPrimary,
+    borderRadius: t.radii.xl,
+    padding: t.spacing[5],
+    gap: t.spacing[4],
+    ...t.shadows.lg,
+  },
+  eyebrow: {
+    fontSize: t.fontSize.xs,
+    fontWeight: t.fontWeight.semibold,
+    letterSpacing: t.letterSpacing.caps,
+    textTransform: "uppercase",
+    color: alpha(t.colors.onActionPrimary, 0.7),
+  },
+  statusPill: {
+    paddingHorizontal: t.spacing[3],
+    paddingVertical: t.spacing[1],
+    borderRadius: t.radii.full,
+    backgroundColor: alpha(t.colors.onActionPrimary, 0.16),
+  },
+  statusText: {
+    fontSize: t.fontSize.xs,
+    fontWeight: t.fontWeight.semibold,
+    color: t.colors.onActionPrimary,
+  },
+  venueRow: { flexDirection: "row", alignItems: "center", gap: t.spacing[3] },
+  venueText: { flex: 1, gap: 4 },
+  locRow: { flexDirection: "row", alignItems: "center", gap: t.spacing[1.5] },
+  locText: { fontSize: t.fontSize.sm, color: alpha(t.colors.onActionPrimary, 0.75) },
+  thumb: { width: 56, height: 56, borderRadius: t.radii.lg },
+  metaItem: { gap: 2 },
+  metaItemEnd: { alignItems: "flex-end" },
+  metaLabel: { fontSize: t.fontSize.xs, color: alpha(t.colors.onActionPrimary, 0.6) },
+  metaValue: {
+    fontFamily: t.fontFamily.mono.medium,
+    fontSize: t.fontSize.sm,
+    color: t.colors.onActionPrimary,
+  },
+  countBlock: { gap: t.spacing[2] },
+  countRow: { flexDirection: "row", alignItems: "baseline", gap: t.spacing[2] },
+  count: {
+    fontFamily: t.fontFamily.mono.bold,
+    fontSize: t.fontSize["3xl"],
+    color: t.colors.onActionPrimary,
+    letterSpacing: t.letterSpacing.tight,
+  },
+  countTotal: {
+    fontFamily: t.fontFamily.mono.medium,
+    fontSize: t.fontSize.xl,
+    color: alpha(t.colors.onActionPrimary, 0.6),
+  },
+  countLabel: { fontSize: t.fontSize.sm, color: alpha(t.colors.onActionPrimary, 0.75) },
+  track: {
+    height: 6,
+    borderRadius: t.radii.full,
+    backgroundColor: alpha(t.colors.onActionPrimary, 0.25),
+    overflow: "hidden",
+  },
+  fill: { height: 6, borderRadius: t.radii.full, backgroundColor: t.colors.onActionPrimary },
+}));

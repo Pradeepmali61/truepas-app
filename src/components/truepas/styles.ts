@@ -172,7 +172,7 @@ export const useStyles = makeStyles((t) => ({
   },
 
   /* TruePas product components */
-  productCard: { width: 340, gap: t.spacing[3] },
+  productCard: { width: "100%", gap: t.spacing[3] },
   productIcon: {
     width: 44,
     height: 44,

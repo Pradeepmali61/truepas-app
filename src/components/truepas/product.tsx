@@ -326,7 +326,7 @@ export function BookingCard({
   const checkedIn = booking.checkedInMembers.length;
   const body = (
     <>
-      {booking.image ? (
+      {booking.image != null && /^https?:\/\//.test(booking.image) ? (
         <Image
           source={{ uri: booking.image }}
           style={{

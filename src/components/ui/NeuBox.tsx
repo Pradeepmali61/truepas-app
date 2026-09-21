@@ -10,8 +10,9 @@
  *   <NeuBox variant="raised">…</NeuBox>     — extruded card/tile
  *   <NeuBox variant="inset">…</NeuBox>      — pressed-in well/track
  */
-import type { ReactNode } from "react";
-import { Platform, StyleSheet, View, type StyleProp, type ViewStyle } from "react-native";
+import type { LucideIcon } from "lucide-react-native";
+import { useState, type ReactNode } from "react";
+import { Platform, Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from "react-native";
 import { alpha, mix, useThemeTokens } from "../../theme";
 
 export type NeuVariant = "raised" | "inset" | "flat";
@@ -216,4 +217,61 @@ export function NeuBox({ variant = "raised", radius, color, depth = 6, style, ch
 export function NeuWell(props: Omit<NeuBoxProps, "variant">) {
   const t = useThemeTokens();
   return <NeuBox variant="inset" color={props.color ?? t.colors.surfaceSunken} {...props} />;
+}
+
+/** Round raised icon button (design-repo neu.tsx SoftIconButton) — the
+ *  header bell / close affordance. `solid` gives the filled brand variant. */
+export interface SoftIconButtonProps {
+  icon: LucideIcon;
+  onPress?: () => void;
+  size?: number;
+  /** Solid brand fill (primary actions). */
+  solid?: boolean;
+  disabled?: boolean;
+  accessibilityLabel?: string;
+  style?: StyleProp<ViewStyle>;
+}
+
+export function SoftIconButton({
+  icon: IconCmp,
+  onPress,
+  size = 48,
+  solid,
+  disabled,
+  accessibilityLabel,
+  style,
+}: SoftIconButtonProps) {
+  const t = useThemeTokens();
+  const [pressed, setPressed] = useState(false);
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      accessibilityState={{ disabled }}
+      disabled={disabled}
+      onPress={onPress}
+      onPressIn={() => setPressed(true)}
+      onPressOut={() => setPressed(false)}
+      style={style}
+    >
+      <NeuBox
+        variant={pressed && !solid ? "inset" : "raised"}
+        radius={size / 2}
+        color={solid ? t.colors.actionPrimary : t.colors.background}
+        depth={4}
+        style={{
+          width: size,
+          height: size,
+          alignItems: "center",
+          justifyContent: "center",
+          opacity: disabled ? t.opacity.disabled : 1,
+        }}
+      >
+        <IconCmp
+          size={Math.round(size * 0.42)}
+          color={solid ? t.colors.onActionPrimary : t.colors.actionPrimary}
+        />
+      </NeuBox>
+    </Pressable>
+  );
 }
