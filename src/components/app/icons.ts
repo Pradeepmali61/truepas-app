@@ -48,6 +48,7 @@ import {
     Users,
     X
 } from "lucide-react-native";
+import { SteeringWheelIcon } from "./SteeringWheelIcon";
 
 export type IconName =
   | "identity"
@@ -131,7 +132,7 @@ const REGISTRY: Record<IconName, LucideIcon> = {
   chevronDown: ChevronDown,
   document: FileText,
   passport: Stamp,
-  drivingLicense: IdCard,
+  drivingLicense: SteeringWheelIcon,
   idCard: IdCard,
   greenCard: IdCard,
   birthCertificate: FileText,
