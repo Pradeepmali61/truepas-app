@@ -2,11 +2,11 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ShieldCheck } from 'lucide-react-native';
 import { Alert as RNAlert, ScrollView, View } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { isMockApi } from '@/api';
 import { MOCK_PIN } from '@/api/mock';
 import { Alert, FormField, OtpInput, ScreenHeader } from '@/components/composite';
-import { ScreenContainer } from '@/components/layout/ScreenContainer';
 import { Button, Link, NeuBox, Typography } from '@/components/ui';
 import { sessionEnded } from '@/features/auth/slice';
 import { PIN_LENGTH, usePinVerification } from '@/features/auth/usePinVerification';
@@ -29,6 +29,7 @@ import { iconSize } from '@/theme/tokens';
 export default function ConfirmPinScreen() {
   const router = useRouter();
   const theme = useThemeTokens();
+  const insets = useSafeAreaInsets();
   const { next } = useLocalSearchParams<{ next?: string }>();
   const gate = usePinVerification();
   const dispatch = useAppDispatch();
@@ -64,7 +65,7 @@ export default function ConfirmPinScreen() {
   };
 
   return (
-    <ScreenContainer scroll={false} background={false}>
+    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: theme.colors.background }}>
       <ScreenHeader title="Confirm it's you" onBack={router.back} />
       <ScrollView
         contentContainerStyle={{
@@ -145,7 +146,7 @@ export default function ConfirmPinScreen() {
         style={{
           paddingHorizontal: theme.spacing[4],
           paddingTop: theme.spacing[4],
-          paddingBottom: theme.spacing[4],
+          paddingBottom: theme.spacing[4] + insets.bottom,
           gap: theme.spacing[2],
         }}>
         <Button
@@ -156,6 +157,6 @@ export default function ConfirmPinScreen() {
           onPress={() => void submit()}
         />
       </View>
-    </ScreenContainer>
+    </SafeAreaView>
   );
 }

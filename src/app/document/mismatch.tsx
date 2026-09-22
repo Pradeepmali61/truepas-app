@@ -5,8 +5,8 @@ import { ScrollView, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { toApiError } from '@/api/errors';
-import { Alert, Card, CardContent, ScreenHeader } from '@/components/composite';
-import { CoreButton, PopIn, RowIcon, Typography } from '@/components/ui';
+import { Alert, ScreenHeader } from '@/components/composite';
+import { CoreButton, NeuBox, PopIn, RowIcon, Typography } from '@/components/ui';
 import { useUpdateProfile } from '@/features/auth/mutations';
 import { formatCountdown, useCountdown } from '@/hooks/useCountdown';
 import { useToast } from '@/hooks/useToast';
@@ -85,53 +85,55 @@ export default function MismatchScreen() {
           </Typography>
         </View>
 
-        <Card>
-          <CardContent>
-            <View
-              style={{
-                flexDirection: 'row',
-                justifyContent: 'space-between',
-                marginBottom: theme.spacing[3],
-              }}>
-              <Typography variant="caption" color="muted" style={{ letterSpacing: theme.letterSpacing.caps }}>
-                PROFILE
-              </Typography>
-              <Typography variant="caption" color="muted" style={{ letterSpacing: theme.letterSpacing.caps }}>
-                DOCUMENT
-              </Typography>
-            </View>
-            <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                borderBottomWidth: theme.sizes.fieldBorderWidth,
-                borderBottomColor: theme.colors.borderSubtle,
-                paddingBottom: theme.spacing[2],
-                marginBottom: theme.spacing[2],
-              }}>
-              <Typography variant="body" style={{ fontWeight: theme.fontWeight.semibold }}>
-                {profileName}
-              </Typography>
-              <Typography variant="body" style={{ fontWeight: theme.fontWeight.semibold }}>
-                {docName}
-              </Typography>
-            </View>
-            <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-              }}>
-              <Typography variant="body" style={{ fontWeight: theme.fontWeight.semibold }}>
-                {profileDob}
-              </Typography>
-              <Typography variant="body" style={{ fontWeight: theme.fontWeight.semibold }}>
-                {docDob}
-              </Typography>
-            </View>
-          </CardContent>
-        </Card>
+        <NeuBox
+          variant="raised"
+          depth={4}
+          color={theme.colors.surface}
+          style={{ padding: theme.spacing[4] }}>
+          <View
+            style={{
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              marginBottom: theme.spacing[3],
+            }}>
+            <Typography variant="caption" color="muted" style={{ letterSpacing: theme.letterSpacing.caps }}>
+              PROFILE
+            </Typography>
+            <Typography variant="caption" color="muted" style={{ letterSpacing: theme.letterSpacing.caps }}>
+              DOCUMENT
+            </Typography>
+          </View>
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              borderBottomWidth: theme.sizes.fieldBorderWidth,
+              borderBottomColor: theme.colors.borderSubtle,
+              paddingBottom: theme.spacing[2],
+              marginBottom: theme.spacing[2],
+            }}>
+            <Typography variant="body" style={{ fontWeight: theme.fontWeight.semibold }}>
+              {profileName}
+            </Typography>
+            <Typography variant="body" style={{ fontWeight: theme.fontWeight.semibold }}>
+              {docName}
+            </Typography>
+          </View>
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}>
+            <Typography variant="body" style={{ fontWeight: theme.fontWeight.semibold }}>
+              {profileDob}
+            </Typography>
+            <Typography variant="body" style={{ fontWeight: theme.fontWeight.semibold }}>
+              {docDob}
+            </Typography>
+          </View>
+        </NeuBox>
 
         {params.reason ? <Alert variant="info">{params.reason}</Alert> : null}
 
@@ -142,13 +144,10 @@ export default function MismatchScreen() {
       </ScrollView>
       <View
         style={{
-          padding: theme.spacing[4],
-          paddingTop: theme.spacing[3],
+          paddingHorizontal: theme.spacing[4],
+          paddingTop: theme.spacing[4],
           paddingBottom: theme.spacing[4] + insets.bottom,
           gap: theme.spacing[2],
-          borderTopWidth: theme.sizes.fieldBorderWidth,
-          borderTopColor: theme.colors.borderSubtle,
-          backgroundColor: theme.colors.surface,
         }}>
         <CoreButton
           fullWidth

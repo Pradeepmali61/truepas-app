@@ -1,10 +1,10 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, View } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { toApiError } from '@/api/errors';
 import { FormField, Alert as InlineAlert, OtpInput, ScreenHeader, Section } from '@/components/composite';
-import { ScreenContainer } from '@/components/layout/ScreenContainer';
 import { Button, Input } from '@/components/ui';
 import { useDeleteAccount } from '@/features/auth/mutations';
 import { useToast } from '@/hooks/useToast';
@@ -21,6 +21,7 @@ import { useThemeTokens } from '@/theme';
 export default function DeleteAccountScreen() {
   const router = useRouter();
   const theme = useThemeTokens();
+  const insets = useSafeAreaInsets();
   const toast = useToast();
   const [confirmation, setConfirmation] = useState('');
   const [pin, setPin] = useState('');
@@ -47,7 +48,7 @@ export default function DeleteAccountScreen() {
   };
 
   return (
-    <ScreenContainer scroll={false} background={false}>
+    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: theme.colors.background }}>
       <ScreenHeader title="Delete account" onBack={router.back} />
       <ScrollView
         contentContainerStyle={{
@@ -95,7 +96,7 @@ export default function DeleteAccountScreen() {
         style={{
           paddingHorizontal: theme.spacing[4],
           paddingTop: theme.spacing[4],
-          paddingBottom: theme.spacing[4],
+          paddingBottom: theme.spacing[4] + insets.bottom,
           gap: theme.spacing[2],
         }}>
         <Button
@@ -107,6 +108,6 @@ export default function DeleteAccountScreen() {
           onPress={() => void handleDelete()}
         />
       </View>
-    </ScreenContainer>
+    </SafeAreaView>
   );
 }

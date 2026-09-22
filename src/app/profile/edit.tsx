@@ -2,10 +2,10 @@ import { useRouter } from 'expo-router';
 import { Lock } from 'lucide-react-native';
 import { useState } from 'react';
 import { ScrollView, View } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { toApiError } from '@/api/errors';
 import { DatePicker, FormField, ScreenHeader, Section } from '@/components/composite';
-import { ScreenContainer } from '@/components/layout/ScreenContainer';
 import { Button, Input, Textarea, Typography } from '@/components/ui';
 import { useUpdateProfile } from '@/features/auth/mutations';
 import { useToast } from '@/hooks/useToast';
@@ -26,6 +26,7 @@ function todayIso(): string {
 export default function EditProfileScreen() {
   const router = useRouter();
   const theme = useThemeTokens();
+  const insets = useSafeAreaInsets();
   const toast = useToast();
   const user = useAppSelector((state) => state.auth.user);
   const updateProfile = useUpdateProfile();
@@ -64,7 +65,7 @@ export default function EditProfileScreen() {
   };
 
   return (
-    <ScreenContainer scroll={false} background={false}>
+    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: theme.colors.background }}>
       <ScreenHeader title="Edit profile" onBack={router.back} />
       <ScrollView
         contentContainerStyle={{
@@ -130,7 +131,7 @@ export default function EditProfileScreen() {
         style={{
           paddingHorizontal: theme.spacing[4],
           paddingTop: theme.spacing[4],
-          paddingBottom: theme.spacing[4],
+          paddingBottom: theme.spacing[4] + insets.bottom,
           gap: theme.spacing[2],
         }}>
         <Button
@@ -141,6 +142,6 @@ export default function EditProfileScreen() {
           onPress={() => void handleSave()}
         />
       </View>
-    </ScreenContainer>
+    </SafeAreaView>
   );
 }

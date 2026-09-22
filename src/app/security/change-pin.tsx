@@ -1,12 +1,12 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ScrollView, View } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { isMockApi } from '@/api';
 import { toApiError } from '@/api/errors';
 import { MOCK_PIN } from '@/api/mock';
 import { FormField, OtpInput, ScreenHeader, Section } from '@/components/composite';
-import { ScreenContainer } from '@/components/layout/ScreenContainer';
 import { Button, Typography } from '@/components/ui';
 import { useChangePin } from '@/features/auth/mutations';
 import { useToast } from '@/hooks/useToast';
@@ -25,6 +25,7 @@ const PIN_LENGTH = 4;
 export default function ChangePinScreen() {
   const router = useRouter();
   const theme = useThemeTokens();
+  const insets = useSafeAreaInsets();
   const currentPin = pinStore.get();
   const [newPin, setNewPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
@@ -70,7 +71,7 @@ export default function ChangePinScreen() {
   }
 
   return (
-    <ScreenContainer scroll={false} background={false}>
+    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: theme.colors.background }}>
       <ScreenHeader title="Change PIN" onBack={router.back} />
       <ScrollView
         contentContainerStyle={{
@@ -122,7 +123,7 @@ export default function ChangePinScreen() {
         style={{
           paddingHorizontal: theme.spacing[4],
           paddingTop: theme.spacing[4],
-          paddingBottom: theme.spacing[4],
+          paddingBottom: theme.spacing[4] + insets.bottom,
           gap: theme.spacing[2],
         }}>
         <Button
@@ -135,6 +136,6 @@ export default function ChangePinScreen() {
           onPress={() => void handleUpdate(newPin, confirmPin)}
         />
       </View>
-    </ScreenContainer>
+    </SafeAreaView>
   );
 }

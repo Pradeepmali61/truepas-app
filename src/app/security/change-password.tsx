@@ -3,10 +3,10 @@ import { useRouter } from 'expo-router';
 import { Lock } from 'lucide-react-native';
 import { useState } from 'react';
 import { ScrollView, View } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { toApiError } from '@/api/errors';
 import { FormField, Alert as InlineAlert, ScreenHeader, Section } from '@/components/composite';
-import { ScreenContainer } from '@/components/layout/ScreenContainer';
 import { Button, Input } from '@/components/ui';
 import { useChangePassword } from '@/features/auth/mutations';
 import { newPasswordSchema } from '@/features/auth/schemas';
@@ -28,6 +28,7 @@ export default function ChangePasswordScreen() {
   const dispatch = useAppDispatch();
   const queryClient = useQueryClient();
   const theme = useThemeTokens();
+  const insets = useSafeAreaInsets();
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -64,7 +65,7 @@ export default function ChangePasswordScreen() {
   const lockIcon = <Lock size={iconSize.md} color={theme.colors.actionPrimary} />;
 
   return (
-    <ScreenContainer scroll={false} background={false}>
+    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: theme.colors.background }}>
       <ScreenHeader title="Change password" onBack={router.back} />
       <ScrollView
         contentContainerStyle={{
@@ -129,7 +130,7 @@ export default function ChangePasswordScreen() {
         style={{
           paddingHorizontal: theme.spacing[4],
           paddingTop: theme.spacing[4],
-          paddingBottom: theme.spacing[4],
+          paddingBottom: theme.spacing[4] + insets.bottom,
           gap: theme.spacing[2],
         }}>
         <Button
@@ -140,6 +141,6 @@ export default function ChangePasswordScreen() {
           onPress={() => void handleChange()}
         />
       </View>
-    </ScreenContainer>
+    </SafeAreaView>
   );
 }

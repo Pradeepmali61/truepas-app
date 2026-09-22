@@ -33,6 +33,14 @@ import {
     type TypePreset
 } from "./tokens";
 
+/** Perceived lightness of a hex color — drives contrast-dependent choices. */
+export function isLight(hex: string): boolean {
+  const n = hex.replace("#", "");
+  const [r, g, b] = [0, 2, 4].map((i) => parseInt(n.slice(i, i + 2), 16) / 255);
+  const lin = (c: number) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
+  return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b) > 0.45;
+}
+
 /** Simple color mix (srgb) — the RN equivalent of CSS color-mix(). */
 export function mix(hex: string, other: string, weight = 0.5): string {
   const parse = (h: string) => {

@@ -49,13 +49,10 @@ export default function FaceUpdateErrorScreen() {
       </View>
       <View
         style={{
-          padding: theme.spacing[4],
-          paddingTop: theme.spacing[3],
+          paddingHorizontal: theme.spacing[4],
+          paddingTop: theme.spacing[4],
           paddingBottom: theme.spacing[4] + insets.bottom,
           gap: theme.spacing[2],
-          borderTopWidth: theme.sizes.fieldBorderWidth,
-          borderTopColor: theme.colors.borderSubtle,
-          backgroundColor: theme.colors.surface,
         }}>
         <CoreButton
           fullWidth

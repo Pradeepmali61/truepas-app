@@ -3,8 +3,8 @@ import { CircleHelp } from 'lucide-react-native';
 import { Linking, ScrollView, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Accordion, Card, CardContent, ScreenHeader } from '@/components/composite';
-import { CoreButton, RowIcon, Typography } from '@/components/ui';
+import { Accordion, ScreenHeader } from '@/components/composite';
+import { CoreButton, NeuBox, RowIcon, Typography } from '@/components/ui';
 import { useThemeTokens } from '@/theme';
 import { iconSize } from '@/theme/tokens';
 
@@ -72,29 +72,31 @@ export default function HelpScreen() {
           }))}
         />
 
-        <Card>
-          <CardContent>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing[3] }}>
-              <RowIcon
-                tone="info"
-                icon={<CircleHelp size={iconSize.md} color={theme.colors.onInfoSubtle} />}
-              />
-              <View style={{ flex: 1, gap: 2 }}>
-                <Typography variant="body">Still stuck?</Typography>
-                <Typography variant="body-sm" color="secondary">
-                  Our support team can help with verification issues.
-                </Typography>
-              </View>
-              <CoreButton
-                variant="outline"
-                size="sm"
-                accessibilityLabel="Email support"
-                onPress={() => Linking.openURL('mailto:support@truepas.com')}>
-                Email us
-              </CoreButton>
+        <NeuBox
+          variant="raised"
+          depth={4}
+          color={theme.colors.surface}
+          style={{ padding: theme.spacing[4] }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing[3] }}>
+            <RowIcon
+              tone="info"
+              icon={<CircleHelp size={iconSize.md} color={theme.colors.onInfoSubtle} />}
+            />
+            <View style={{ flex: 1, gap: 2 }}>
+              <Typography variant="body">Still stuck?</Typography>
+              <Typography variant="body-sm" color="secondary">
+                Our support team can help with verification issues.
+              </Typography>
             </View>
-          </CardContent>
-        </Card>
+            <CoreButton
+              variant="outline"
+              size="sm"
+              accessibilityLabel="Email support"
+              onPress={() => Linking.openURL('mailto:support@truepas.com')}>
+              Email us
+            </CoreButton>
+          </View>
+        </NeuBox>
       </ScrollView>
     </SafeAreaView>
   );

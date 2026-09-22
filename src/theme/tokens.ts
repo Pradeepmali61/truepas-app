@@ -158,7 +158,10 @@ export const sizes: Record<
   | "sidebarWidth"
   | "headerHeight"
   | "fieldBorderWidth"
-  | "labelGap",
+  | "labelGap"
+  | "screenGutter"
+  | "sectionGap"
+  | "fieldGap",
   number
 > = {
   heightXs: 28,
@@ -174,6 +177,14 @@ export const sizes: Record<
   headerHeight: 56,
   fieldBorderWidth: 1,
   labelGap: 8,
+  /**
+   * Layout rhythm — the only three spacing values a screen may use:
+   * one horizontal gutter, 24 between logical sections, 16 inside a section
+   * (between fields/tiles), 8 between a label and its control.
+   */
+  screenGutter: 16,
+  sectionGap: 24,
+  fieldGap: 16,
 };
 
 export const iconSize: Record<"xs" | "sm" | "md" | "lg" | "xl", number> = {

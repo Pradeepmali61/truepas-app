@@ -5,8 +5,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Card, CardContent } from '@/components/composite';
-import { CoreButton, Divider, PopIn, RowIcon, Typography } from '@/components/ui';
+import { CoreButton, Divider, NeuBox, PopIn, RowIcon, Typography } from '@/components/ui';
 import { sessionEnded } from '@/features/auth/slice';
 import { clearAllDocumentImages } from '@/services/documentImageStore';
 import { flowGuards } from '@/services/flowGuards';
@@ -67,47 +66,47 @@ export default function DeleteSuccessScreen() {
           All your data has been permanently removed
         </Typography>
         <View style={{ alignSelf: 'stretch', marginTop: theme.spacing[2] }}>
-          <Card>
-            <CardContent>
-              <Typography variant="caption" color="muted">
-                DELETION VERIFIED
-              </Typography>
-              {systems.map((system, i) => (
-                <View key={system.label}>
-                  {i > 0 ? <Divider /> : null}
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      gap: theme.spacing[2],
-                      paddingVertical: theme.spacing[3],
-                    }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing[2] }}>
-                      {system.icon}
-                      <Typography variant="body-sm">{system.label}</Typography>
-                    </View>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing[1] }}>
-                      <Check size={iconSize.xs} color={theme.colors.success} />
-                      <Typography variant="body-sm" style={{ color: theme.colors.success, fontWeight: theme.fontWeight.semibold }}>
-                        Deleted
-                      </Typography>
-                    </View>
+          <NeuBox
+            variant="raised"
+            depth={4}
+            color={theme.colors.surface}
+            style={{ paddingHorizontal: theme.spacing[4], paddingVertical: theme.spacing[3], gap: theme.spacing[1] }}>
+            <Typography variant="caption" color="muted">
+              DELETION VERIFIED
+            </Typography>
+            {systems.map((system, i) => (
+              <View key={system.label}>
+                {i > 0 ? <Divider /> : null}
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: theme.spacing[2],
+                    paddingVertical: theme.spacing[3],
+                  }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing[2] }}>
+                    {system.icon}
+                    <Typography variant="body-sm">{system.label}</Typography>
+                  </View>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing[1] }}>
+                    <Check size={iconSize.xs} color={theme.colors.success} />
+                    <Typography variant="body-sm" style={{ color: theme.colors.success, fontWeight: theme.fontWeight.semibold }}>
+                      Deleted
+                    </Typography>
                   </View>
                 </View>
-              ))}
-            </CardContent>
-          </Card>
+              </View>
+            ))}
+          </NeuBox>
         </View>
       </View>
       <View
         style={{
-          padding: theme.spacing[4],
-          paddingTop: theme.spacing[3],
+          paddingHorizontal: theme.spacing[4],
+          paddingTop: theme.spacing[4],
           paddingBottom: theme.spacing[4] + insets.bottom,
-          borderTopWidth: theme.sizes.fieldBorderWidth,
-          borderTopColor: theme.colors.borderSubtle,
-          backgroundColor: theme.colors.surface,
+          gap: theme.spacing[2],
         }}>
         <CoreButton
           fullWidth

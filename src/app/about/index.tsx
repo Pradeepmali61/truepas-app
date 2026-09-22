@@ -14,8 +14,8 @@ import type { ReactNode } from 'react';
 import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Card, CardContent, ScreenHeader } from '@/components/composite';
-import { Badge, RowIcon, Typography } from '@/components/ui';
+import { ScreenHeader } from '@/components/composite';
+import { Badge, NeuBox, RowIcon, Typography } from '@/components/ui';
 import { useThemeTokens } from '@/theme';
 import { iconSize } from '@/theme/tokens';
 
@@ -118,18 +118,20 @@ export default function AboutScreen() {
         />
 
         {/* Mission */}
-        <Card appearance="filled" style={{ marginBottom: theme.spacing[6] }}>
-          <CardContent>
-            <Typography variant="body" style={{ fontWeight: theme.fontWeight.semibold, marginBottom: theme.spacing[2] }}>
-              Our Mission
-            </Typography>
-            <Typography variant="body-sm" color="secondary">
-              To eliminate identity fraud and make identity verification effortless for everyone,
-              everywhere. We believe your identity should be yours to own, control, and share —
-              securely and instantly.
-            </Typography>
-          </CardContent>
-        </Card>
+        <NeuBox
+          variant="raised"
+          depth={4}
+          color={theme.colors.surface}
+          style={{ padding: theme.spacing[4], marginBottom: theme.spacing[6] }}>
+          <Typography variant="body" style={{ fontWeight: theme.fontWeight.semibold, marginBottom: theme.spacing[2] }}>
+            Our Mission
+          </Typography>
+          <Typography variant="body-sm" color="secondary">
+            To eliminate identity fraud and make identity verification effortless for everyone,
+            everywhere. We believe your identity should be yours to own, control, and share —
+            securely and instantly.
+          </Typography>
+        </NeuBox>
 
         {/* Contact */}
         <Typography variant="h4" style={{ marginBottom: theme.spacing[3] }}>

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Spinner, Typography } from '@/components/ui';
+import { NeuBox, Spinner, Typography } from '@/components/ui';
 import { flowGuards } from '@/services/flowGuards';
 import { useThemeTokens } from '@/theme';
 import { iconSize } from '@/theme/tokens';
@@ -56,11 +56,15 @@ export default function DeleteProcessingScreen() {
         <Typography variant="h4" accessibilityLiveRegion="polite">
           Deleting your data…
         </Typography>
-        <View>
+        <NeuBox
+          variant="raised"
+          depth={4}
+          color={theme.colors.surface}
+          style={{ padding: theme.spacing[4], alignSelf: 'stretch' }}>
           {step(<Check size={iconSize.sm} color={theme.colors.success} />, 'Account data removed (PostgreSQL)')}
           {step(<Check size={iconSize.sm} color={theme.colors.success} />, 'Images deleted (S3)')}
           {step(<Hourglass size={iconSize.sm} color={theme.colors.actionPrimary} />, 'Removing face template (ROC)…')}
-        </View>
+        </NeuBox>
       </View>
     </SafeAreaView>
   );

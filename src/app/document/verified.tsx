@@ -1,12 +1,12 @@
 import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import { BadgeCheck, Camera, FileText, ScanFace, TriangleAlert } from 'lucide-react-native';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Animated, Image, ScrollView, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Card, ScreenHeader } from '@/components/composite';
+import { ScreenHeader } from '@/components/composite';
 import { ConfidenceRing, DocumentIdCard } from '@/components/truepas';
-import { CoreButton, PopIn, RowIcon, Typography } from '@/components/ui';
+import { CoreButton, NeuBox, PopIn, RowIcon, Typography } from '@/components/ui';
 import { getDocumentImageUri } from '@/services/documentImageStore';
 import { flowGuards } from '@/services/flowGuards';
 import { makeStyles, useThemeTokens, type Theme } from '@/theme';
@@ -66,7 +66,7 @@ export default function DocumentVerifiedScreen() {
   useEffect(() => {
     if (allowed) flowGuards.consume('document:verified');
   }, [allowed]);
-  const flipAnim = useRef(new Animated.Value(0)).current;
+  const [flipAnim] = useState(() => new Animated.Value(0));
 
   useEffect(() => {
     // Captured images were persisted locally (keyed by docId) before verification
@@ -227,7 +227,11 @@ export default function DocumentVerifiedScreen() {
         </View>
 
         {/* Extracted fields — portrait + captured data, off the credential card */}
-        <Card style={{ alignSelf: 'stretch', marginTop: theme.spacing[5] }}>
+        <NeuBox
+          variant="raised"
+          depth={4}
+          color={theme.colors.surface}
+          style={{ alignSelf: 'stretch', marginTop: theme.spacing[5], padding: theme.spacing[4] }}>
           <View style={{ flexDirection: 'row' }}>
             {/* Portrait — from backend (portraitImageUrl, extracted by server-side Regula)
              *  → selfie fallback → icon placeholder */}
@@ -288,7 +292,7 @@ export default function DocumentVerifiedScreen() {
               </View>
             </View>
           </View>
-        </Card>
+        </NeuBox>
 
         {confidencePct != null && (
           <ConfidenceRing value={confidencePct} style={{ marginTop: theme.spacing[5] }} />
@@ -297,12 +301,10 @@ export default function DocumentVerifiedScreen() {
 
       <View
         style={{
-          padding: theme.spacing[4],
-          paddingTop: theme.spacing[3],
+          paddingHorizontal: theme.spacing[4],
+          paddingTop: theme.spacing[4],
           paddingBottom: theme.spacing[4] + insets.bottom,
-          borderTopWidth: theme.sizes.fieldBorderWidth,
-          borderTopColor: theme.colors.borderSubtle,
-          backgroundColor: theme.colors.surface,
+          gap: theme.spacing[2],
         }}>
         <CoreButton
           fullWidth

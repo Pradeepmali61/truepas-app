@@ -3,8 +3,8 @@ import { Cake, Clock, Plus } from 'lucide-react-native';
 import { ScrollView, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Alert, Card, CardContent, ScreenHeader } from '@/components/composite';
-import { CoreButton, PopIn, RowIcon, Typography } from '@/components/ui';
+import { Alert, ScreenHeader } from '@/components/composite';
+import { CoreButton, NeuBox, PopIn, RowIcon, Typography } from '@/components/ui';
 import { useThemeTokens } from '@/theme';
 import { iconSize } from '@/theme/tokens';
 
@@ -29,8 +29,8 @@ export default function Age18NotificationScreen() {
             />
           </PopIn>
         </View>
-        <Card>
-          <CardContent style={{ alignItems: 'center', gap: theme.spacing[3] }}>
+        <NeuBox variant="raised" depth={6} color={theme.colors.surface} style={{ padding: theme.spacing[4] }}>
+          <View style={{ alignItems: 'center', gap: theme.spacing[3] }}>
             <Typography variant="h3" center>
               You&apos;re eligible for a new Truepas account
             </Typography>
@@ -42,18 +42,15 @@ export default function Age18NotificationScreen() {
               <Alert variant="success">Eligible to create own account</Alert>
               <Alert variant="warning">Data retained for 30 days after removal</Alert>
             </View>
-          </CardContent>
-        </Card>
+          </View>
+        </NeuBox>
       </ScrollView>
       <View
         style={{
-          padding: theme.spacing[4],
-          paddingTop: theme.spacing[3],
+          paddingHorizontal: theme.spacing[4],
+          paddingTop: theme.spacing[4],
           paddingBottom: theme.spacing[4] + insets.bottom,
           gap: theme.spacing[2],
-          borderTopWidth: theme.sizes.fieldBorderWidth,
-          borderTopColor: theme.colors.borderSubtle,
-          backgroundColor: theme.colors.surface,
         }}>
         <CoreButton
           fullWidth

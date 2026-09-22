@@ -1,13 +1,17 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { View } from 'react-native';
+import { ShieldCheck } from 'lucide-react-native';
+import { ScrollView, View } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { isMockApi } from '@/api';
+import { MOCK_PIN } from '@/api/mock';
 import { Alert, FormField, OtpInput, ScreenHeader } from '@/components/composite';
-import { ScreenContainer } from '@/components/layout/ScreenContainer';
-import { Typography } from '@/components/ui';
+import { Button, NeuBox, Typography } from '@/components/ui';
 import { PIN_LENGTH, usePinVerification } from '@/features/auth/usePinVerification';
 import { formatCountdown } from '@/hooks/useCountdown';
 import { flowGuards } from '@/services/flowGuards';
 import { useThemeTokens } from '@/theme';
+import { iconSize } from '@/theme/tokens';
 
 /** Update face — PIN verification (PRD FR-04: PIN required for face updates).
  *  Forwards `personId` (when present) so the face update targets the family
@@ -16,10 +20,11 @@ import { useThemeTokens } from '@/theme';
 export default function FaceUpdatePinScreen() {
   const router = useRouter();
   const theme = useThemeTokens();
+  const insets = useSafeAreaInsets();
   const { personId, age } = useLocalSearchParams<{ personId?: string; age?: string }>();
   const gate = usePinVerification();
 
-  const handleComplete = async (value: string) => {
+  const handleComplete = async (value?: string) => {
     const code = await gate.submit(value);
     if (!code) return;
     flowGuards.grant('face-update:camera');
@@ -30,31 +35,47 @@ export default function FaceUpdatePinScreen() {
   };
 
   return (
-    <ScreenContainer scroll={false} background={false}>
+    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: theme.colors.background }}>
       <ScreenHeader title="Confirm PIN" onBack={router.back} />
-      <View
-        style={{
-          flex: 1,
+      <ScrollView
+        contentContainerStyle={{
           padding: theme.spacing[4],
-          paddingTop: theme.spacing[6],
-          gap: theme.spacing[4],
-        }}>
+          paddingTop: theme.spacing[4],
+          gap: theme.spacing[6],
+        }}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}>
         <View style={{ alignItems: 'center', gap: theme.spacing[1] }}>
+          <NeuBox
+            variant="raised"
+            radius={theme.radii.full}
+            depth={4}
+            style={{
+              width: 64,
+              height: 64,
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: theme.spacing[2],
+            }}>
+            <ShieldCheck size={iconSize.lg} color={theme.colors.actionPrimary} />
+          </NeuBox>
           <Typography variant="h3" center>
-            Enter Your PIN
+            Enter your PIN
           </Typography>
           <Typography color="secondary" center>
             Verify it&apos;s you to update your face
           </Typography>
         </View>
-        <FormField>
+
+        <FormField error={gate.error ?? undefined}>
           <OtpInput
             length={PIN_LENGTH}
             value={gate.pin}
             onChange={gate.setPin}
-            onComplete={handleComplete}
-            state={gate.error ? 'error' : 'default'}
+            onComplete={(v) => void handleComplete(v)}
+            error={gate.error != null}
             disabled={gate.locked}
+            autoFocus
             accessibilityLabel="Current PIN"
           />
         </FormField>
@@ -74,7 +95,29 @@ export default function FaceUpdatePinScreen() {
             {gate.error}
           </Alert>
         ) : null}
+
+        {__DEV__ && isMockApi() && (
+          <Typography variant="caption" color="muted" center>
+            Demo PIN: {MOCK_PIN}
+          </Typography>
+        )}
+      </ScrollView>
+
+      <View
+        style={{
+          paddingHorizontal: theme.spacing[4],
+          paddingTop: theme.spacing[4],
+          paddingBottom: theme.spacing[4] + insets.bottom,
+          gap: theme.spacing[2],
+        }}>
+        <Button
+          label="Verify"
+          size="lg"
+          loading={gate.isPending}
+          disabled={gate.pin.length !== PIN_LENGTH || gate.locked}
+          onPress={() => void handleComplete()}
+        />
       </View>
-    </ScreenContainer>
+    </SafeAreaView>
   );
 }

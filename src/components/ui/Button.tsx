@@ -62,7 +62,11 @@ export function Button({
         iconLeft && <View style={styles.icon}>{iconLeft}</View>
       )}
       {children != null && (
-        <Text style={[styles.label, styles[`${variant}Label`], styles[`${size}Label`]]} numberOfLines={1}>
+        <Text
+          style={[styles.label, styles[`${variant}Label`], styles[`${size}Label`]]}
+          numberOfLines={1}
+          maxFontSizeMultiplier={1.5}
+        >
           {children}
         </Text>
       )}

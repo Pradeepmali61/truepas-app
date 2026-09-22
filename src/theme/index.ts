@@ -10,6 +10,6 @@ export {
     useThemeTokens, type ColorScheme, type DeepPartial, type RadiusPreset,
     type ThemeProviderProps
 } from "./ThemeProvider";
-export { alpha, buildTheme, darkColors, lightColors, mix, type SemanticColors, type Theme } from "./themes";
+export { alpha, buildTheme, darkColors, isLight, lightColors, mix, type SemanticColors, type Theme } from "./themes";
 export * as tokens from "./tokens";
 

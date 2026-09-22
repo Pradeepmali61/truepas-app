@@ -5,8 +5,8 @@ import type { ReactNode } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Card, CardContent, ScreenHeader } from '@/components/composite';
-import { Badge, Divider, RowIcon, Typography } from '@/components/ui';
+import { ScreenHeader } from '@/components/composite';
+import { Badge, Divider, NeuBox, RowIcon, Typography } from '@/components/ui';
 import { useThemeTokens } from '@/theme';
 import { iconSize } from '@/theme/tokens';
 
@@ -67,92 +67,100 @@ export default function DataPrivacyScreen() {
           <Typography variant="caption" color="muted">
             YOUR DATA
           </Typography>
-          <Card>
-            <CardContent style={{ paddingVertical: theme.spacing[1] }}>
-              {actionRow(
-                <Download size={iconSize.md} color={theme.colors.actionPrimary} />,
-                'Download My Data',
-                'Export all your data as ZIP',
-              )}
-              <Divider />
-              {actionRow(
-                <Trash2 size={iconSize.md} color={theme.colors.error} />,
-                'Delete Account',
-                'Permanently remove all data',
-                () => router.push('/account/delete'),
-              )}
-            </CardContent>
-          </Card>
+          <NeuBox
+            variant="raised"
+            depth={4}
+            color={theme.colors.surface}
+            style={{ paddingHorizontal: theme.spacing[4], paddingVertical: theme.spacing[1] }}>
+            {actionRow(
+              <Download size={iconSize.md} color={theme.colors.actionPrimary} />,
+              'Download My Data',
+              'Export all your data as ZIP',
+            )}
+            <Divider />
+            {actionRow(
+              <Trash2 size={iconSize.md} color={theme.colors.error} />,
+              'Delete Account',
+              'Permanently remove all data',
+              () => router.push('/account/delete'),
+            )}
+          </NeuBox>
         </View>
 
         <View style={{ gap: theme.spacing[2] }}>
           <Typography variant="caption" color="muted">
             BIOMETRIC DATA
           </Typography>
-          <Card>
-            <CardContent style={{ gap: theme.spacing[2] }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing[3] }}>
-                <RowIcon
-                  tone="primary"
-                  icon={<ScanFace size={iconSize.md} color={theme.colors.actionPrimary} />}
-                />
-                <Typography variant="body" style={{ flex: 1 }}>
-                  Face Template
-                </Typography>
-                <Badge variant="success">Enrolled</Badge>
-              </View>
-              <Typography variant="body-sm" color="secondary">
-                Your encrypted face template is stored in ROC (Rank One Computing) gallery. It will be
-                deleted permanently when you delete your account.
+          <NeuBox
+            variant="raised"
+            depth={4}
+            color={theme.colors.surface}
+            style={{ padding: theme.spacing[4], gap: theme.spacing[2] }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing[3] }}>
+              <RowIcon
+                tone="primary"
+                icon={<ScanFace size={iconSize.md} color={theme.colors.actionPrimary} />}
+              />
+              <Typography variant="body" style={{ flex: 1 }}>
+                Face Template
               </Typography>
-            </CardContent>
-          </Card>
+              <Badge variant="success">Enrolled</Badge>
+            </View>
+            <Typography variant="body-sm" color="secondary">
+              Your encrypted face template is stored in ROC (Rank One Computing) gallery. It will be
+              deleted permanently when you delete your account.
+            </Typography>
+          </NeuBox>
         </View>
 
         <View style={{ gap: theme.spacing[2] }}>
           <Typography variant="caption" color="muted">
             RETENTION POLICY
           </Typography>
-          <Card>
-            <CardContent>
-              {RETENTION.map((item, i) => (
-                <View key={item.label}>
-                  {i > 0 ? <Divider /> : null}
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      gap: theme.spacing[3],
-                      paddingVertical: theme.spacing[3],
-                    }}>
-                    <Typography variant="body-sm" color="secondary">
-                      {item.label}
-                    </Typography>
-                    <Typography variant="body-sm" style={{ flexShrink: 1 }}>
-                      {item.policy}
-                    </Typography>
-                  </View>
+          <NeuBox
+            variant="raised"
+            depth={4}
+            color={theme.colors.surface}
+            style={{ paddingHorizontal: theme.spacing[4], paddingVertical: theme.spacing[1] }}>
+            {RETENTION.map((item, i) => (
+              <View key={item.label}>
+                {i > 0 ? <Divider /> : null}
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: theme.spacing[3],
+                    paddingVertical: theme.spacing[3],
+                  }}>
+                  <Typography variant="body-sm" color="secondary">
+                    {item.label}
+                  </Typography>
+                  <Typography variant="body-sm" style={{ flexShrink: 1 }}>
+                    {item.policy}
+                  </Typography>
                 </View>
-              ))}
-            </CardContent>
-          </Card>
+              </View>
+            ))}
+          </NeuBox>
         </View>
 
         <View style={{ gap: theme.spacing[2] }}>
           <Typography variant="caption" color="muted">
             CONSENT
           </Typography>
-          <Card>
-            <CardContent style={{ paddingVertical: theme.spacing[1] }}>
-              {actionRow(
-                <Shield size={iconSize.md} color={theme.colors.actionPrimary} />,
-                'Biometric Consent',
-                'Granted · Jul 29, 2026',
-                () => router.push('/security'),
-              )}
-            </CardContent>
-          </Card>
+          <NeuBox
+            variant="raised"
+            depth={4}
+            color={theme.colors.surface}
+            style={{ paddingHorizontal: theme.spacing[4], paddingVertical: theme.spacing[1] }}>
+            {actionRow(
+              <Shield size={iconSize.md} color={theme.colors.actionPrimary} />,
+              'Biometric Consent',
+              'Granted · Jul 29, 2026',
+              () => router.push('/security'),
+            )}
+          </NeuBox>
         </View>
       </ScrollView>
     </SafeAreaView>

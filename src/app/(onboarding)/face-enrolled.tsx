@@ -4,8 +4,7 @@ import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Card, CardContent } from '@/components/composite';
-import { Badge, CoreButton, FadeUp, PopIn, RowIcon, Typography } from '@/components/ui';
+import { Badge, CoreButton, FadeUp, NeuBox, PopIn, RowIcon, Typography } from '@/components/ui';
 import { faceEnrollmentCompleted } from '@/features/auth/slice';
 import { flowGuards } from '@/services/flowGuards';
 import { useAppDispatch } from '@/store';
@@ -49,28 +48,28 @@ export default function FaceEnrolledScreen() {
           </Typography>
         </View>
         <FadeUp delay={140}>
-          <Card>
-            <CardContent>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing[3] }}>
-                <RowIcon tone="success" icon={<CircleCheck size={iconSize.md} color={theme.colors.onSuccessSubtle} />} />
-                <View style={{ flex: 1, gap: 2, minWidth: 0 }}>
-                  <Typography variant="body">Face ID</Typography>
-                  <Typography variant="body-sm" color="secondary">Enrolled</Typography>
-                </View>
-                <Badge variant="success">Active</Badge>
+          <NeuBox
+            variant="raised"
+            depth={4}
+            color={theme.colors.surface}
+            style={{ padding: theme.spacing[4] }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing[3] }}>
+              <RowIcon tone="success" icon={<CircleCheck size={iconSize.md} color={theme.colors.onSuccessSubtle} />} />
+              <View style={{ flex: 1, gap: 2, minWidth: 0 }}>
+                <Typography variant="body">Face ID</Typography>
+                <Typography variant="body-sm" color="secondary">Enrolled</Typography>
               </View>
-            </CardContent>
-          </Card>
+              <Badge variant="success">Active</Badge>
+            </View>
+          </NeuBox>
         </FadeUp>
       </View>
       <View
         style={{
-          padding: theme.spacing[4],
-          paddingTop: theme.spacing[3],
+          paddingHorizontal: theme.spacing[4],
+          paddingTop: theme.spacing[4],
           paddingBottom: theme.spacing[4] + insets.bottom,
-          borderTopWidth: theme.sizes.fieldBorderWidth,
-          borderTopColor: theme.colors.borderSubtle,
-          backgroundColor: theme.colors.surface,
+          gap: theme.spacing[2],
         }}>
         <CoreButton fullWidth size="lg" accessibilityLabel="Continue to Truepas" onPress={handleContinue}>
           Continue to Truepas
