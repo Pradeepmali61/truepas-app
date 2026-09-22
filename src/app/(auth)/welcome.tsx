@@ -9,6 +9,7 @@ import { IdCard, ScanFace, ShieldCheck, Users, type LucideIcon } from 'lucide-re
 import { ScrollView, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { TruepasIcon } from '@/components/app/TruepasIcon';
 import { CoreButton, FadeUp, Link, NeuBox, NeuWell, PopIn, Pulse, ScanFrame, ScanLine, Typography } from '@/components/ui';
 import { alpha, makeStyles, useThemeTokens } from '@/theme';
 
@@ -42,7 +43,7 @@ export default function WelcomeScreen() {
                   <NeuBox variant="raised" radius={t.radii.full} depth={8} style={styles.ring}>
                     <View style={styles.disc}>
                       <ScanLine color={alpha(t.colors.onActionPrimary, 0.8)} />
-                      <ScanFace size={t.iconSize.lg} color={t.colors.onActionPrimary} />
+                      <TruepasIcon size={t.iconSize.lg} color={t.colors.onActionPrimary} />
                     </View>
                   </NeuBox>
                 </Pulse>

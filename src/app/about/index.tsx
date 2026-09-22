@@ -14,6 +14,7 @@ import type { ReactNode } from 'react';
 import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { TruepasIcon } from '@/components/app/TruepasIcon';
 import { ScreenHeader } from '@/components/composite';
 import { Badge, NeuBox, RowIcon, Typography } from '@/components/ui';
 import { useThemeTokens } from '@/theme';
@@ -65,7 +66,7 @@ export default function AboutScreen() {
               justifyContent: 'center',
               ...theme.shadows.lg,
             }}>
-            <ScanFace size={iconSize.xl} color={theme.colors.onActionPrimary} />
+            <TruepasIcon size={iconSize.xl} color={theme.colors.onActionPrimary} />
           </View>
           <Typography variant="h2">Truepas</Typography>
           <Typography variant="body-sm" color="secondary">

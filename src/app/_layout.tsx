@@ -47,10 +47,10 @@ setOnSessionExpired(() => {
 
 function RootShell({ children }: { children: React.ReactNode }) {
   const [fontsLoaded] = useTruepasFonts();
-  const { resolvedScheme } = useTheme();
+  const { resolvedScheme, theme } = useTheme();
 
   if (!fontsLoaded) {
-    return <View style={{ flex: 1, backgroundColor: '#f8fafc' }} />;
+    return <View style={{ flex: 1, backgroundColor: theme.colors.background }} />;
   }
 
   return (
@@ -58,6 +58,25 @@ function RootShell({ children }: { children: React.ReactNode }) {
       <StatusBar style={resolvedScheme === 'dark' ? 'light' : 'dark'} />
       {children}
     </>
+  );
+}
+
+/** Renders inside ThemeProvider so the stack's behind-screen color tracks
+ *  the active palette instead of flashing white during transitions. */
+function RootStack() {
+  const { theme } = useTheme();
+  return (
+    <Stack
+      screenOptions={{
+        headerShown: false,
+        animation: 'slide_from_right',
+        contentStyle: { backgroundColor: theme.colors.background },
+      }}>
+      <Stack.Screen name="dev" />
+      <Stack.Screen name="(auth)" />
+      <Stack.Screen name="(onboarding)" />
+      <Stack.Screen name="(tabs)" />
+    </Stack>
   );
 }
 
@@ -70,17 +89,7 @@ export default function RootLayout() {
             <FieldLabelStyleProvider>
               <ToastProvider>
                 <RootShell>
-                  <Stack
-                    screenOptions={{
-                      headerShown: false,
-                      animation: 'slide_from_right',
-                      contentStyle: { backgroundColor: '#ffffff' },
-                    }}>
-                    <Stack.Screen name="dev" />
-                    <Stack.Screen name="(auth)" />
-                    <Stack.Screen name="(onboarding)" />
-                    <Stack.Screen name="(tabs)" />
-                  </Stack>
+                  <RootStack />
                   {/* Dev-only overlay — absent from preview/production builds */}
                   <DevFloatingButton />
                 </RootShell>

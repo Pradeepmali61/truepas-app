@@ -1,3 +1,4 @@
+/** @jsxImportSource react */
 /**
  * Check-ins tab — bookings split into Upcoming / Past sections, each
  * rendered with the kit BookingCard and drilling into booking detail.

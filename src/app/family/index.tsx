@@ -1,3 +1,4 @@
+/** @jsxImportSource react */
 /**
  * FamilyScreen — pushed route (Home → See all). FamilyCard per member;
  * empty state pushes the add-member flow.

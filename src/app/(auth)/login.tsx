@@ -1,14 +1,23 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Lock, Mail, Phone, ScanFace } from 'lucide-react-native';
+import { Lock, Mail, Phone } from 'lucide-react-native';
 import { useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { api } from '@/api';
 import { toApiError } from '@/api/errors';
+import { TruepasIcon } from '@/components/app/TruepasIcon';
 import { Alert, FormField, ScreenHeader, Section } from '@/components/composite';
-import { CoreButton, Input, Link, NeuBox, NeuSegmented, Typography } from '@/components/ui';
-import { DEFAULT_COUNTRY_CODE } from '@/constants/countries';
+import {
+    CoreButton,
+    Input,
+    Link,
+    NeuBox,
+    NeuSegmented,
+    Select,
+    Typography
+} from '@/components/ui';
+import { COUNTRIES, DEFAULT_COUNTRY_CODE } from '@/constants/countries';
 import { loginSchema } from '@/features/auth/schemas';
 import { sessionStarted } from '@/features/auth/slice';
 import { useAppDispatch } from '@/store';
@@ -34,6 +43,7 @@ export default function LoginScreen() {
   // landed here instead of silently dropping them on a bare login form.
   const { reason } = useLocalSearchParams<{ reason?: string }>();
   const [mode, setMode] = useState<IdentifierMode>('email');
+  const [countryCode, setCountryCode] = useState(DEFAULT_COUNTRY_CODE);
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [identifierError, setIdentifierError] = useState<string>();
@@ -60,12 +70,12 @@ export default function LoginScreen() {
           setIdentifierError('Enter a valid mobile number');
           return;
         }
-        const cc = DEFAULT_COUNTRY_CODE.slice(1);
+        const cc = countryCode.slice(1);
         // A bare national number is ≤10 digits — always prepend the country
         // code. Only treat it as already-international when it's longer AND
         // starts with the cc digits (a 10-digit number can itself start with
         // '91', e.g. 9198765432, and must still get the +91 prefix).
-        value = digits.startsWith(cc) && digits.length > 10 ? `+${digits}` : `${DEFAULT_COUNTRY_CODE}${digits}`;
+        value = digits.startsWith(cc) && digits.length > 10 ? `+${digits}` : `${countryCode}${digits}`;
       }
 
       const { user, accessToken, refreshToken } = await api.login({
@@ -114,7 +124,7 @@ export default function LoginScreen() {
             depth={4}
             color={t.colors.actionPrimary}
             style={styles.brandIcon}>
-            <ScanFace size={t.iconSize.sm} color={t.colors.onActionPrimary} />
+            <TruepasIcon size={t.iconSize.sm} color={t.colors.onActionPrimary} />
           </NeuBox>
           <Typography variant="h4">Truepas</Typography>
         </View>
@@ -152,25 +162,50 @@ export default function LoginScreen() {
           <FormField
             label={mode === 'email' ? 'Email' : 'Phone number'}
             error={identifierError}>
-            <Input
-              placeholder={mode === 'email' ? 'ada@example.com' : '+1 415 555 0123'}
-              autoCapitalize="none"
-              autoCorrect={false}
-              keyboardType={mode === 'email' ? 'email-address' : 'phone-pad'}
-              value={identifier}
-              onChangeText={(v) => {
-                setIdentifier(v);
-                setIdentifierError(undefined);
-                setFormError(null);
-              }}
-              iconLeft={
-                mode === 'email' ? (
-                  <Mail size={t.iconSize.md} color={t.colors.actionPrimary} />
-                ) : (
-                  <Phone size={t.iconSize.md} color={t.colors.actionPrimary} />
-                )
-              }
-            />
+            {mode === 'email' ? (
+              <Input
+                placeholder="ada@example.com"
+                autoCapitalize="none"
+                autoCorrect={false}
+                keyboardType="email-address"
+                value={identifier}
+                onChangeText={(v) => {
+                  setIdentifier(v);
+                  setIdentifierError(undefined);
+                  setFormError(null);
+                }}
+                iconLeft={<Mail size={t.iconSize.md} color={t.colors.actionPrimary} />}
+              />
+            ) : (
+              <View style={styles.phoneRow}>
+                <Select
+                  options={COUNTRIES.map((c) => ({
+                    value: c.code,
+                    label: `${c.flag} ${c.name} (${c.code})`,
+                    fieldLabel: `${c.flag} ${c.code}`,
+                  }))}
+                  value={countryCode}
+                  onValueChange={setCountryCode}
+                  accessibilityLabel="Country code"
+                  style={styles.ccSelect}
+                />
+                <Input
+                  placeholder="(555) 555-0123"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  keyboardType="phone-pad"
+                  value={identifier}
+                  onChangeText={(v) => {
+                    setIdentifier(v);
+                    setIdentifierError(undefined);
+                    setFormError(null);
+                  }}
+                  state={identifierError ? 'error' : 'default'}
+                  containerStyle={styles.phoneInput}
+                  iconLeft={<Phone size={t.iconSize.md} color={t.colors.actionPrimary} />}
+                />
+              </View>
+            )}
           </FormField>
           <FormField label="Password" error={passwordError}>
             <Input
@@ -238,5 +273,8 @@ const useStyles = makeStyles((t) => ({
     justifyContent: 'center',
   },
   heading: { alignItems: 'center', gap: t.spacing[1] },
+  phoneRow: { flexDirection: 'row', gap: t.spacing[2] },
+  ccSelect: { width: 124 },
+  phoneInput: { flex: 1 },
   helperRow: { flexDirection: 'row', justifyContent: 'flex-end' },
 }));

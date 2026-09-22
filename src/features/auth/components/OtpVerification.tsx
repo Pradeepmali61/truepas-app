@@ -10,7 +10,7 @@ import { setRegistrationToken } from '@/api/client';
 import { toApiError } from '@/api/errors';
 import { Alert, OtpInput } from '@/components/composite';
 import { useToast } from '@/components/composite/Toast';
-import { CoreButton, IconButton, Link, NeuWell, Typography } from '@/components/ui';
+import { CoreButton, IconButton, Link, Typography } from '@/components/ui';
 import { useVerifyOtp } from '@/features/auth/mutations';
 import { useCountdown } from '@/hooks/useCountdown';
 import { makeStyles, useThemeTokens } from '@/theme';
@@ -77,6 +77,7 @@ export function OtpVerification({
   const [verifyState, setVerifyState] = useState<VerifyState>('idle');
   const [resending, setResending] = useState(false);
   const [attemptsLeft, setAttemptsLeft] = useState(MAX_OTP_ATTEMPTS);
+  const [verifyError, setVerifyError] = useState<{ title: string; message: string; status: number | null } | null>(null);
   const { seconds: resendSeconds, reset: resetResendCooldown } = useCountdown(RESEND_SECONDS);
   const { seconds: otpSecondsLeft, reset: resetOtpTtl } = useCountdown(OTP_TTL_SECONDS);
   const locked = attemptsLeft <= 0;
@@ -90,12 +91,16 @@ export function OtpVerification({
     if (verifyState === 'error') {
       setVerifyState('idle');
     }
+    if (verifyError) {
+      setVerifyError(null);
+    }
   };
 
   const handleVerify = async (submitted?: string) => {
     const otp = submitted ?? code;
     if (otp.length !== OTP_LENGTH || verifyState === 'loading' || verifyState === 'success' || locked || expired) return;
     setVerifyState('loading');
+    setVerifyError(null);
     try {
       const payload: VerifyOtpRequest = {
         otp,
@@ -125,14 +130,19 @@ export function OtpVerification({
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       onVerified(response, otp);
     } catch (err: any) {
-      console.error('[OTP] Error:', {
-        message: err?.message,
-        status: err?.response?.status,
-        url: err?.config?.url,
-        data: JSON.stringify(err?.response?.data),
-      });
       const apiErr = toApiError(err);
       setVerifyState('error');
+      // Only rejections of the code itself burn an attempt — not a stale
+      // registration session (404), an existing account (409), a malformed
+      // payload (422), or network/5xx failures. Prefer a server-provided
+      // remaining count.
+      const isCodeRejection =
+        apiErr.status !== null &&
+        apiErr.status >= 400 &&
+        apiErr.status < 500 &&
+        apiErr.status !== 404 &&
+        apiErr.status !== 409 &&
+        apiErr.status !== 422;
       if (apiErr.status === 429) {
         // 429 on verify means the code is burned — waiting won't help, resend will.
         setAttemptsLeft(0);
@@ -141,17 +151,31 @@ export function OtpVerification({
           title: 'Incorrect code',
           description: 'Too many incorrect attempts. This code is no longer valid — request a new one.',
         });
-      } else {
+      } else if (isCodeRejection) {
         toast({
           variant: 'error',
           title: 'Incorrect code',
           description: apiErr.message || 'Check the latest code and try again.',
         });
-        // Count only real rejections (4xx), not network/5xx failures or a stale
-        // registration session (404). Prefer a server-provided remaining count.
-        if (apiErr.status !== null && apiErr.status >= 400 && apiErr.status < 500 && apiErr.status !== 404) {
-          setAttemptsLeft((prev) => attemptsRemainingFrom(err) ?? Math.max(0, prev - 1));
-        }
+        setAttemptsLeft((prev) => attemptsRemainingFrom(err) ?? Math.max(0, prev - 1));
+      } else {
+        // Not a wrong code — pin the failure inline so it doesn't vanish with
+        // the toast and the user gets a real next step.
+        setVerifyError({
+          title:
+            apiErr.status === 409
+              ? 'Account already exists'
+              : apiErr.status === null
+                ? 'No connection'
+                : apiErr.status >= 500
+                  ? 'Server error'
+                  : "Couldn't verify",
+          message:
+            apiErr.status === 409
+              ? 'Sign in instead, or go back and try different details.'
+              : apiErr.message || 'Please try again.',
+          status: apiErr.status,
+        });
       }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       shakeX.value = withSequence(
@@ -177,6 +201,7 @@ export function OtpVerification({
       setAttemptsLeft(MAX_OTP_ATTEMPTS);
       setCode('');
       setVerifyState('idle');
+      setVerifyError(null);
       toast({ variant: 'success', title: 'Code resent' });
     } catch (err: any) {
       toast({
@@ -241,14 +266,6 @@ export function OtpVerification({
               />
             </Animated.View>
 
-            {__DEV__ ? (
-              <NeuWell radius={theme.radii.full} style={styles.demoPill}>
-                <Typography variant="caption" color="muted" style={styles.mono}>
-                  Demo code: 123456
-                </Typography>
-              </NeuWell>
-            ) : null}
-
             {expired ? (
               <Alert variant="warning" title="Code expired">
                 This code is no longer valid — request a new one.
@@ -256,6 +273,17 @@ export function OtpVerification({
             ) : locked ? (
               <Alert variant="error" title="Code locked">
                 Too many incorrect attempts — request a new code.
+              </Alert>
+            ) : verifyError ? (
+              <Alert
+                variant="error"
+                title={verifyError.title}
+                action={
+                  verifyError.status === 409 ? (
+                    <Link onPress={() => router.replace('/(auth)/login')}>Sign in</Link>
+                  ) : undefined
+                }>
+                {verifyError.message}
               </Alert>
             ) : attemptsLeft <= 2 ? (
               <Alert variant="warning" title={`${attemptsLeft} attempt${attemptsLeft === 1 ? '' : 's'} remaining`} />
@@ -320,11 +348,6 @@ const useStyles = makeStyles((t) => ({
   scrollContent: { flexGrow: 1, paddingBottom: t.spacing[6] },
   body: { flex: 1, gap: t.spacing[6], paddingHorizontal: t.spacing[4], paddingTop: t.spacing[4] },
   center: { alignItems: 'center', gap: t.spacing[1] },
-  demoPill: {
-    alignSelf: 'center',
-    paddingVertical: t.spacing[1],
-    paddingHorizontal: t.spacing[3],
-  },
   mono: { fontFamily: t.fontFamily.mono.medium },
   footer: {
     paddingHorizontal: t.spacing[4],

@@ -11,9 +11,10 @@ import { useState } from 'react';
 import { RefreshControl, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { ActionSheet, AsyncBlock, ScreenHeader, Section, SectionTitle } from '@/components/composite';
+import { ActionSheet, AsyncBlock, ScreenHeader, Section, SectionTitle, SkeletonRows } from '@/components/composite';
 import { useToast } from '@/components/composite/Toast';
-import { Avatar, Badge, Divider, NeuBox, StatusChip, Typography } from '@/components/ui';
+import { DocumentRow } from '@/components/truepas';
+import { Avatar, Badge, Divider, FadeUp, NeuBox, StatusChip, Typography } from '@/components/ui';
 import { Button } from '@/components/ui/Button';
 import { useDocuments } from '@/features/documents/hooks';
 import { useFamilyMember, useRemoveFamilyMember } from '@/features/family/hooks';
@@ -64,7 +65,7 @@ export default function FamilyMemberScreen() {
     const { id } = useLocalSearchParams<{ id: string }>();
 
     const member = useFamilyMember(id);
-    const { data: memberDocs } = useDocuments(id);
+    const memberDocs = useDocuments(id);
     const removeMember = useRemoveFamilyMember();
     const [confirmRemove, setConfirmRemove] = useState(false);
 
@@ -73,7 +74,7 @@ export default function FamilyMemberScreen() {
     const isPhoto = (m?.faceCaptureMode ?? (m && m.age < 5 ? 'photo' : 'liveness')) === 'photo';
     // Member docs may stay 'pending' when backend verification isn't run for
     // them — any captured (non-failed) document completes this step.
-    const doneDoc = memberDocs?.find((d) => d.status !== 'failed' && d.status !== 'missing');
+    const doneDoc = memberDocs.data?.find((d) => d.status !== 'failed' && d.status !== 'missing');
     const docDone =
         doneDoc != null || m?.verification === 'pending_liveness' || m?.verification === 'verified';
 
@@ -123,8 +124,11 @@ export default function FamilyMemberScreen() {
                 showsVerticalScrollIndicator={false}
                 refreshControl={
                     <RefreshControl
-                        refreshing={member.isRefetching}
-                        onRefresh={() => void member.refetch()}
+                        refreshing={member.isRefetching || memberDocs.isRefetching}
+                        onRefresh={() => {
+                            void member.refetch();
+                            void memberDocs.refetch();
+                        }}
                         tintColor={t.colors.actionPrimary}
                     />
                 }>
@@ -192,6 +196,47 @@ export default function FamilyMemberScreen() {
                                         </View>
                                     ))}
                                 </NeuBox>
+                            </Section>
+
+                            {/* ---------- documents ---------- */}
+                            <Section>
+                                <SectionTitle>Documents</SectionTitle>
+                                <AsyncBlock
+                                    state={{
+                                        data: memberDocs.data,
+                                        isPending: memberDocs.isPending,
+                                        isError: memberDocs.isError,
+                                        error: memberDocs.error,
+                                        refetch: () => void memberDocs.refetch(),
+                                    }}
+                                    empty={(docs) => docs.length === 0}
+                                    emptyTitle="No documents yet"
+                                    emptyBody={`Add a document to verify ${first}.`}
+                                    skeleton={<SkeletonRows />}>
+                                    {(docs) => (
+                                        <Section>
+                                            {docs.map((d, i) => (
+                                                <FadeUp key={d.id} delay={Math.min(i, 8) * 60}>
+                                                    <DocumentRow
+                                                        doc={{
+                                                            label: d.label,
+                                                            number: d.number,
+                                                            status: d.status,
+                                                            expiresAt: d.expiresAt
+                                                                ? d.expiresAt.split('T')[0]
+                                                                : null,
+                                                            matchScore: d.matchScore,
+                                                            type: d.type,
+                                                        }}
+                                                        onPress={() =>
+                                                            router.push(`/document/${d.id}` as never)
+                                                        }
+                                                    />
+                                                </FadeUp>
+                                            ))}
+                                        </Section>
+                                    )}
+                                </AsyncBlock>
                             </Section>
                         </>
                     )}

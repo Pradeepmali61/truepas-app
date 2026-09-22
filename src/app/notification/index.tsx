@@ -1,16 +1,17 @@
+/** @jsxImportSource react */
 /**
  * NotificationsScreen — inbox pushed over the tabs. Read state is local
  * only (the contract exposes no mark-read endpoint).
  */
 import { useRouter } from 'expo-router';
 import {
-    Bell,
-    CalendarClock,
-    CircleUserRound,
-    FileText,
-    ScanFace,
-    Users,
-    type LucideIcon,
+  Bell,
+  CalendarClock,
+  CircleUserRound,
+  FileText,
+  ScanFace,
+  Users,
+  type LucideIcon,
 } from 'lucide-react-native';
 import { useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';

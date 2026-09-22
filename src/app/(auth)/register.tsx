@@ -1,12 +1,13 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'expo-router';
-import { ArrowLeft, Phone, ScanFace } from 'lucide-react-native';
+import { ArrowLeft, Phone } from 'lucide-react-native';
 import { useState } from 'react';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import { KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { toApiError } from '@/api/errors';
+import { TruepasIcon } from '@/components/app/TruepasIcon';
 import { FormField } from '@/components/composite/FormField';
 import { useToast } from '@/components/composite/Toast';
 import { Button } from '@/components/ui/Button';
@@ -92,7 +93,7 @@ export default function RegisterScreen() {
                 depth={4}
                 color={t.colors.actionPrimary}
                 style={styles.brandIcon}>
-                <ScanFace size={t.iconSize.sm} color={t.colors.onActionPrimary} />
+                <TruepasIcon size={t.iconSize.sm} color={t.colors.onActionPrimary} />
               </NeuBox>
               <Typography variant="h4">Truepas</Typography>
             </View>
@@ -121,7 +122,7 @@ export default function RegisterScreen() {
                         options={COUNTRIES.map((c) => ({
                           value: c.code,
                           label: `${c.flag} ${c.name} (${c.code})`,
-                          fieldLabel: `${c.flag}  ${c.code}`,
+                          fieldLabel: `${c.flag} ${c.code}`,
                         }))}
                         value={countryCode}
                         onValueChange={setCountryCode}
@@ -200,7 +201,7 @@ const useStyles = makeStyles((t) => ({
   heading: { alignItems: 'center', gap: t.spacing[1] },
   section: { gap: t.spacing[4] },
   phoneRow: { flexDirection: 'row', gap: t.spacing[2] },
-  ccSelect: { width: 104 },
+  ccSelect: { width: 124 },
   phoneInput: { flex: 1 },
   footer: {
     paddingHorizontal: t.spacing[4],

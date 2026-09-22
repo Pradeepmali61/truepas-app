@@ -1,3 +1,4 @@
+/** @jsxImportSource react */
 /**
  * HomeScreen — dashboard tab. Ported 1:1 from UI-design-repo
  * `screens/main/HomeScreen.tsx`: brand header (logo + bell + avatar that
@@ -8,11 +9,12 @@
  * useNotifications) in place of the design's useApiData store.
  */
 import { useRouter } from 'expo-router';
-import { Bell, CalendarDays, Plus, ScanFace, UserPlus } from 'lucide-react-native';
+import { Bell, CalendarDays, Plus, UserPlus } from 'lucide-react-native';
 import { useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { TruepasIcon } from '@/components/app/TruepasIcon';
 import { AsyncBlock, EmptyState, ProfileDrawer, Section, SectionTitle, SkeletonRows } from '@/components/composite';
 import { BookingCard, DocumentRow, NextCheckinCard } from '@/components/truepas';
 import { Avatar, FadeUp, Link, NeuBox, Skeleton, SoftIconButton, Typography } from '@/components/ui';
@@ -72,7 +74,7 @@ export default function HomeScreen() {
                     {/* ---------- header: brand + bell + avatar ---------- */}
                     <View style={styles.header}>
                         <View style={styles.brand}>
-                            <ScanFace size={iconSize.lg} color={t.colors.actionPrimary} />
+                            <TruepasIcon size={iconSize.lg} />
                             <Typography variant="h4">Truepas</Typography>
                         </View>
                         <View style={styles.headerActions}>

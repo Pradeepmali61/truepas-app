@@ -246,7 +246,11 @@ export function LivenessCamera({ mode, personId, onSuccess, onError, allowBackCa
     const clientTsMs = Math.max(Date.now(), lastClientTs.current + 1);
     lastClientTs.current = clientTsMs;
 
-    // Submit evidence — metadata only, NO image (per guide §4.2)
+    // Submit evidence — metadata only, NO image (per guide §4.2).
+    // submittingRef stays held until the NEXT step's beginStep() releases it.
+    // Releasing it in `finally` opens a window where samples still hit the
+    // pre-advance closure (old step index, detector refs still "hot") and
+    // resubmit evidence for the completed step → SEQUENCE_VIOLATION.
     submittingRef.current = true;
     try {
       console.log(`[Liveness] Submitting evidence for step ${liveness.currentStepIndex}: ${action}`);
@@ -264,8 +268,6 @@ export function LivenessCamera({ mode, personId, onSuccess, onError, allowBackCa
       // resubmitting evidence (the old navigation path left the phase
       // unchanged and caused a 429 resubmission storm).
       failWithCooldown(err, 'Liveness step rejected');
-    } finally {
-      submittingRef.current = false;
     }
   }, [liveness, failWithCooldown]);
 
@@ -572,6 +574,7 @@ export function LivenessCamera({ mode, personId, onSuccess, onError, allowBackCa
       outputs={[photoOutput, faceDetectorOutput]}
       mirrorMode="auto"
       resizeMode="cover"
+      implementationMode="compatible"
     />
   );
 

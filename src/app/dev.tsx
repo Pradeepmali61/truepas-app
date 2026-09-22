@@ -34,6 +34,10 @@ interface ScreenEntry {
    *  deep-link guard requires, so the entry lands on the screen itself
    *  instead of being bounced to the start of its flow. */
   prepare?: (dispatch: AppDispatch) => void;
+  /** Turns the dev mock override back OFF for this entry — use for screens
+   *  like Login where the dev wants the real BFF to answer (real
+   *  credentials → real session), not the mock fixtures. */
+  realApi?: boolean;
 }
 
 // 1×1 PNG — stands in for a captured scan so /document/processing runs
@@ -80,7 +84,14 @@ const GROUPS: { title: string; screens: ScreenEntry[] }[] = [
         // phone OTP — without it the deep-link guard bounces to register.
         prepare: () => setRegistrationToken('dev-registration-token'),
       },
-      { label: 'Login', route: '/(auth)/login', preset: 'unauth' },
+      {
+        label: 'Login',
+        route: '/(auth)/login',
+        preset: 'unauth',
+        // Real sign-in must reach the BFF — otherwise mockApi.login returns
+        // the fixture user no matter which credentials are entered.
+        realApi: true,
+      },
       { label: 'Forgot — email', route: '/(auth)/forgot-password', preset: 'unauth' },
       { label: 'Forgot — reset password', route: '/(auth)/forgot-password?step=reset', preset: 'unauth' },
     ],
@@ -295,6 +306,7 @@ function DevScreenInner() {
 
   const navigate = (entry: ScreenEntry) => {
     applyPreset(entry.preset);
+    if (entry.realApi) setDevMockApi(false);
     entry.prepare?.(dispatch);
     router.push(entry.route as never);
   };

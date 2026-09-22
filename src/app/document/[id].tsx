@@ -1,7 +1,7 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Trash2 } from 'lucide-react-native';
-import { useState } from 'react';
-import { ScrollView, Text, useWindowDimensions, View } from 'react-native';
+import { Camera, FileText, Trash2 } from 'lucide-react-native';
+import { useEffect, useState } from 'react';
+import { Animated, Image, ScrollView, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ActionSheet, AsyncBlock, ScreenHeader, Section, SectionTitle } from '@/components/composite';
@@ -14,6 +14,7 @@ import {
 import { CoreButton, FadeUp, ScanFrame } from '@/components/ui';
 import { useDocument, useRemoveDocument } from '@/features/documents/hooks';
 import { useToast } from '@/hooks/useToast';
+import { getDocumentImageUri } from '@/services/documentImageStore';
 import { alpha, makeStyles, useThemeTokens, type Theme } from '@/theme';
 import { iconSize } from '@/theme/tokens';
 import type { IdentityDocument } from '@/types/domain';
@@ -34,6 +35,36 @@ export default function DocumentDetailScreen() {
   const docQuery = useDocument(id);
   const removeDocument = useRemoveDocument();
   const [confirmRemove, setConfirmRemove] = useState(false);
+  const [scanImageUri, setScanImageUri] = useState<string | null>(null);
+  const [isFlipped, setIsFlipped] = useState(false);
+  const [flipAnim] = useState(() => new Animated.Value(0));
+
+  // The backend doesn't return the captured photo — it's persisted locally
+  // (keyed by docId) at scan time; flip the hero card to reveal it.
+  useEffect(() => {
+    if (!id) return;
+    let alive = true;
+    getDocumentImageUri(id, 'front')
+      .then((uri) => {
+        if (alive) setScanImageUri(uri);
+      })
+      .catch(() => {
+        if (alive) setScanImageUri(null);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [id]);
+
+  const toggleFlip = () => {
+    Animated.spring(flipAnim, {
+      toValue: isFlipped ? 0 : 1,
+      useNativeDriver: true,
+      friction: 8,
+      tension: 10,
+    }).start();
+    setIsFlipped(!isFlipped);
+  };
 
   const status = docQuery.data?.status;
   const canVerify = status === 'pending' || status === 'failed';
@@ -93,12 +124,76 @@ export default function DocumentDetailScreen() {
             return (
               <>
                 <FadeUp>
-                  <ScanFrame
-                    color={alpha(theme.colors.onActionPrimary, 0.7)}
-                    radius={theme.radii.xl}
-                    style={styles.heroFrame}>
-                    <DocumentIdCard doc={productDoc} style={{ width: cardW }} />
-                  </ScanFrame>
+                  <View style={{ alignItems: 'center', gap: theme.spacing[3] }}>
+                    <ScanFrame
+                      color={alpha(theme.colors.onActionPrimary, 0.7)}
+                      radius={theme.radii.xl}
+                      style={styles.heroFrame}>
+                      {/* Flip card — front: TruePas credential card / back: captured scan
+                       *  (same pattern as document/verified.tsx). */}
+                      <View style={{ width: cardW }}>
+                        <Animated.View
+                          style={{
+                            transform: [
+                              { perspective: 1000 },
+                              {
+                                rotateY: flipAnim.interpolate({
+                                  inputRange: [0, 1],
+                                  outputRange: ['0deg', '180deg'],
+                                }),
+                              },
+                            ],
+                            backfaceVisibility: 'hidden',
+                            zIndex: isFlipped ? 0 : 1,
+                          }}>
+                          <DocumentIdCard doc={productDoc} style={{ width: cardW }} />
+                        </Animated.View>
+                        <Animated.View
+                          style={[
+                            styles.scanFace,
+                            {
+                              transform: [
+                                { perspective: 1000 },
+                                {
+                                  rotateY: flipAnim.interpolate({
+                                    inputRange: [0, 1],
+                                    outputRange: ['180deg', '360deg'],
+                                  }),
+                                },
+                              ],
+                              backfaceVisibility: 'hidden',
+                              zIndex: isFlipped ? 1 : 0,
+                            },
+                          ]}>
+                          {scanImageUri ? (
+                            <Image
+                              source={{ uri: scanImageUri }}
+                              style={styles.scanImage}
+                              resizeMode="cover"
+                            />
+                          ) : (
+                            <View style={styles.scanPlaceholder}>
+                              <FileText size={iconSize.xl} color={theme.colors.textMuted} />
+                              <Text style={styles.scanHint}>Original scan not available</Text>
+                            </View>
+                          )}
+                        </Animated.View>
+                      </View>
+                    </ScanFrame>
+                    <CoreButton
+                      size="sm"
+                      onPress={toggleFlip}
+                      accessibilityLabel={isFlipped ? 'View document info' : 'View document scan'}
+                      iconLeft={
+                        isFlipped ? (
+                          <FileText size={iconSize.sm} color={theme.colors.onActionPrimary} />
+                        ) : (
+                          <Camera size={iconSize.sm} color={theme.colors.onActionPrimary} />
+                        )
+                      }>
+                      {isFlipped ? 'View Info' : 'View Scan'}
+                    </CoreButton>
+                  </View>
                 </FadeUp>
                 {d.matchScore != null && (
                   <FadeUp delay={80}>
@@ -161,5 +256,23 @@ export default function DocumentDetailScreen() {
 
 const useStyles = makeStyles((t: Theme) => ({
   heroFrame: { alignSelf: 'center' },
+  scanFace: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: t.colors.surfaceSunken,
+    borderRadius: t.radii.xl,
+    overflow: 'hidden',
+  },
+  scanImage: { width: '100%', height: '100%' },
+  scanPlaceholder: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: t.spacing[2],
+  },
+  scanHint: { color: t.colors.textMuted, fontSize: t.fontSize.sm },
   removeLabel: { color: t.colors.error },
 }));

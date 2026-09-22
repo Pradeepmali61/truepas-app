@@ -55,7 +55,7 @@ function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const styles = useStyles();
 
   return (
-    <View style={[styles.navWrap, { paddingBottom: Math.max(insets.bottom, theme.spacing[2]) }]}>
+    <View style={[styles.navWrap, { paddingBottom: insets.bottom + theme.spacing[2] }]}>
       <NeuBox variant="raised" radius={theme.radii.xl} depth={8} style={styles.navBar}>
         {state.routes.map((route: typeof state.routes[number], index: number) => {
           const { options } = descriptors[route.key];

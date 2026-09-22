@@ -1,11 +1,12 @@
+/** @jsxImportSource react */
 /**
  * ListTile — the standard raised row (icon tile + title/subtitle + chevron).
  *
  * Ported 1:1 from UI-design-repo `src/app/ui/chrome.tsx` (ListTile).
  */
+import { ChevronRight, type LucideIcon } from "lucide-react-native";
 import type { ReactNode } from "react";
 import { Pressable, Text, View } from "react-native";
-import { ChevronRight, type LucideIcon } from "lucide-react-native";
 import { makeStyles, useThemeTokens } from "../../theme";
 import { NeuBox } from "../ui/NeuBox";
 

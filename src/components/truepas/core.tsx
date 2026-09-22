@@ -1,3 +1,4 @@
+/** @jsxImportSource react */
 import { useThemeTokens } from "@/theme";
 import type { ReactNode } from "react";
 import { Pressable, Text, View } from "react-native";

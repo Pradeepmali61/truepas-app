@@ -1,10 +1,12 @@
 import { Redirect, Stack } from 'expo-router';
 
 import { useAppSelector } from '@/store';
+import { useThemeTokens } from '@/theme';
 
 /** Mandatory face-enrollment gate — no skip path (PRD requirement). */
 export default function OnboardingLayout() {
   const { status, faceEnrolled } = useAppSelector((state) => state.auth);
+  const t = useThemeTokens();
 
   if (status !== 'authenticated') {
     return <Redirect href="/(auth)/welcome" />;
@@ -18,7 +20,7 @@ export default function OnboardingLayout() {
       screenOptions={{
         headerShown: false,
         gestureEnabled: false,
-        contentStyle: { backgroundColor: '#ffffff' },
+        contentStyle: { backgroundColor: t.colors.background },
       }}
     />
   );
