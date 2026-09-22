@@ -15,7 +15,6 @@ export { NeuPitView } from "./NeuPitView";
 export { Pill, type PillVariant } from "./Pill";
 export { PinDots, PinPad } from "./PinPad";
 export { SectionTitle } from "./SectionTitle";
-export { SteeringWheelIcon } from "./SteeringWheelIcon";
 export { Stepper } from "./Stepper";
 export { TruepasIcon } from "./TruepasIcon";
 

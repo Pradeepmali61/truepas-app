@@ -10,6 +10,7 @@ import {
     Cake,
     Calendar,
     Camera,
+    CarFront,
     Check,
     CheckCircle2,
     ChevronDown,
@@ -31,6 +32,7 @@ import {
     Menu,
     MoreHorizontal,
     Phone,
+    Plane,
     Plus,
     QrCode,
     ScanFace,
@@ -48,7 +50,6 @@ import {
     Users,
     X
 } from "lucide-react-native";
-import { SteeringWheelIcon } from "./SteeringWheelIcon";
 
 export type IconName =
   | "identity"
@@ -131,8 +132,8 @@ const REGISTRY: Record<IconName, LucideIcon> = {
   chevron: ChevronRight,
   chevronDown: ChevronDown,
   document: FileText,
-  passport: Stamp,
-  drivingLicense: SteeringWheelIcon,
+  passport: Plane,
+  drivingLicense: CarFront,
   idCard: IdCard,
   greenCard: IdCard,
   birthCertificate: FileText,

@@ -54,7 +54,7 @@ export default function DataPrivacyScreen() {
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: theme.colors.background }}>
-      <ScreenHeader title="Data & Privacy" />
+      <ScreenHeader title="Data & Privacy" onBack={() => router.back()} />
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{

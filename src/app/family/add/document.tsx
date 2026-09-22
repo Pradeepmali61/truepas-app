@@ -68,7 +68,7 @@ export default function FamilyDocumentScreen() {
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: theme.colors.background }}>
-      <ScreenHeader title="Add Family Member" />
+      <ScreenHeader title="Add Family Member" onBack={() => router.back()} />
       <View
         style={{
           paddingHorizontal: theme.spacing[4],

@@ -124,10 +124,7 @@ export default function TabsLayout() {
 
 const useStyles = makeStyles((t) => ({
   navWrap: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
+    backgroundColor: t.colors.background,
     paddingHorizontal: t.spacing[4],
     paddingBottom: t.spacing[3],
   },

@@ -86,7 +86,7 @@ export default function DocumentsScreen() {
                                 </View>
                                 <Divider />
                                 {checks.map((c, i) => (
-                                    <View key={c.label}>
+                                    <View key={c.label} style={styles.checkItem}>
                                         {i > 0 && <Divider />}
                                         <View style={styles.row}>
                                             <c.icon size={iconSize.md} color={t.colors.actionPrimary} />
@@ -161,6 +161,7 @@ const useStyles = makeStyles((t) => ({
         gap: t.spacing[6],
     },
     card: { padding: t.spacing[4], gap: t.spacing[3] },
+    checkItem: { gap: t.spacing[3] },
     row: { flexDirection: 'row', alignItems: 'center', gap: t.spacing[3] },
     skeletonCard: { borderRadius: t.radii.xl },
 }));

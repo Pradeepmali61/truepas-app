@@ -2,9 +2,10 @@
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { X } from 'lucide-react-native';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Image, Pressable, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CoreButton, Spinner, Typography } from '@/components/ui';
 import {
@@ -45,6 +46,7 @@ const ON_DARK_MUTED = 'rgba(255,255,255,0.7)';
 export default function DocumentScanScreen() {
   const theme = useThemeTokens();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { type, label, number, expiresAt, family, personId, name, dob, relationship, band } = useLocalSearchParams<{
     type?: string;
     label?: string;
@@ -281,10 +283,35 @@ export default function DocumentScanScreen() {
     paddingHorizontal: theme.spacing[8],
   };
 
+  // Dark-chrome close control — every scan state gets a way out (the screen
+  // has no header, so hardware back was the only exit).
+  const closeButton = (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel="Go back"
+      onPress={() => router.back()}
+      style={({ pressed }) => ({
+        position: 'absolute',
+        top: insets.top + theme.spacing[2],
+        left: theme.spacing[4],
+        zIndex: 10,
+        height: 40,
+        width: 40,
+        borderRadius: theme.radii.full,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        opacity: pressed ? 0.7 : 1,
+      })}>
+      <X size={22} color={ON_DARK} />
+    </Pressable>
+  );
+
   // Permission not yet determined — show loading
   if (permission === null) {
     return (
       <SafeAreaView style={centered} edges={['top', 'bottom']}>
+        {closeButton}
         <Spinner size="lg" label="Requesting camera permission" />
         <Typography variant="body-sm" style={{ color: ON_DARK, marginTop: theme.spacing[4] }}>
           Requesting camera permission...
@@ -297,6 +324,7 @@ export default function DocumentScanScreen() {
   if (!permission.granted) {
     return (
       <SafeAreaView style={centered} edges={['top', 'bottom']}>
+        {closeButton}
         <Typography variant="body" style={{ color: ON_DARK, marginBottom: theme.spacing[4] }} center>
           Camera permission is required for document scanning.
         </Typography>
@@ -312,6 +340,7 @@ export default function DocumentScanScreen() {
     const previewUri = frontPreview ?? frontImage;
     return (
       <SafeAreaView style={centered} edges={['top', 'bottom']}>
+        {closeButton}
         <Typography variant="h3" style={{ color: ON_DARK, marginBottom: theme.spacing[2] }}>
           Capture Complete!
         </Typography>
@@ -397,6 +426,7 @@ export default function DocumentScanScreen() {
   if (showRegulaUI) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: CAMERA_BG }} edges={['top', 'bottom']}>
+        {closeButton}
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: theme.spacing[8] }}>
           <Typography variant="h3" style={{ color: ON_DARK, marginBottom: theme.spacing[2] }}>
             Scan Front of Document
@@ -442,6 +472,7 @@ export default function DocumentScanScreen() {
   // ── Manual expo-camera UI (selfie step + front fallback) ─────────────────
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: CAMERA_BG }} edges={['top', 'bottom']}>
+      {closeButton}
       <View
         style={{ flex: 1 }}
         onLayout={(e) => {

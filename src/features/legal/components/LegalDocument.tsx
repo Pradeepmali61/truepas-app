@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -19,10 +20,11 @@ interface LegalDocumentProps {
 /** Shared legal document renderer — plain text only, no HTML rendering (OWASP A03/XSS-safe). */
 export function LegalDocument({ title, updated, sections }: LegalDocumentProps) {
   const theme = useThemeTokens();
+  const router = useRouter();
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: theme.colors.background }}>
-      <ScreenHeader title={title} />
+      <ScreenHeader title={title} onBack={() => router.back()} />
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{

@@ -1,18 +1,18 @@
 /** @jsxImportSource react */
-import { SteeringWheelIcon } from "@/components/app/SteeringWheelIcon";
 import { Badge, type BadgeVariant } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Progress } from "@/components/ui/Progress";
 import { useThemeTokens } from "@/theme";
 import { iconSize } from "@/theme/tokens";
 import {
+    CarFront,
     ChevronDown,
     ChevronRight,
     Contact,
     CreditCard,
     FileText,
-    Globe,
     Landmark,
+    Plane,
     RefreshCw,
     Share,
     ShieldCheck
@@ -31,8 +31,8 @@ import { useStyles } from "./styles";
  */
 
 export const DOC_ICON: Record<string, typeof FileText> = {
-  passport: Globe,
-  drivingLicense: SteeringWheelIcon,
+  passport: Plane,
+  drivingLicense: CarFront,
   idCard: Contact,
   greenCard: CreditCard,
   birthCertificate: FileText,
