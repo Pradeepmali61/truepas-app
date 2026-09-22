@@ -225,7 +225,7 @@ export default function HomeScreen() {
                                 skeleton={<SkeletonRows />}>
                                 {(docs) => (
                                     <Section>
-                                        {docs.map((d, i) => (
+                                        {docs.slice(0, 2).map((d, i) => (
                                             <FadeUp key={d.id} delay={Math.min(i, 8) * 60}>
                                                 <DocumentRow
                                                     doc={{
@@ -288,7 +288,7 @@ export default function HomeScreen() {
                                         />
                                     ) : (
                                         <Section>
-                                            {past.map((b, i) => (
+                                            {past.slice(0, 2).map((b, i) => (
                                                 <FadeUp key={b.id} delay={Math.min(i, 8) * 60}>
                                                     <Pressable
                                                         accessibilityRole="button"
