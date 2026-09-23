@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ScrollView, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { isMockApi } from '@/api';
@@ -9,6 +9,7 @@ import { MOCK_PIN } from '@/api/mock';
 import { FormField, OtpInput, ScreenHeader, Section } from '@/components/composite';
 import { Button, Typography } from '@/components/ui';
 import { useChangePin } from '@/features/auth/mutations';
+import { useKeyboardScrollPad } from '@/hooks/useKeyboardScrollPad';
 import { useToast } from '@/hooks/useToast';
 import { pinStore } from '@/services/pinStore';
 import { useThemeTokens } from '@/theme';
@@ -26,6 +27,7 @@ export default function ChangePinScreen() {
   const router = useRouter();
   const theme = useThemeTokens();
   const insets = useSafeAreaInsets();
+  const kbd = useKeyboardScrollPad();
   const currentPin = pinStore.get();
   const [newPin, setNewPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
@@ -72,70 +74,74 @@ export default function ChangePinScreen() {
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: theme.colors.background }}>
-      <ScreenHeader title="Change PIN" onBack={router.back} />
-      <ScrollView
-        contentContainerStyle={{
-          padding: theme.spacing[4],
-          paddingTop: theme.spacing[4],
-          gap: theme.spacing[6],
-        }}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}>
-        <View style={{ alignItems: 'center', gap: theme.spacing[1] }}>
-          <Typography variant="h3" center>
-            Choose a new PIN
-          </Typography>
-          <Typography color="secondary" center>
-            4 digits. Avoid birthdays and repeated numbers.
-          </Typography>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+        <ScreenHeader title="Change PIN" onBack={router.back} />
+        <ScrollView
+          {...kbd.scrollProps}
+          contentContainerStyle={{
+            padding: theme.spacing[4],
+            paddingTop: theme.spacing[4],
+            gap: theme.spacing[6],
+          }}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}>
+          <View style={{ alignItems: 'center', gap: theme.spacing[1] }}>
+            <Typography variant="h3" center>
+              Choose a new PIN
+            </Typography>
+            <Typography color="secondary" center>
+              4 digits. Avoid birthdays and repeated numbers.
+            </Typography>
+          </View>
+
+          <Section>
+            <FormField label="New PIN">
+              <OtpInput
+                length={PIN_LENGTH}
+                value={newPin}
+                onChange={setNewPin}
+                autoFocus
+                accessibilityLabel="New PIN"
+              />
+            </FormField>
+            <FormField label="Confirm new PIN" error={mismatch ? "PINs don't match." : undefined}>
+              <OtpInput
+                length={PIN_LENGTH}
+                value={confirmPin}
+                onChange={setConfirmPin}
+                onComplete={(v) => void handleUpdate(newPin, v)}
+                error={mismatch}
+                accessibilityLabel="Confirm new PIN"
+              />
+            </FormField>
+          </Section>
+
+          {__DEV__ && isMockApi() && (
+            <Typography variant="caption" color="muted" center>
+              Demo PIN: {MOCK_PIN}
+            </Typography>
+          )}
+        </ScrollView>
+
+        <View
+          {...kbd.footerProps}
+          style={{
+            paddingHorizontal: theme.spacing[4],
+            paddingTop: theme.spacing[6],
+            paddingBottom: theme.spacing[4] + insets.bottom,
+            gap: theme.spacing[2],
+          }}>
+          <Button
+            label="Update PIN"
+            size="lg"
+            loading={changePin.isPending}
+            disabled={
+              newPin.length !== PIN_LENGTH || confirmPin.length !== PIN_LENGTH || mismatch
+            }
+            onPress={() => void handleUpdate(newPin, confirmPin)}
+          />
         </View>
-
-        <Section>
-          <FormField label="New PIN">
-            <OtpInput
-              length={PIN_LENGTH}
-              value={newPin}
-              onChange={setNewPin}
-              autoFocus
-              accessibilityLabel="New PIN"
-            />
-          </FormField>
-          <FormField label="Confirm new PIN" error={mismatch ? "PINs don't match." : undefined}>
-            <OtpInput
-              length={PIN_LENGTH}
-              value={confirmPin}
-              onChange={setConfirmPin}
-              onComplete={(v) => void handleUpdate(newPin, v)}
-              error={mismatch}
-              accessibilityLabel="Confirm new PIN"
-            />
-          </FormField>
-        </Section>
-
-        {__DEV__ && isMockApi() && (
-          <Typography variant="caption" color="muted" center>
-            Demo PIN: {MOCK_PIN}
-          </Typography>
-        )}
-      </ScrollView>
-
-      <View
-        style={{
-          paddingHorizontal: theme.spacing[4],
-          paddingTop: theme.spacing[4],
-          paddingBottom: theme.spacing[4] + insets.bottom,
-          gap: theme.spacing[2],
-        }}>
-        <Button
-          label="Update PIN"
-          size="lg"
-          loading={changePin.isPending}
-          disabled={
-            newPin.length !== PIN_LENGTH || confirmPin.length !== PIN_LENGTH || mismatch
-          }
-          onPress={() => void handleUpdate(newPin, confirmPin)}
-        />
-      </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

@@ -13,6 +13,7 @@ import { useToast } from '@/components/composite/Toast';
 import { CoreButton, IconButton, Link, Typography } from '@/components/ui';
 import { useVerifyOtp } from '@/features/auth/mutations';
 import { useCountdown } from '@/hooks/useCountdown';
+import { useKeyboardScrollPad } from '@/hooks/useKeyboardScrollPad';
 import { makeStyles, useThemeTokens } from '@/theme';
 import type { OtpPurpose, VerifyOtpRequest, VerifyOtpResponse } from '@/types/domain';
 
@@ -72,6 +73,7 @@ export function OtpVerification({
   const router = useRouter();
   const theme = useThemeTokens();
   const insets = useSafeAreaInsets();
+  const kbd = useKeyboardScrollPad();
   const { toast } = useToast();
   const [code, setCode] = useState('');
   const [verifyState, setVerifyState] = useState<VerifyState>('idle');
@@ -238,6 +240,7 @@ export function OtpVerification({
         </View>
 
         <ScrollView
+          {...kbd.scrollProps}
           style={styles.flex}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
@@ -311,7 +314,7 @@ export function OtpVerification({
           </View>
         </ScrollView>
 
-        <View style={[styles.footer, { paddingBottom: theme.spacing[4] + insets.bottom }]}>
+        <View {...kbd.footerProps} style={[styles.footer, { paddingBottom: theme.spacing[4] + insets.bottom }]}>
           <CoreButton
             fullWidth
             size="lg"
@@ -351,7 +354,7 @@ const useStyles = makeStyles((t) => ({
   mono: { fontFamily: t.fontFamily.mono.medium },
   footer: {
     paddingHorizontal: t.spacing[4],
-    paddingTop: t.spacing[4],
+    paddingTop: t.spacing[6],
     gap: t.spacing[2],
   },
 }));

@@ -7,6 +7,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Alert, DatePicker, FormField, ScreenHeader } from '@/components/composite';
 import { CoreButton, Input, Select, type SelectOption } from '@/components/ui';
 import { ageBandFromAge, ageFromDob } from '@/features/family/hooks';
+import { useKeyboardScrollPad } from '@/hooks/useKeyboardScrollPad';
 import { useThemeTokens } from '@/theme';
 
 const RELATIONSHIPS: SelectOption[] = [
@@ -29,6 +30,7 @@ function todayIso(): string {
 export default function AddFamilyScreen() {
   const theme = useThemeTokens();
   const insets = useSafeAreaInsets();
+  const kbd = useKeyboardScrollPad();
   const router = useRouter();
 
   const [fullName, setFullName] = useState('');
@@ -62,8 +64,11 @@ export default function AddFamilyScreen() {
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: theme.colors.background }}>
       <ScreenHeader title="Add member" onBack={() => router.back()} />
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}>
         <ScrollView
+          {...kbd.scrollProps}
           style={{ flex: 1 }}
           contentContainerStyle={{ padding: theme.spacing[4], gap: theme.spacing[4] }}
           showsVerticalScrollIndicator={false}
@@ -101,18 +106,19 @@ export default function AddFamilyScreen() {
             Under 5: document + photo. Ages 5–9: document + liveness (any camera). 10+: document + front-camera liveness.
           </Alert>
         </ScrollView>
+        <View
+          {...kbd.footerProps}
+          style={{
+            paddingHorizontal: theme.spacing[4],
+            paddingTop: theme.spacing[6],
+            paddingBottom: theme.spacing[4] + insets.bottom,
+            gap: theme.spacing[2],
+          }}>
+          <CoreButton fullWidth size="lg" accessibilityLabel="Add member" onPress={submit}>
+            Add member
+          </CoreButton>
+        </View>
       </KeyboardAvoidingView>
-      <View
-        style={{
-          paddingHorizontal: theme.spacing[4],
-          paddingTop: theme.spacing[4],
-          paddingBottom: theme.spacing[4] + insets.bottom,
-          gap: theme.spacing[2],
-        }}>
-        <CoreButton fullWidth size="lg" accessibilityLabel="Add member" onPress={submit}>
-          Add member
-        </CoreButton>
-      </View>
     </SafeAreaView>
   );
 }

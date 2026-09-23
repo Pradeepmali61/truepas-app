@@ -16,6 +16,7 @@ import { IconButton } from '@/components/ui/IconButton';
 import { Input } from '@/components/ui/Input';
 import { useCompleteAccountDetails } from '@/features/auth/mutations';
 import { AccountDetailsForm, accountDetailsSchema } from '@/features/auth/schemas';
+import { useKeyboardScrollPad } from '@/hooks/useKeyboardScrollPad';
 import { accountDetailsStore } from '@/services/accountDetailsStore';
 import { makeStyles, useThemeTokens } from '@/theme';
 
@@ -36,6 +37,7 @@ export default function AccountDetailsScreen() {
   const styles = useStyles();
   const t = useThemeTokens();
   const insets = useSafeAreaInsets();
+  const kbd = useKeyboardScrollPad();
   const router = useRouter();
   const { toast } = useToast();
   const [confirmPin, setConfirmPin] = useState('');
@@ -119,6 +121,7 @@ export default function AccountDetailsScreen() {
         </View>
 
         <ScrollView
+          {...kbd.scrollProps}
           style={styles.flex}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
@@ -267,7 +270,7 @@ export default function AccountDetailsScreen() {
           </View>
         </ScrollView>
 
-        <View style={[styles.footer, { paddingBottom: t.spacing[4] + insets.bottom }]}>
+        <View {...kbd.footerProps} style={[styles.footer, { paddingBottom: t.spacing[4] + insets.bottom }]}>
           <Button
             fullWidth
             size="lg"
@@ -300,7 +303,7 @@ const useStyles = makeStyles((t) => ({
   section: { gap: t.spacing[4] },
   footer: {
     paddingHorizontal: t.spacing[4],
-    paddingTop: t.spacing[4],
+    paddingTop: t.spacing[6],
     gap: t.spacing[2],
   },
 }));

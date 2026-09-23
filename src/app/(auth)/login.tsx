@@ -1,7 +1,7 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Lock, Mail, Phone } from 'lucide-react-native';
 import { useState } from 'react';
-import { ScrollView, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { api } from '@/api';
@@ -20,6 +20,7 @@ import {
 import { COUNTRIES, DEFAULT_COUNTRY_CODE } from '@/constants/countries';
 import { loginSchema } from '@/features/auth/schemas';
 import { sessionStarted } from '@/features/auth/slice';
+import { useKeyboardScrollPad } from '@/hooks/useKeyboardScrollPad';
 import { useAppDispatch } from '@/store';
 import { makeStyles, useThemeTokens } from '@/theme';
 
@@ -39,6 +40,7 @@ export default function LoginScreen() {
   const router = useRouter();
   const dispatch = useAppDispatch();
   const insets = useSafeAreaInsets();
+  const kbd = useKeyboardScrollPad();
   // Set by the session-expired handler in _layout — explains why the user
   // landed here instead of silently dropping them on a bare login form.
   const { reason } = useLocalSearchParams<{ reason?: string }>();
@@ -107,154 +109,158 @@ export default function LoginScreen() {
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: t.colors.background }}>
-      <ScreenHeader onBack={() => router.back()} />
-      <ScrollView
-        contentContainerStyle={{
-          padding: t.spacing[4],
-          paddingTop: t.spacing[4],
-          gap: t.spacing[6],
-          flexGrow: 1,
-        }}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}>
-        <View style={styles.brand}>
-          <NeuBox
-            variant="raised"
-            radius={t.radii.lg}
-            depth={4}
-            color={t.colors.actionPrimary}
-            style={styles.brandIcon}>
-            <TruepasIcon size={t.iconSize.sm} color={t.colors.onActionPrimary} />
-          </NeuBox>
-          <Typography variant="h4">Truepas</Typography>
-        </View>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+        <ScreenHeader onBack={() => router.back()} />
+        <ScrollView
+          {...kbd.scrollProps}
+          contentContainerStyle={{
+            padding: t.spacing[4],
+            paddingTop: t.spacing[4],
+            gap: t.spacing[6],
+            flexGrow: 1,
+          }}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}>
+          <View style={styles.brand}>
+            <NeuBox
+              variant="raised"
+              radius={t.radii.lg}
+              depth={4}
+              color={t.colors.actionPrimary}
+              style={styles.brandIcon}>
+              <TruepasIcon size={t.iconSize.sm} color={t.colors.onActionPrimary} />
+            </NeuBox>
+            <Typography variant="h4">Truepas</Typography>
+          </View>
 
-        <View style={styles.heading}>
-          <Typography variant="h2" center>
-            Welcome back
-          </Typography>
-          <Typography color="secondary" center>
-            Sign in with your email or phone.
-          </Typography>
-        </View>
+          <View style={styles.heading}>
+            <Typography variant="h2" center>
+              Welcome back
+            </Typography>
+            <Typography color="secondary" center>
+              Sign in with your email or phone.
+            </Typography>
+          </View>
 
-        {reason === 'session-expired' ? (
-          <Alert variant="warning" title="Session expired">
-            For your security, you were signed out. Please sign in again to continue.
-          </Alert>
-        ) : null}
+          {reason === 'session-expired' ? (
+            <Alert variant="warning" title="Session expired">
+              For your security, you were signed out. Please sign in again to continue.
+            </Alert>
+          ) : null}
 
-        <Section>
-          <NeuSegmented
-            label="Sign in method"
-            options={[
-              { value: 'email', label: 'Email', icon: Mail },
-              { value: 'phone', label: 'Phone', icon: Phone },
-            ]}
-            value={mode}
-            onChange={(m) => {
-              setMode(m);
-              setIdentifier('');
-              setIdentifierError(undefined);
-              setFormError(null);
-            }}
-          />
-          <FormField
-            label={mode === 'email' ? 'Email' : 'Phone number'}
-            error={identifierError}>
-            {mode === 'email' ? (
-              <Input
-                placeholder="ada@example.com"
-                autoCapitalize="none"
-                autoCorrect={false}
-                keyboardType="email-address"
-                value={identifier}
-                onChangeText={(v) => {
-                  setIdentifier(v);
-                  setIdentifierError(undefined);
-                  setFormError(null);
-                }}
-                iconLeft={<Mail size={t.iconSize.md} color={t.colors.actionPrimary} />}
-              />
-            ) : (
-              <View style={styles.phoneRow}>
-                <Select
-                  options={COUNTRIES.map((c) => ({
-                    value: c.code,
-                    label: `${c.flag} ${c.name} (${c.code})`,
-                    fieldLabel: `${c.flag} ${c.code}`,
-                  }))}
-                  value={countryCode}
-                  onValueChange={setCountryCode}
-                  accessibilityLabel="Country code"
-                  style={styles.ccSelect}
-                />
+          <Section>
+            <NeuSegmented
+              label="Sign in method"
+              options={[
+                { value: 'email', label: 'Email', icon: Mail },
+                { value: 'phone', label: 'Phone', icon: Phone },
+              ]}
+              value={mode}
+              onChange={(m) => {
+                setMode(m);
+                setIdentifier('');
+                setIdentifierError(undefined);
+                setFormError(null);
+              }}
+            />
+            <FormField
+              label={mode === 'email' ? 'Email' : 'Phone number'}
+              error={identifierError}>
+              {mode === 'email' ? (
                 <Input
-                  placeholder="(555) 555-0123"
+                  placeholder="ada@example.com"
                   autoCapitalize="none"
                   autoCorrect={false}
-                  keyboardType="phone-pad"
+                  keyboardType="email-address"
                   value={identifier}
                   onChangeText={(v) => {
                     setIdentifier(v);
                     setIdentifierError(undefined);
                     setFormError(null);
                   }}
-                  state={identifierError ? 'error' : 'default'}
-                  containerStyle={styles.phoneInput}
-                  iconLeft={<Phone size={t.iconSize.md} color={t.colors.actionPrimary} />}
+                  iconLeft={<Mail size={t.iconSize.md} color={t.colors.actionPrimary} />}
                 />
-              </View>
+              ) : (
+                <View style={styles.phoneRow}>
+                  <Select
+                    options={COUNTRIES.map((c) => ({
+                      value: c.code,
+                      label: `${c.flag} ${c.name} (${c.code})`,
+                      fieldLabel: `${c.flag} ${c.code}`,
+                    }))}
+                    value={countryCode}
+                    onValueChange={setCountryCode}
+                    accessibilityLabel="Country code"
+                    style={styles.ccSelect}
+                  />
+                  <Input
+                    placeholder="(555) 555-0123"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    keyboardType="phone-pad"
+                    value={identifier}
+                    onChangeText={(v) => {
+                      setIdentifier(v);
+                      setIdentifierError(undefined);
+                      setFormError(null);
+                    }}
+                    state={identifierError ? 'error' : 'default'}
+                    containerStyle={styles.phoneInput}
+                    iconLeft={<Phone size={t.iconSize.md} color={t.colors.actionPrimary} />}
+                  />
+                </View>
+              )}
+            </FormField>
+            <FormField label="Password" error={passwordError}>
+              <Input
+                placeholder="••••••••••"
+                secureTextEntry
+                value={password}
+                onChangeText={(v) => {
+                  setPassword(v);
+                  setPasswordError(undefined);
+                  setFormError(null);
+                }}
+                iconLeft={<Lock size={t.iconSize.md} color={t.colors.actionPrimary} />}
+              />
+            </FormField>
+
+            {formError && (
+              <Typography variant="caption" color="error" center>
+                {formError}
+              </Typography>
             )}
-          </FormField>
-          <FormField label="Password" error={passwordError}>
-            <Input
-              placeholder="••••••••••"
-              secureTextEntry
-              value={password}
-              onChangeText={(v) => {
-                setPassword(v);
-                setPasswordError(undefined);
-                setFormError(null);
-              }}
-              iconLeft={<Lock size={t.iconSize.md} color={t.colors.actionPrimary} />}
-            />
-          </FormField>
 
-          {formError && (
-            <Typography variant="caption" color="error" center>
-              {formError}
-            </Typography>
-          )}
+            <View style={styles.helperRow}>
+              <Link onPress={() => router.push('/(auth)/forgot-password' as never)}>
+                Forgot password?
+              </Link>
+            </View>
+          </Section>
+        </ScrollView>
 
-          <View style={styles.helperRow}>
-            <Link onPress={() => router.push('/(auth)/forgot-password' as never)}>
-              Forgot password?
-            </Link>
-          </View>
-        </Section>
-      </ScrollView>
-
-      <View
-        style={{
-          paddingHorizontal: t.spacing[4],
-          paddingTop: t.spacing[4],
-          paddingBottom: t.spacing[4] + insets.bottom,
-          gap: t.spacing[2],
-        }}>
-        <CoreButton
-          fullWidth
-          size="lg"
-          loading={loading}
-          disabled={!identifier.trim() || !password}
-          onPress={() => void submit()}>
-          Sign in
-        </CoreButton>
-        <Typography variant="body-sm" color="muted" center>
-          New to Truepas?{' '}
-          <Link onPress={() => router.push('/(auth)/register')}>Create account</Link>
-        </Typography>
-      </View>
+        <View
+          {...kbd.footerProps}
+          style={{
+            paddingHorizontal: t.spacing[4],
+            paddingTop: t.spacing[6],
+            paddingBottom: t.spacing[4] + insets.bottom,
+            gap: t.spacing[2],
+          }}>
+          <CoreButton
+            fullWidth
+            size="lg"
+            loading={loading}
+            disabled={!identifier.trim() || !password}
+            onPress={() => void submit()}>
+            Sign in
+          </CoreButton>
+          <Typography variant="body-sm" color="muted" center>
+            New to Truepas?{' '}
+            <Link onPress={() => router.push('/(auth)/register')}>Create account</Link>
+          </Typography>
+        </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -274,7 +280,7 @@ const useStyles = makeStyles((t) => ({
   },
   heading: { alignItems: 'center', gap: t.spacing[1] },
   phoneRow: { flexDirection: 'row', gap: t.spacing[2] },
-  ccSelect: { width: 124 },
+  ccSelect: { width: 110 },
   phoneInput: { flex: 1 },
   helperRow: { flexDirection: 'row', justifyContent: 'flex-end' },
 }));

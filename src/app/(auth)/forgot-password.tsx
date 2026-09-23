@@ -1,7 +1,7 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Lock, Mail } from 'lucide-react-native';
 import { useState } from 'react';
-import { ScrollView, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { toApiError } from '@/api/errors';
@@ -10,6 +10,7 @@ import { Button, Input, Typography } from '@/components/ui';
 import { OtpVerification } from '@/features/auth/components/OtpVerification';
 import { useForgotPassword, useResetPassword } from '@/features/auth/mutations';
 import { newPasswordSchema } from '@/features/auth/schemas';
+import { useKeyboardScrollPad } from '@/hooks/useKeyboardScrollPad';
 import { useToast } from '@/hooks/useToast';
 import { useThemeTokens } from '@/theme';
 import { iconSize } from '@/theme/tokens';
@@ -28,6 +29,7 @@ export default function ForgotPasswordScreen() {
   const router = useRouter();
   const theme = useThemeTokens();
   const insets = useSafeAreaInsets();
+  const kbd = useKeyboardScrollPad();
   // `?step=reset` lets the dev screen jump straight to the password form.
   const { step: stepParam } = useLocalSearchParams<{ step?: string }>();
   const [step, setStep] = useState<Step>(stepParam === 'reset' ? 'reset' : 'email');
@@ -113,124 +115,128 @@ export default function ForgotPasswordScreen() {
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: theme.colors.background }}>
-      <ScreenHeader
-        title={effectiveStep === 'email' ? 'Reset password' : 'Choose a new password'}
-        onBack={router.back}
-      />
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={{
-          padding: theme.spacing[4],
-          paddingTop: theme.spacing[4],
-          gap: theme.spacing[6],
-          flexGrow: 1,
-        }}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}>
-        {effectiveStep === 'email' && (
-          <>
-            <View style={{ alignItems: 'center', gap: theme.spacing[1] }}>
-              <Typography variant="h3" center>
-                Find your account
-              </Typography>
-              <Typography color="secondary" center>
-                Enter your account email. If it exists, we&apos;ll send a reset code.
-              </Typography>
-            </View>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+        <ScreenHeader
+          title={effectiveStep === 'email' ? 'Reset password' : 'Choose a new password'}
+          onBack={router.back}
+        />
+        <ScrollView
+          {...kbd.scrollProps}
+          style={{ flex: 1 }}
+          contentContainerStyle={{
+            padding: theme.spacing[4],
+            paddingTop: theme.spacing[4],
+            gap: theme.spacing[6],
+            flexGrow: 1,
+          }}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}>
+          {effectiveStep === 'email' && (
+            <>
+              <View style={{ alignItems: 'center', gap: theme.spacing[1] }}>
+                <Typography variant="h3" center>
+                  Find your account
+                </Typography>
+                <Typography color="secondary" center>
+                  Enter your account email. If it exists, we&apos;ll send a reset code.
+                </Typography>
+              </View>
 
-            <FormField label="Email" error={emailError}>
-              <Input
-                value={email}
-                onChangeText={(v) => {
-                  setEmail(v);
-                  setEmailError(undefined);
-                }}
-                placeholder="ada@example.com"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-                autoComplete="email"
-                iconLeft={<Mail size={iconSize.md} color={theme.colors.actionPrimary} />}
-              />
-            </FormField>
-          </>
-        )}
-
-        {effectiveStep === 'reset' && (
-          <>
-            <View style={{ alignItems: 'center', gap: theme.spacing[1] }}>
-              <Typography variant="h3" center>
-                Almost done
-              </Typography>
-              <Typography color="secondary" center>
-                Set a new password for {email || 'your account'}.
-              </Typography>
-            </View>
-
-            <Section>
-              <FormField label="New password" required error={passwordError}>
+              <FormField label="Email" error={emailError}>
                 <Input
-                  value={newPassword}
+                  value={email}
                   onChangeText={(v) => {
-                    setNewPassword(v);
-                    setPasswordError(undefined);
+                    setEmail(v);
+                    setEmailError(undefined);
                   }}
-                  placeholder="New password"
-                  secureTextEntry
+                  placeholder="ada@example.com"
+                  keyboardType="email-address"
                   autoCapitalize="none"
                   autoCorrect={false}
-                  autoComplete="new-password"
-                  iconLeft={<Lock size={iconSize.md} color={theme.colors.actionPrimary} />}
+                  autoComplete="email"
+                  iconLeft={<Mail size={iconSize.md} color={theme.colors.actionPrimary} />}
                 />
               </FormField>
-              <FormField label="Confirm new password" required error={confirmError}>
-                <Input
-                  value={confirmPassword}
-                  onChangeText={(v) => {
-                    setConfirmPassword(v);
-                    setConfirmError(undefined);
-                  }}
-                  placeholder="Repeat password"
-                  secureTextEntry
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  iconLeft={<Lock size={iconSize.md} color={theme.colors.actionPrimary} />}
-                />
-              </FormField>
-            </Section>
+            </>
+          )}
 
-            <InlineAlert variant="warning" title="Sessions revoked">
-              You&apos;ll be signed out of every device after the reset.
-            </InlineAlert>
-          </>
-        )}
-      </ScrollView>
+          {effectiveStep === 'reset' && (
+            <>
+              <View style={{ alignItems: 'center', gap: theme.spacing[1] }}>
+                <Typography variant="h3" center>
+                  Almost done
+                </Typography>
+                <Typography color="secondary" center>
+                  Set a new password for {email || 'your account'}.
+                </Typography>
+              </View>
 
-      <View
-        style={{
-          paddingHorizontal: theme.spacing[4],
-          paddingTop: theme.spacing[4],
-          paddingBottom: theme.spacing[4] + insets.bottom,
-          gap: theme.spacing[2],
-        }}>
-        {effectiveStep === 'email' ? (
-          <Button
-            label="Send reset code"
-            size="lg"
-            loading={forgotPassword.isPending}
-            disabled={!email.trim()}
-            onPress={() => void handleSendOtp()}
-          />
-        ) : (
-          <Button
-            label="Reset password"
-            size="lg"
-            loading={resetPassword.isPending}
-            disabled={!newPassword || !confirmPassword}
-            onPress={() => void handleReset()}
-          />
-        )}
-      </View>
+              <Section>
+                <FormField label="New password" required error={passwordError}>
+                  <Input
+                    value={newPassword}
+                    onChangeText={(v) => {
+                      setNewPassword(v);
+                      setPasswordError(undefined);
+                    }}
+                    placeholder="New password"
+                    secureTextEntry
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    autoComplete="new-password"
+                    iconLeft={<Lock size={iconSize.md} color={theme.colors.actionPrimary} />}
+                  />
+                </FormField>
+                <FormField label="Confirm new password" required error={confirmError}>
+                  <Input
+                    value={confirmPassword}
+                    onChangeText={(v) => {
+                      setConfirmPassword(v);
+                      setConfirmError(undefined);
+                    }}
+                    placeholder="Repeat password"
+                    secureTextEntry
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    iconLeft={<Lock size={iconSize.md} color={theme.colors.actionPrimary} />}
+                  />
+                </FormField>
+              </Section>
+
+              <InlineAlert variant="warning" title="Sessions revoked">
+                You&apos;ll be signed out of every device after the reset.
+              </InlineAlert>
+            </>
+          )}
+        </ScrollView>
+
+        <View
+          {...kbd.footerProps}
+          style={{
+            paddingHorizontal: theme.spacing[4],
+            paddingTop: theme.spacing[6],
+            paddingBottom: theme.spacing[4] + insets.bottom,
+            gap: theme.spacing[2],
+          }}>
+          {effectiveStep === 'email' ? (
+            <Button
+              label="Send reset code"
+              size="lg"
+              loading={forgotPassword.isPending}
+              disabled={!email.trim()}
+              onPress={() => void handleSendOtp()}
+            />
+          ) : (
+            <Button
+              label="Reset password"
+              size="lg"
+              loading={resetPassword.isPending}
+              disabled={!newPassword || !confirmPassword}
+              onPress={() => void handleReset()}
+            />
+          )}
+        </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

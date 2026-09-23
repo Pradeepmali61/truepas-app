@@ -1,7 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ShieldCheck } from 'lucide-react-native';
-import { Alert as RNAlert, ScrollView, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Alert as RNAlert, ScrollView, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { isMockApi } from '@/api';
@@ -11,6 +11,7 @@ import { Button, Link, NeuBox, Typography } from '@/components/ui';
 import { sessionEnded } from '@/features/auth/slice';
 import { PIN_LENGTH, usePinVerification } from '@/features/auth/usePinVerification';
 import { formatCountdown } from '@/hooks/useCountdown';
+import { useKeyboardScrollPad } from '@/hooks/useKeyboardScrollPad';
 import { pinStore } from '@/services/pinStore';
 import { useAppDispatch } from '@/store';
 import { useThemeTokens } from '@/theme';
@@ -30,6 +31,7 @@ export default function ConfirmPinScreen() {
   const router = useRouter();
   const theme = useThemeTokens();
   const insets = useSafeAreaInsets();
+  const kbd = useKeyboardScrollPad();
   const { next } = useLocalSearchParams<{ next?: string }>();
   const gate = usePinVerification();
   const dispatch = useAppDispatch();
@@ -66,97 +68,101 @@ export default function ConfirmPinScreen() {
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: theme.colors.background }}>
-      <ScreenHeader title="Confirm it's you" onBack={router.back} />
-      <ScrollView
-        contentContainerStyle={{
-          padding: theme.spacing[4],
-          paddingTop: theme.spacing[4],
-          gap: theme.spacing[6],
-        }}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}>
-        <View style={{ alignItems: 'center', gap: theme.spacing[1] }}>
-          <NeuBox
-            variant="raised"
-            radius={theme.radii.full}
-            depth={4}
-            style={{
-              width: 64,
-              height: 64,
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginBottom: theme.spacing[2],
-            }}>
-            <ShieldCheck size={iconSize.lg} color={theme.colors.actionPrimary} />
-          </NeuBox>
-          <Typography variant="h3" center>
-            Enter your PIN
-          </Typography>
-          <Typography color="secondary" center>
-            Required before changing security settings.
-          </Typography>
-        </View>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+        <ScreenHeader title="Confirm it's you" onBack={router.back} />
+        <ScrollView
+          {...kbd.scrollProps}
+          contentContainerStyle={{
+            padding: theme.spacing[4],
+            paddingTop: theme.spacing[4],
+            gap: theme.spacing[6],
+          }}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}>
+          <View style={{ alignItems: 'center', gap: theme.spacing[1] }}>
+            <NeuBox
+              variant="raised"
+              radius={theme.radii.full}
+              depth={4}
+              style={{
+                width: 64,
+                height: 64,
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginBottom: theme.spacing[2],
+              }}>
+              <ShieldCheck size={iconSize.lg} color={theme.colors.actionPrimary} />
+            </NeuBox>
+            <Typography variant="h3" center>
+              Enter your PIN
+            </Typography>
+            <Typography color="secondary" center>
+              Required before changing security settings.
+            </Typography>
+          </View>
 
-        <FormField error={gate.error ?? undefined}>
-          <OtpInput
-            length={PIN_LENGTH}
-            value={gate.pin}
-            onChange={gate.setPin}
-            onComplete={submit}
-            error={gate.error != null}
-            disabled={gate.locked}
-            autoFocus
-            accessibilityLabel="Account PIN"
+          <FormField error={gate.error ?? undefined}>
+            <OtpInput
+              length={PIN_LENGTH}
+              value={gate.pin}
+              onChange={gate.setPin}
+              onComplete={submit}
+              error={gate.error != null}
+              disabled={gate.locked}
+              autoFocus
+              accessibilityLabel="Account PIN"
+            />
+          </FormField>
+
+          {gate.locked ? (
+            <Alert variant="error" title="PIN locked">
+              Too many incorrect attempts. Try again in {formatCountdown(gate.lockSecondsLeft)}.
+            </Alert>
+          ) : gate.error ? (
+            <Alert
+              variant="error"
+              title={
+                gate.attemptsLeft < gate.maxAttempts
+                  ? `${gate.attemptsLeft} attempt${gate.attemptsLeft === 1 ? '' : 's'} remaining`
+                  : 'Verification failed'
+              }>
+              {gate.error}
+              {gate.attemptsLeft < gate.maxAttempts
+                ? ' PIN entry locks for 15 minutes after 5 wrong tries.'
+                : ''}
+            </Alert>
+          ) : null}
+
+          <View style={{ alignItems: 'center' }}>
+            <Link onPress={handleForgotPin} accessibilityLabel="Forgot PIN">
+              Forgot PIN?
+            </Link>
+          </View>
+
+          {__DEV__ && isMockApi() && (
+            <Typography variant="caption" color="muted" center>
+              Demo PIN: {MOCK_PIN}
+            </Typography>
+          )}
+        </ScrollView>
+
+        <View
+          {...kbd.footerProps}
+          style={{
+            paddingHorizontal: theme.spacing[4],
+            paddingTop: theme.spacing[6],
+            paddingBottom: theme.spacing[4] + insets.bottom,
+            gap: theme.spacing[2],
+          }}>
+          <Button
+            label="Verify"
+            size="lg"
+            loading={gate.isPending}
+            disabled={gate.pin.length !== PIN_LENGTH || gate.locked}
+            onPress={() => void submit()}
           />
-        </FormField>
-
-        {gate.locked ? (
-          <Alert variant="error" title="PIN locked">
-            Too many incorrect attempts. Try again in {formatCountdown(gate.lockSecondsLeft)}.
-          </Alert>
-        ) : gate.error ? (
-          <Alert
-            variant="error"
-            title={
-              gate.attemptsLeft < gate.maxAttempts
-                ? `${gate.attemptsLeft} attempt${gate.attemptsLeft === 1 ? '' : 's'} remaining`
-                : 'Verification failed'
-            }>
-            {gate.error}
-            {gate.attemptsLeft < gate.maxAttempts
-              ? ' PIN entry locks for 15 minutes after 5 wrong tries.'
-              : ''}
-          </Alert>
-        ) : null}
-
-        <View style={{ alignItems: 'center' }}>
-          <Link onPress={handleForgotPin} accessibilityLabel="Forgot PIN">
-            Forgot PIN?
-          </Link>
         </View>
-
-        {__DEV__ && isMockApi() && (
-          <Typography variant="caption" color="muted" center>
-            Demo PIN: {MOCK_PIN}
-          </Typography>
-        )}
-      </ScrollView>
-
-      <View
-        style={{
-          paddingHorizontal: theme.spacing[4],
-          paddingTop: theme.spacing[4],
-          paddingBottom: theme.spacing[4] + insets.bottom,
-          gap: theme.spacing[2],
-        }}>
-        <Button
-          label="Verify"
-          size="lg"
-          loading={gate.isPending}
-          disabled={gate.pin.length !== PIN_LENGTH || gate.locked}
-          onPress={() => void submit()}
-        />
-      </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

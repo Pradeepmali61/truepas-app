@@ -54,8 +54,8 @@ export const fontSize: Record<
 > = {
   xs: 13,
   sm: 14,
-  base: 15,
-  md: 16,
+  base: 16,
+  md: 17,
   lg: 18,
   xl: 20,
   "2xl": 24,
@@ -165,10 +165,10 @@ export const sizes: Record<
   number
 > = {
   heightXs: 28,
-  heightSm: 32,
-  heightMd: 44,
-  heightLg: 48,
-  touchTarget: 44,
+  heightSm: 40,
+  heightMd: 52,
+  heightLg: 56,
+  touchTarget: 48,
   controlPaddingXSm: 12,
   controlPaddingXMd: 16,
   controlPaddingXLg: 20,
