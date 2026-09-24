@@ -1,13 +1,13 @@
+import { Eye, EyeOff } from "lucide-react-native";
 import { useState, type ReactNode } from "react";
 import {
-  Pressable,
-  TextInput,
-  View,
-  type StyleProp,
-  type TextInputProps,
-  type ViewStyle,
+    Pressable,
+    TextInput,
+    View,
+    type StyleProp,
+    type TextInputProps,
+    type ViewStyle,
 } from "react-native";
-import { Eye, EyeOff } from "lucide-react-native";
 import { makeStyles, useThemeTokens } from "../../theme";
 import { iconSize } from "../../theme/tokens";
 
@@ -78,9 +78,9 @@ export function Input({
           style={styles.affix}
         >
           {hidden ? (
-            <Eye size={iconSize.sm} color={theme.colors.textMuted} />
+            <Eye size={iconSize.md} color={theme.colors.textMuted} />
           ) : (
-            <EyeOff size={iconSize.sm} color={theme.colors.textMuted} />
+            <EyeOff size={iconSize.md} color={theme.colors.textMuted} />
           )}
         </Pressable>
       )}
