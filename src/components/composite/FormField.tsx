@@ -94,7 +94,9 @@ const useStyles = makeStyles((t) => ({
     // so it must match the screen — not the input's opaque `surface` fill.
     backgroundColor: t.colors.background,
     paddingHorizontal: t.spacing[1.5],
-    borderRadius: t.radii.sm,
+    borderRadius: t.radii.full,
+    borderWidth: t.sizes.fieldBorderWidth,
+    borderColor: t.colors.border,
   },
   overlapLabelText: { fontSize: t.fontSize.sm },
   description: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
