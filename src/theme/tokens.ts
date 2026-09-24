@@ -164,10 +164,10 @@ export const sizes: Record<
   | "fieldGap",
   number
 > = {
-  heightXs: 28,
-  heightSm: 40,
-  heightMd: 52,
-  heightLg: 56,
+  heightXs: 30,
+  heightSm: 42,
+  heightMd: 54,
+  heightLg: 58,
   touchTarget: 48,
   controlPaddingXSm: 12,
   controlPaddingXMd: 16,

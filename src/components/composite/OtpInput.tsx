@@ -99,7 +99,7 @@ const useStyles = makeStyles((t) => ({
   cell: {
     flex: 1,
     maxWidth: t.sizes.heightLg,
-    height: 52,
+    height: t.sizes.heightMd,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: t.colors.surface,
