@@ -91,10 +91,10 @@ export function FormField({
 
 const useStyles = makeStyles((t) => ({
   field: { gap: t.spacing[1.5] },
-  fieldOverlap: { marginTop: t.spacing[3] },
+  fieldOverlap: { marginTop: t.spacing[4] },
   overlapLabel: {
     position: "absolute",
-    top: -10,
+    top: -15,
     left: t.spacing[3],
     zIndex: 1,
     // Screens paint `colors.background`; the chip doubles as the border notch,
@@ -107,7 +107,7 @@ const useStyles = makeStyles((t) => ({
   },
   overlapLabelText: { fontSize: t.fontSize.sm },
   description: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
-  // The chip protrudes 10px above the control, so the description needs at
+  // The chip protrudes 15px above the control, so the description needs at
   // least that much clearance on top of the field gap.
   descriptionOverlap: { marginBottom: t.sizes.labelGap },
   message: { flexDirection: "row", alignItems: "flex-start", gap: t.spacing[1.5] },
