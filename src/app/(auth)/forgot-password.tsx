@@ -98,7 +98,8 @@ export default function ForgotPasswordScreen() {
       <OtpVerification
         title="Reset password"
         heading="Check your inbox"
-        sentTo={`We emailed a reset code to ${email}`}
+        sentTo="We emailed a reset code to"
+        sentToAddress={email}
         purpose="password_reset"
         identifier={{ email }}
         onBack={() => setStep('email')}

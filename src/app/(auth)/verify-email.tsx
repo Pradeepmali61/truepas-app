@@ -36,7 +36,8 @@ export default function VerifyEmailScreen() {
     <OtpVerification
       title="Verify your email"
       heading="Check your inbox"
-      sentTo={`We emailed a code to ${email ?? 'your email'}`}
+      sentTo="We emailed a code to"
+      sentToAddress={email}
       purpose="email"
       identifier={{ email: email ?? '' }}
       onResend={async () => {

@@ -21,6 +21,9 @@ interface OtpVerificationProps {
   title: string;
   heading: string;
   sentTo: string;
+  /** Destination shown on its own line under `sentTo` so a long email never
+   *  wraps mid-address. */
+  sentToAddress?: string;
   purpose: OtpPurpose;
   /** Identifier fields to send with the OTP verification. */
   identifier?: { registrationId?: string; phone?: string; countryCode?: string; email?: string };
@@ -63,6 +66,7 @@ export function OtpVerification({
   title,
   heading,
   sentTo,
+  sentToAddress,
   purpose,
   identifier,
   onVerified,
@@ -254,6 +258,16 @@ export function OtpVerification({
               <Typography color="secondary" center>
                 {sentTo}
               </Typography>
+              {sentToAddress ? (
+                <Typography
+                  color="secondary"
+                  center
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.5}>
+                  {sentToAddress}
+                </Typography>
+              ) : null}
             </View>
 
             <Animated.View style={shakeStyle}>
