@@ -170,8 +170,8 @@ const useStyles = makeStyles((t) => ({
   },
   grabber: {
     alignSelf: "center",
-    width: 36,
-    height: 4,
+    width: 38,
+    height: 6,
     borderRadius: t.radii.full,
     backgroundColor: t.colors.borderStrong,
     marginVertical: t.spacing[2],

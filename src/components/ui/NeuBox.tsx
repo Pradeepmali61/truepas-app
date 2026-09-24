@@ -127,6 +127,19 @@ export function NeuBox({ variant = "raised", radius, color, depth = 6, style, ch
         }
       : null;
 
+  // Yoga inflates a flexGrow child even inside an auto-height host when a
+  // bounded column ancestor has free space (yoga#701 legacy stretch) — an
+  // unsized NeuBox then balloons to fill the screen. Grow the inner view
+  // only when the caller actually sized the host.
+  const hostSized =
+    outerStyle.height != null ||
+    outerStyle.minHeight != null ||
+    outerStyle.maxHeight != null ||
+    outerStyle.flex != null ||
+    outerStyle.flexGrow != null ||
+    outerStyle.flexBasis != null ||
+    outerStyle.aspectRatio != null;
+
   return (
     <View style={[{ borderRadius: r }, radiusStyle, outerStyle]}>
       {variant === "raised" && (
@@ -166,7 +179,8 @@ export function NeuBox({ variant = "raised", radius, color, depth = 6, style, ch
       )}
       <View
         style={[
-          { flexGrow: 1, alignSelf: "stretch", borderRadius: r, backgroundColor: paint, overflow: "hidden" },
+          { alignSelf: "stretch", borderRadius: r, backgroundColor: paint, overflow: "hidden" },
+          hostSized && { flexGrow: 1 },
           hairline,
           innerStyle,
         ]}
@@ -243,6 +257,7 @@ export function SoftIconButton({
 }: SoftIconButtonProps) {
   const t = useThemeTokens();
   const [pressed, setPressed] = useState(false);
+  const controlSize = size + 2;
   return (
     <Pressable
       accessibilityRole="button"
@@ -256,19 +271,19 @@ export function SoftIconButton({
     >
       <NeuBox
         variant={pressed && !solid ? "inset" : "raised"}
-        radius={size / 2}
+        radius={controlSize / 2}
         color={solid ? t.colors.actionPrimary : t.colors.background}
         depth={4}
         style={{
-          width: size,
-          height: size,
+          width: controlSize,
+          height: controlSize,
           alignItems: "center",
           justifyContent: "center",
           opacity: disabled ? t.opacity.disabled : 1,
         }}
       >
         <IconCmp
-          size={Math.round(size * 0.42)}
+          size={Math.round(controlSize * 0.42)}
           color={solid ? t.colors.onActionPrimary : t.colors.actionPrimary}
         />
       </NeuBox>

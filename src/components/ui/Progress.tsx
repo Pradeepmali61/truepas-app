@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useState } from "react";
 import { Animated, View, type StyleProp, type ViewStyle } from "react-native";
 import { makeStyles } from "../../theme";
 
@@ -14,7 +14,7 @@ export interface ProgressProps {
 export function Progress({ value, size = "md", variant = "primary", accessibilityLabel = "Progress", style }: ProgressProps) {
   const styles = useStyles();
   const indeterminate = value === undefined;
-  const width = useRef(new Animated.Value(indeterminate ? 40 : Math.min(100, Math.max(0, value)))).current;
+  const [width] = useState(() => new Animated.Value(indeterminate ? 40 : Math.min(100, Math.max(0, value))));
 
   useEffect(() => {
     if (indeterminate) {
@@ -60,8 +60,8 @@ const useStyles = makeStyles((t) => ({
     backgroundColor: t.colors.actionSecondary,
     borderRadius: t.radii.full,
   },
-  sm: { height: 4 },
-  md: { height: 8 },
+  sm: { height: 6 },
+  md: { height: 10 },
   fill: { height: "100%", borderRadius: t.radii.full },
   primary: { backgroundColor: t.colors.actionPrimary },
   success: { backgroundColor: t.colors.success },

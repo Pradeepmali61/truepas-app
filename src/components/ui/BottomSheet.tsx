@@ -70,10 +70,10 @@ export function BottomSheet({ visible, onClose, title, children, bottomInset = 0
           sheetStyle,
         ]}>
         <View className="items-center pt-3">
-          <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: Colors.divider }} />
+          <View style={{ width: 42, height: 6, borderRadius: 3, backgroundColor: Colors.divider }} />
         </View>
         {title ? (
-          <Text className="px-5 pb-3 pt-4 text-[18px] font-bold text-ink">{title}</Text>
+          <Text className="px-5 pb-3 pt-4 text-[20px] font-bold text-ink">{title}</Text>
         ) : null}
         {children}
       </Animated.View>

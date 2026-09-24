@@ -109,7 +109,7 @@ export function Button({
       fullWidth={fullWidth ?? true}
       style={style}
       iconLeft={
-        icon ? <AppIcon name={icon} size={20} color={iconColor ?? theme.colors.onActionPrimary} /> : undefined
+        icon ? <AppIcon name={icon} size={theme.iconSize.md} color={iconColor ?? theme.colors.onActionPrimary} /> : undefined
       }
     >
       {label}

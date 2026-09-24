@@ -143,8 +143,8 @@ const useStyles = makeStyles((t) => ({
   rowPressed: { backgroundColor: t.colors.actionSecondary },
   rowUnread: { backgroundColor: t.colors.actionPrimarySubtle },
   iconWrap: {
-    width: 36,
-    height: 36,
+    width: 38,
+    height: 38,
     borderRadius: t.radii.full,
     backgroundColor: t.colors.actionSecondary,
     alignItems: "center",

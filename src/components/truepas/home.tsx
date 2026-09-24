@@ -85,7 +85,7 @@ export function HomeVerifyHero() {
       </View>
       <View style={styles.centerCol}>
         <View style={styles.heroRing}>
-          <ScanFace size={44} color={theme.colors.actionPrimary} />
+          <ScanFace size={46} color={theme.colors.actionPrimary} />
         </View>
         <View style={styles.rowCenter}>
           <Badge variant="success">Face detected</Badge>
@@ -100,7 +100,7 @@ export function HomeVerifyHero() {
         Verify identity
       </Button>
       <View style={[styles.rowCenter, { justifyContent: "center" }]}>
-        <Lock size={12} color={theme.colors.textSecondary} />
+        <Lock size={14} color={theme.colors.textSecondary} />
         <Text style={styles.helper}>Your image is not stored</Text>
       </View>
       <HomeNav />
@@ -357,8 +357,8 @@ const useHeroStyles = makeStyles((t) => ({
   card: {
     backgroundColor: t.colors.actionPrimary,
     borderRadius: t.radii.xl,
-    padding: t.spacing[5],
-    gap: t.spacing[4],
+    padding: t.spacing[5] + 1,
+    gap: t.spacing[4] + 1,
     ...t.shadows.lg,
   },
   eyebrow: {
@@ -369,8 +369,8 @@ const useHeroStyles = makeStyles((t) => ({
     color: alpha(t.colors.onActionPrimary, 0.7),
   },
   statusPill: {
-    paddingHorizontal: t.spacing[3],
-    paddingVertical: t.spacing[1],
+    paddingHorizontal: t.spacing[3] + 1,
+    paddingVertical: t.spacing[1] + 1,
     borderRadius: t.radii.full,
     backgroundColor: alpha(t.colors.onActionPrimary, 0.16),
   },
@@ -383,7 +383,7 @@ const useHeroStyles = makeStyles((t) => ({
   venueText: { flex: 1, gap: 4 },
   locRow: { flexDirection: "row", alignItems: "center", gap: t.spacing[1.5] },
   locText: { fontSize: t.fontSize.sm, color: alpha(t.colors.onActionPrimary, 0.75) },
-  thumb: { width: 56, height: 56, borderRadius: t.radii.lg },
+  thumb: { width: 58, height: 58, borderRadius: t.radii.lg },
   metaItem: { gap: 2 },
   metaItemEnd: { alignItems: "flex-end" },
   metaLabel: { fontSize: t.fontSize.xs, color: alpha(t.colors.onActionPrimary, 0.6) },
@@ -407,10 +407,10 @@ const useHeroStyles = makeStyles((t) => ({
   },
   countLabel: { fontSize: t.fontSize.sm, color: alpha(t.colors.onActionPrimary, 0.75) },
   track: {
-    height: 6,
+    height: 8,
     borderRadius: t.radii.full,
     backgroundColor: alpha(t.colors.onActionPrimary, 0.25),
     overflow: "hidden",
   },
-  fill: { height: 6, borderRadius: t.radii.full, backgroundColor: t.colors.onActionPrimary },
+  fill: { height: 8, borderRadius: t.radii.full, backgroundColor: t.colors.onActionPrimary },
 }));

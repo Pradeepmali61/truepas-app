@@ -28,7 +28,7 @@ function TabItem({ isFocused, options, label, onPress }: { isFocused: boolean; o
     Animated.spring(scale, { toValue: v, friction: 7, tension: 140, useNativeDriver: true }).start();
 
   const icon = options.tabBarIcon
-    ? options.tabBarIcon({ focused: isFocused, color: isFocused ? theme.colors.onActionPrimary : theme.colors.actionPrimary, size: iconSize.md })
+    ? options.tabBarIcon({ focused: isFocused, color: isFocused ? theme.colors.onActionPrimary : theme.colors.actionPrimary, size: isFocused ? iconSize.lg : iconSize.md })
     : null;
 
   return (

@@ -11,8 +11,8 @@ export interface AvatarProps {
   style?: StyleProp<ViewStyle>;
 }
 
-const PX = { xs: 24, sm: 32, md: 40, lg: 48, xl: 64 } as const;
-const FONT = { xs: 10, sm: 13, md: 14, lg: 16, xl: 18 } as const;
+const PX = { xs: 26, sm: 34, md: 42, lg: 50, xl: 66 } as const;
+const FONT = { xs: 12, sm: 15, md: 16, lg: 18, xl: 20 } as const;
 
 const TINTS: [keyof SemanticColors, keyof SemanticColors][] = [
   ["actionPrimarySubtle", "actionPrimary"],

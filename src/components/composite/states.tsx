@@ -1,10 +1,10 @@
+import { CircleAlert, Inbox } from "lucide-react-native";
 import type { ReactNode } from "react";
 import { Text, View, type StyleProp, type ViewStyle } from "react-native";
-import { CircleAlert, Inbox } from "lucide-react-native";
 import { makeStyles, useThemeTokens } from "../../theme";
 import { iconSize } from "../../theme/tokens";
-import { Spinner } from "../ui/Spinner";
 import { Button } from "../ui/Button";
+import { Spinner } from "../ui/Spinner";
 
 interface StateShellProps {
   icon?: ReactNode;
@@ -106,8 +106,8 @@ const useStyles = makeStyles((t) => ({
   },
   compact: { padding: t.spacing[6], paddingHorizontal: t.spacing[4] },
   iconWrap: {
-    width: 48,
-    height: 48,
+    width: 50,
+    height: 50,
     borderRadius: t.radii.full,
     backgroundColor: t.colors.actionSecondary,
     alignItems: "center",

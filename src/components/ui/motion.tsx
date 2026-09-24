@@ -186,7 +186,7 @@ const useStyles = makeStyles((t) => ({
     overflow: "hidden",
   },
   scanLine: {
-    height: 3,
+    height: 5,
     borderRadius: t.radii.full,
     marginHorizontal: t.spacing[4],
     shadowColor: t.colors.actionPrimary,

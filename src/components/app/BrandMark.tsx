@@ -20,8 +20,8 @@ export function BrandMark({ compact }: { compact?: boolean }) {
 const useStyles = makeStyles((t) => ({
   brand: { flexDirection: "row", alignItems: "center", gap: t.spacing[2] },
   brandIcon: {
-    width: 36,
-    height: 36,
+    width: 38,
+    height: 38,
     borderRadius: t.radii.lg,
     backgroundColor: t.colors.actionPrimary,
     alignItems: "center",

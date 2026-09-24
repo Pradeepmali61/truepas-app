@@ -84,7 +84,7 @@ const useStyles = makeStyles((t) => ({
     gap: t.spacing[4],
     marginVertical: t.spacing[4],
   },
-  dot: { width: 16, height: 16, borderRadius: t.radii.full },
+  dot: { width: 18, height: 18, borderRadius: t.radii.full },
   pad: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -92,14 +92,14 @@ const useStyles = makeStyles((t) => ({
     paddingBottom: 30,
   },
   keyCell: {
-    height: 56,
+    height: 58,
     width: "33.333%",
     alignItems: "center",
     justifyContent: "center",
   },
   keyPressed: { opacity: t.opacity.pressed },
   keyLabel: {
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: t.fontWeight.semibold,
     color: t.colors.textPrimary,
   },

@@ -2,8 +2,8 @@ import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
-import { getNeuBoxShadow, getNeuColors, NEU_RADIUS, useNeuBase } from "./neumorphism";
 import { AppIcon, type IconName } from "./AppIcon";
+import { getNeuBoxShadow, getNeuColors, NEU_RADIUS, useNeuBase } from "./neumorphism";
 
 type NeuButtonType = "elevated_soft" | "elevated_flat";
 
@@ -153,8 +153,8 @@ export function NeuButton({
           </View>
         )}
         <View style={{ flexDirection: "row", alignItems: "center", gap: 8, zIndex: 10 }}>
-          {icon ? <AppIcon name={icon} size={18} color={iconColor ?? colors.dark} /> : null}
-          <Text allowFontScaling={false} style={{ fontSize: 16, fontWeight: "700", color: "#000000" }}>
+          {icon ? <AppIcon name={icon} size={20} color={iconColor ?? colors.dark} /> : null}
+          <Text allowFontScaling={false} style={{ fontSize: 18, fontWeight: "700", color: "#000000" }}>
             {label}
           </Text>
         </View>

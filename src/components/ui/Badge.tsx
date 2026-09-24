@@ -92,14 +92,14 @@ const useStyles = makeStyles((t) => {
       alignSelf: "flex-start",
       maxWidth: "100%",
     },
-    sm: { height: 20, paddingHorizontal: t.spacing[2] },
-    md: { height: 24, paddingHorizontal: t.spacing[3] },
-    lg: { height: 28, paddingHorizontal: t.spacing[4] },
+    sm: { height: 22, paddingHorizontal: t.spacing[2] + 1 },
+    md: { height: 26, paddingHorizontal: t.spacing[3] + 1 },
+    lg: { height: 30, paddingHorizontal: t.spacing[4] + 1 },
     text: { fontWeight: t.fontWeight.medium },
     smText: { fontSize: t.fontSize.xs },
     mdText: { fontSize: t.fontSize.sm },
     lgText: { fontSize: t.fontSize.base },
-    dot: { width: 6, height: 6, borderRadius: t.radii.full },
+    dot: { width: 8, height: 8, borderRadius: t.radii.full }
   };
 
   for (const v of Object.keys(subtleBg) as BadgeVariant[]) {

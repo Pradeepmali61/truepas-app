@@ -204,7 +204,7 @@ const useStyles = makeStyles((t) => ({
   heading: { alignItems: 'center', gap: t.spacing[1] },
   section: { gap: t.spacing[4] },
   phoneRow: { flexDirection: 'row', gap: t.spacing[2] },
-  ccSelect: { width: 110 },
+  ccSelect: { width: 122 },
   phoneInput: { flex: 1 },
   footer: {
     paddingHorizontal: t.spacing[4],

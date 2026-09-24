@@ -71,8 +71,8 @@ export function Checkbox({
 
 const useStyles = makeStyles((t) => ({
   box: {
-    width: 20,
-    height: 20,
+    width: 22,
+    height: 22,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: t.colors.surface,

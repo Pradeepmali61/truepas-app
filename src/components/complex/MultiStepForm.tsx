@@ -104,8 +104,8 @@ const useStyles = makeStyles((t) => ({
   rail: { flexDirection: "row", alignItems: "flex-start" },
   railStep: { flex: 1, alignItems: "center", gap: t.spacing[1] },
   bubble: {
-    width: 28,
-    height: 28,
+    width: 30,
+    height: 30,
     // Android: borderRadius > h/2 + borderWidth breaks the background fill.
     borderRadius: 14,
     borderWidth: t.sizes.fieldBorderWidth,

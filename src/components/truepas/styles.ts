@@ -6,7 +6,7 @@ export const useStyles = makeStyles((t) => ({
 
   card: {
     width: 300,
-    padding: t.spacing[5],
+    padding: t.spacing[5] + 1,
     borderRadius: t.radii.xl,
     backgroundColor: t.colors.surface,
     borderWidth: t.sizes.fieldBorderWidth,
@@ -45,14 +45,14 @@ export const useStyles = makeStyles((t) => ({
   rowBaseline: { flexDirection: "row", alignItems: "baseline", gap: t.spacing[1] },
   grow: { flex: 1, gap: 2 },
   bulletRow: { flexDirection: "row", alignItems: "center", gap: t.spacing[2] },
-  bullet: { width: 6, height: 6, borderRadius: t.radii.full, backgroundColor: t.colors.actionPrimary },
+  bullet: { width: 8, height: 8, borderRadius: t.radii.full, backgroundColor: t.colors.actionPrimary },
   dividedRow: { paddingVertical: t.spacing[3], borderTopWidth: t.sizes.fieldBorderWidth, borderTopColor: t.colors.borderSubtle },
   dividedRowFirst: { borderTopColor: "transparent", paddingTop: t.spacing[1] },
 
   /* buttons */
   circle: {
-    width: 48,
-    height: 48,
+    width: 50,
+    height: 50,
     borderRadius: t.radii.full,
     backgroundColor: t.colors.surface,
     alignItems: "center",
@@ -61,8 +61,8 @@ export const useStyles = makeStyles((t) => ({
   },
   circleSolid: { backgroundColor: t.colors.actionPrimary },
   square: {
-    width: 48,
-    height: 48,
+    width: 50,
+    height: 50,
     borderRadius: t.radii.lg,
     backgroundColor: t.colors.surface,
     alignItems: "center",
@@ -101,8 +101,8 @@ export const useStyles = makeStyles((t) => ({
   /* price rows */
   priceRow: { flexDirection: "row", alignItems: "center", gap: t.spacing[3] },
   priceBadge: {
-    width: 44,
-    height: 44,
+    width: 46,
+    height: 46,
     borderRadius: t.radii.md,
     backgroundColor: t.colors.actionPrimary,
     alignItems: "center",
@@ -114,28 +114,28 @@ export const useStyles = makeStyles((t) => ({
   tabItem: { alignItems: "center", gap: t.spacing[2] },
   tabLabel: { fontSize: t.fontSize.base, color: t.colors.textSecondary },
   tabLabelActive: { color: t.colors.textPrimary, fontWeight: t.fontWeight.semibold },
-  tabDot: { width: 6, height: 6, borderRadius: t.radii.full, backgroundColor: t.colors.actionPrimary },
+  tabDot: { width: 8, height: 8, borderRadius: t.radii.full, backgroundColor: t.colors.actionPrimary },
 
   /* legend */
   legendRow: { flexDirection: "row", gap: t.spacing[4] },
   legendItem: { flexDirection: "row", alignItems: "center", gap: t.spacing[1.5] },
-  legendDot: { width: 12, height: 12, borderRadius: t.radii.full },
+  legendDot: { width: 14, height: 14, borderRadius: t.radii.full },
   legendDotOutline: { backgroundColor: "transparent", borderWidth: 2, borderColor: t.colors.actionPrimary },
   legendDotSoft: { backgroundColor: t.colors.accentSubtle },
 
   /* slider */
   sliderTrack: {
-    height: 10,
+    height: 12,
     borderRadius: t.radii.full,
     backgroundColor: t.colors.surfaceSunken,
     justifyContent: "center",
   },
-  sliderFill: { position: "absolute", left: 0, width: "62%", height: 10, borderRadius: t.radii.full, backgroundColor: t.colors.actionPrimary },
+  sliderFill: { position: "absolute", left: 0, width: "62%", height: 12, borderRadius: t.radii.full, backgroundColor: t.colors.actionPrimary },
   sliderKnob: {
     position: "absolute",
     left: "58%",
-    width: 22,
-    height: 22,
+    width: 24,
+    height: 24,
     borderRadius: t.radii.full,
     backgroundColor: t.colors.surface,
     ...t.shadows.sm,
@@ -146,7 +146,7 @@ export const useStyles = makeStyles((t) => ({
 
   /* calendar */
   weekRow: { flexDirection: "row", justifyContent: "space-between" },
-  weekLabel: { flex: 1, textAlign: "center", fontSize: 10, letterSpacing: t.letterSpacing.caps, color: t.colors.textMuted },
+  weekLabel: { flex: 1, textAlign: "center", fontSize: 12, letterSpacing: t.letterSpacing.caps, color: t.colors.textMuted },
   daysGrid: { flexDirection: "row", flexWrap: "wrap" },
   dayCell: { width: `${100 / 7}%`, aspectRatio: 1, alignItems: "center", justifyContent: "center", borderRadius: t.radii.sm },
   dayInRange: { backgroundColor: t.colors.actionPrimarySubtle },
@@ -174,8 +174,8 @@ export const useStyles = makeStyles((t) => ({
   /* TruePas product components */
   productCard: { width: "100%", gap: t.spacing[3] },
   productIcon: {
-    width: 44,
-    height: 44,
+    width: 46,
+    height: 46,
     borderRadius: t.radii.full,
     alignItems: "center",
     justifyContent: "center",
@@ -187,11 +187,11 @@ export const useStyles = makeStyles((t) => ({
   rowWrap: { flexDirection: "row", flexWrap: "wrap", gap: t.spacing[2] },
   historyRow: { flexDirection: "row", alignItems: "center", gap: t.spacing[3], paddingVertical: t.spacing[1] },
   stepRow: { flexDirection: "row", alignItems: "center", gap: t.spacing[3], minHeight: 28 },
-  stepActive: { width: 16, height: 16, borderRadius: t.radii.full, backgroundColor: t.colors.actionPrimary },
-  unreadDot: { width: 8, height: 8, borderRadius: t.radii.full, backgroundColor: t.colors.actionPrimary },
+  stepActive: { width: 18, height: 18, borderRadius: t.radii.full, backgroundColor: t.colors.actionPrimary },
+  unreadDot: { width: 10, height: 10, borderRadius: t.radii.full, backgroundColor: t.colors.actionPrimary },
   avatar: {
-    width: 56,
-    height: 56,
+    width: 58,
+    height: 58,
     borderRadius: t.radii.full,
     backgroundColor: t.colors.actionPrimary,
     alignItems: "center",
@@ -208,7 +208,7 @@ export const useStyles = makeStyles((t) => ({
   },
   riskLabel: { fontSize: t.fontSize.xs, fontWeight: t.fontWeight.bold, letterSpacing: t.letterSpacing.caps },
   riskTrack: { flexDirection: "row", gap: t.spacing[1] },
-  riskSeg: { flex: 1, height: 10, borderRadius: t.radii.full },
+  riskSeg: { flex: 1, height: 12, borderRadius: t.radii.full },
 
   /* navigation */
   navStack: { gap: t.spacing[4], width: 380 },
@@ -217,8 +217,8 @@ export const useStyles = makeStyles((t) => ({
   navBar: { width: 380, flexDirection: "row", paddingVertical: t.spacing[3], paddingHorizontal: t.spacing[2] },
   navItem: { flex: 1, alignItems: "center", gap: t.spacing[1] },
   navIconActive: { backgroundColor: t.colors.actionPrimary, ...t.shadows.md },
-  navLabel: { fontSize: 11, color: t.colors.textSecondary },
-  navLabelActive: { color: t.colors.textPrimary, fontWeight: t.fontWeight.semibold },
+  navLabel: { fontSize: 13, fontWeight: t.fontWeight.medium, color: t.colors.textSecondary },
+  navLabelActive: { color: t.colors.textPrimary, fontSize: 13, fontWeight: t.fontWeight.bold },
 
   /* login */
   loginCard: { width: 380, gap: t.spacing[5], padding: t.spacing[6] },
@@ -227,7 +227,7 @@ export const useStyles = makeStyles((t) => ({
   fieldLabel: { fontSize: t.fontSize.sm, fontWeight: t.fontWeight.medium, color: t.colors.textSecondary },
   fieldError: { fontSize: t.fontSize.xs, color: t.colors.error },
   phoneRow: { flexDirection: "row", gap: t.spacing[2], alignItems: "stretch" },
-  ccSelect: { width: 112 },
+  ccSelect: { width: 124 },
   link: { fontSize: t.fontSize.sm, fontWeight: t.fontWeight.medium, color: t.colors.actionPrimary },
   orRow: { flexDirection: "row", alignItems: "center", gap: t.spacing[3] },
   orLine: { flex: 1, height: t.sizes.fieldBorderWidth, backgroundColor: t.colors.border },
@@ -235,7 +235,7 @@ export const useStyles = makeStyles((t) => ({
 
   /* family members */
   stripRow: { flexDirection: "row", alignItems: "center", gap: t.spacing[4] },
-  stripCell: { alignItems: "center", gap: 6, width: 60 },
+  stripCell: { alignItems: "center", gap: 6, width: 62 },
   stripRing: {
     padding: 3,
     // Android: borderRadius > h/2 + borderWidth breaks the background fill.
@@ -244,8 +244,8 @@ export const useStyles = makeStyles((t) => ({
     borderColor: t.colors.actionPrimary,
   },
   stripAdd: {
-    width: 54,
-    height: 54,
+    width: 56,
+    height: 56,
     // Android: borderRadius > h/2 + borderWidth breaks the background fill.
     borderRadius: 27,
     alignItems: "center",
@@ -260,7 +260,7 @@ export const useStyles = makeStyles((t) => ({
     borderWidth: 3,
     backgroundColor: t.colors.actionPrimarySubtle,
   },
-  stripName: { fontSize: 11, color: t.colors.textSecondary, textAlign: "center" },
+  stripName: { fontSize: 13, color: t.colors.textSecondary, textAlign: "center" },
   stripNameSelected: { color: t.colors.textPrimary, fontWeight: t.fontWeight.semibold },
   starRow: { flexDirection: "row", gap: 3 },
   contactRow: { flexDirection: "row", alignItems: "center", gap: t.spacing[2] },
@@ -268,10 +268,10 @@ export const useStyles = makeStyles((t) => ({
     position: "absolute",
     right: 0,
     bottom: 0,
-    width: 10,
-    height: 10,
+    width: 12,
+    height: 12,
     // Android: borderRadius > h/2 + borderWidth breaks the background fill.
-    borderRadius: 5,
+    borderRadius: 6,
     backgroundColor: t.colors.success,
     borderWidth: 2,
   },
@@ -279,10 +279,10 @@ export const useStyles = makeStyles((t) => ({
     position: "absolute",
     right: 0,
     bottom: 0,
-    width: 14,
-    height: 14,
+    width: 16,
+    height: 16,
     // Android: borderRadius > h/2 + borderWidth breaks the background fill.
-    borderRadius: 7,
+    borderRadius: 8,
     borderWidth: 2,
   },
   bubbleIn: {
@@ -291,7 +291,7 @@ export const useStyles = makeStyles((t) => ({
     backgroundColor: t.colors.surfaceSunken,
     borderRadius: t.radii.lg,
     borderTopLeftRadius: t.radii.sm,
-    padding: t.spacing[3],
+    padding: t.spacing[3] + 1,
   },
   bubbleOut: {
     alignSelf: "flex-end",
@@ -299,12 +299,12 @@ export const useStyles = makeStyles((t) => ({
     backgroundColor: t.colors.actionPrimary,
     borderRadius: t.radii.lg,
     borderTopRightRadius: t.radii.sm,
-    padding: t.spacing[3],
+    padding: t.spacing[3] + 1,
   },
   chatInputRow: { flexDirection: "row", alignItems: "center", gap: t.spacing[2] },
   weekStripRow: { flexDirection: "row", gap: t.spacing[2] },
   weekDay: {
-    width: 34,
+    width: 36,
     paddingVertical: t.spacing[2],
     borderRadius: t.radii.md,
     alignItems: "center",
@@ -316,8 +316,8 @@ export const useStyles = makeStyles((t) => ({
   /* PIN cells */
   pinRowCells: { flexDirection: "row", gap: t.spacing[3] },
   pinCell: {
-    width: 52,
-    height: 56,
+    width: 54,
+    height: 58,
     borderRadius: t.radii.md,
     backgroundColor: t.colors.surface,
     borderWidth: t.sizes.fieldBorderWidth,
@@ -327,8 +327,8 @@ export const useStyles = makeStyles((t) => ({
     ...t.shadows.sm,
   },
   pinDot: {
-    width: 12,
-    height: 12,
+    width: 14,
+    height: 14,
     borderRadius: t.radii.full,
     backgroundColor: t.colors.textPrimary,
   },
@@ -337,14 +337,14 @@ export const useStyles = makeStyles((t) => ({
   /* popups & alerts */
   popupCard: { width: 320, gap: t.spacing[4] },
   popupIcon: {
-    width: 56,
-    height: 56,
+    width: 58,
+    height: 58,
     borderRadius: t.radii.full,
     alignItems: "center",
     justifyContent: "center",
   },
   variantTag: {
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: t.fontWeight.semibold,
     letterSpacing: t.letterSpacing.caps,
     color: t.colors.textMuted,
@@ -353,16 +353,16 @@ export const useStyles = makeStyles((t) => ({
   toastCard: { width: 320, gap: t.spacing[3], paddingBottom: t.spacing[3] },
   toastRow: { flexDirection: "row", alignItems: "center", gap: t.spacing[3] },
   toastIcon: {
-    width: 36,
-    height: 36,
+    width: 38,
+    height: 38,
     borderRadius: t.radii.full,
     alignItems: "center",
     justifyContent: "center",
   },
-  toastBar: { height: 3, borderRadius: t.radii.full, alignSelf: "stretch" },
+  toastBar: { height: 5, borderRadius: t.radii.full, alignSelf: "stretch" },
   grabber: {
-    width: 40,
-    height: 5,
+    width: 42,
+    height: 7,
     borderRadius: t.radii.full,
     backgroundColor: t.colors.borderStrong,
     alignSelf: "center",
@@ -380,8 +380,8 @@ export const useStyles = makeStyles((t) => ({
   },
   homeNavItem: { alignItems: "center", gap: 4 },
   heroRing: {
-    width: 150,
-    height: 150,
+    width: 152,
+    height: 152,
     // Android: borderRadius > h/2 + borderWidth breaks the background fill.
     borderRadius: 75,
     borderWidth: 3,
@@ -394,7 +394,7 @@ export const useStyles = makeStyles((t) => ({
   homePanel: {
     backgroundColor: t.colors.surfaceSunken,
     borderRadius: t.radii.lg,
-    padding: t.spacing[4],
+    padding: t.spacing[4] + 1,
     gap: t.spacing[3],
   },
   quickGrid: { flexDirection: "row", flexWrap: "wrap", gap: t.spacing[3] },
@@ -402,7 +402,7 @@ export const useStyles = makeStyles((t) => ({
     width: "47.5%",
     backgroundColor: t.colors.surfaceSunken,
     borderRadius: t.radii.lg,
-    padding: t.spacing[3],
+    padding: t.spacing[3] + 1,
     gap: t.spacing[2],
   },
 
@@ -423,7 +423,7 @@ export const useStyles = makeStyles((t) => ({
   /* liveness studio */
   liveCard: { width: 380, alignItems: "center", gap: t.spacing[4], paddingVertical: t.spacing[6] },
   liveHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", alignSelf: "stretch" },
-  liveStage: { width: 240, height: 240, alignItems: "center", justifyContent: "center" },
+  liveStage: { width: 242, height: 242, alignItems: "center", justifyContent: "center" },
   liveBadge: {
     flexDirection: "row",
     alignItems: "center",
@@ -432,6 +432,6 @@ export const useStyles = makeStyles((t) => ({
     paddingVertical: 5,
     borderRadius: t.radii.full,
   },
-  liveBadgeDot: { width: 7, height: 7, borderRadius: t.radii.full },
-  liveBadgeText: { fontSize: 10, fontWeight: t.fontWeight.bold, letterSpacing: t.letterSpacing.caps },
+  liveBadgeDot: { width: 9, height: 9, borderRadius: t.radii.full },
+  liveBadgeText: { fontSize: 12, fontWeight: t.fontWeight.bold, letterSpacing: t.letterSpacing.caps },
 }));

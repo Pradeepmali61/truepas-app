@@ -33,7 +33,7 @@ export function ListItem({
     <>
       {icon ? (
         <View style={[styles.iconWrap, { backgroundColor: iconBg ?? theme.colors.actionPrimarySubtle }]}>
-          <AppIcon name={icon} size={18} color={theme.colors.actionPrimary} />
+          <AppIcon name={icon} size={20} color={theme.colors.actionPrimary} />
         </View>
       ) : null}
       <View style={styles.text}>
@@ -41,7 +41,7 @@ export function ListItem({
         {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
       </View>
       {rightSlot}
-      {showChevron ? <ChevronRight size={18} color={theme.colors.textMuted} /> : null}
+      {showChevron ? <ChevronRight size={20} color={theme.colors.textMuted} /> : null}
     </>
   );
 
@@ -67,15 +67,15 @@ const useStyles = makeStyles((t) => ({
     gap: t.spacing[3],
     paddingHorizontal: t.spacing[5],
     paddingVertical: t.spacing[3],
-    minHeight: 56,
+    minHeight: 58,
   },
   rowPressed: { backgroundColor: t.colors.surfaceSunken },
   iconWrap: {
     alignItems: "center",
     justifyContent: "center",
     borderRadius: t.radii.md,
-    width: 40,
-    height: 40,
+    width: 42,
+    height: 42,
   },
   text: { flex: 1 },
   title: { fontSize: t.fontSize.base, fontWeight: t.fontWeight.medium, color: t.colors.textPrimary },

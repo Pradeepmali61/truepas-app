@@ -23,8 +23,8 @@ export function RowIcon({ icon, tone = "neutral" }: RowIconProps) {
   return (
     <View
       style={{
-        width: 40,
-        height: 40,
+        width: 42,
+        height: 42,
         borderRadius: theme.radii.lg,
         alignItems: "center",
         justifyContent: "center",

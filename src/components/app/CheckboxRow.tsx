@@ -1,6 +1,6 @@
-import { Text, View, type StyleProp, type ViewStyle } from "react-native";
-import { Check } from "lucide-react-native";
 import { makeStyles, useThemeTokens } from "@/theme";
+import { Check } from "lucide-react-native";
+import { Text, View, type StyleProp, type ViewStyle } from "react-native";
 
 interface CheckboxRowProps {
   checked: boolean;
@@ -30,7 +30,7 @@ export function CheckboxRow({ checked, onToggle, label, style }: CheckboxRowProp
           checked && { backgroundColor: theme.colors.actionPrimary },
         ]}
       >
-        {checked ? <Check size={14} color={theme.colors.onActionPrimary} strokeWidth={3} /> : null}
+        {checked ? <Check size={16} color={theme.colors.onActionPrimary} strokeWidth={3} /> : null}
       </View>
       <Text style={styles.label}>{label}</Text>
     </View>
@@ -40,13 +40,13 @@ export function CheckboxRow({ checked, onToggle, label, style }: CheckboxRowProp
 const useStyles = makeStyles((t) => ({
   row: { flexDirection: "row", alignItems: "flex-start", gap: t.spacing[3], paddingHorizontal: t.spacing[6] },
   box: {
-    width: 20,
-    height: 20,
+    width: 22,
+    height: 22,
     borderRadius: t.radii.sm,
     borderWidth: t.sizes.fieldBorderWidth,
     alignItems: "center",
     justifyContent: "center",
     marginTop: 2,
   },
-  label: { flex: 1, fontSize: t.fontSize.sm, color: t.colors.textPrimary, lineHeight: 20 },
+  label: { flex: 1, fontSize: t.fontSize.sm, color: t.colors.textPrimary, lineHeight: 22 },
 }));

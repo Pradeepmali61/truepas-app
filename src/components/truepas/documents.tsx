@@ -126,7 +126,7 @@ export function DocumentIdCard({ doc, style }: { doc: ProductDocument; style?: S
         </View>
       </View>
       <View style={styles.rowCenter}>
-        <ShieldCheck size={14} color={on} />
+        <ShieldCheck size={16} color={on} />
         <Text style={[styles.idCardMeta, { color: on }]}>TruePas verified credential</Text>
       </View>
     </View>

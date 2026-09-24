@@ -19,16 +19,16 @@ export function TopBar({ title, showBack = true, rightSlot }: TopBarProps) {
           accessibilityRole="button"
           accessibilityLabel="Go back"
           onPress={() => router.back()}
-          className="h-9 w-9 items-center justify-center">
-          <Icon name="back" size={24} />
+          className="h-[38px] w-[38px] items-center justify-center">
+          <Icon name="back" size={26} />
         </Pressable>
       ) : (
-        <View className="w-9" />
+        <View className="w-[38px]" />
       )}
-      <Text accessibilityRole="header" className="text-[18px] font-bold text-ink">
+      <Text accessibilityRole="header" className="text-[20px] font-bold text-ink">
         {title}
       </Text>
-      {rightSlot ?? <View className="w-9" />}
+      {rightSlot ?? <View className="w-[38px]" />}
     </View>
   );
 }

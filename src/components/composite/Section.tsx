@@ -8,7 +8,7 @@
  * (sizes.fieldGap → spacing[4]).
  */
 import type { ReactNode } from "react";
-import { View, type StyleProp, type ViewStyle } from "react-native";
+import { View, type StyleProp, type TextStyle, type ViewStyle } from "react-native";
 import { makeStyles } from "../../theme";
 import { Typography } from "../ui/Typography";
 
@@ -23,11 +23,11 @@ export function Section({
   return <View style={[styles.section, style]}>{children}</View>;
 }
 
-export function SectionTitle({ children, action }: { children: ReactNode; action?: ReactNode }) {
+export function SectionTitle({ children, action, titleStyle }: { children: ReactNode; action?: ReactNode; titleStyle?: StyleProp<TextStyle> }) {
   const styles = useStyles();
   return (
     <View style={styles.sectionRow}>
-      <Typography variant="label" color="secondary">
+      <Typography variant="label" color="secondary" style={titleStyle}>
         {children}
       </Typography>
       {action}

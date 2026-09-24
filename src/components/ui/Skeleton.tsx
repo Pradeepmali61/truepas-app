@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useState } from "react";
 import { Animated, View, type StyleProp, type ViewStyle } from "react-native";
 import { makeStyles } from "../../theme";
 
@@ -13,7 +13,7 @@ export interface SkeletonProps {
 }
 
 function usePulse() {
-  const opacity = useRef(new Animated.Value(1)).current;
+  const [opacity] = useState(() => new Animated.Value(1));
   useEffect(() => {
     const loop = Animated.loop(
       Animated.sequence([
@@ -52,8 +52,8 @@ export function Skeleton({ variant = "rect", width, height, lines = 1, radius, s
         variant === "circle" && styles.circle,
         variant === "text" && styles.text,
         variant === "rect" && styles.rect,
-        width != null && { width } as ViewStyle,
-        height != null && { height },
+        width != null && { width: typeof width === "number" ? width + 2 : width } as ViewStyle,
+        height != null && { height: height + 2 },
         radius != null && { borderRadius: radius },
         style,
       ]}
@@ -74,8 +74,8 @@ function Bone({ opacity, style }: { opacity: Animated.Value; style: StyleProp<Vi
 
 const useStyles = makeStyles((t) => ({
   bone: { backgroundColor: t.colors.surfaceSunken },
-  rect: { borderRadius: t.radii.md, minHeight: 16 },
-  text: { borderRadius: t.radii.sm, height: 12 },
-  circle: { borderRadius: t.radii.full, width: 40, height: 40 },
+  rect: { borderRadius: t.radii.md, minHeight: 18 },
+  text: { borderRadius: t.radii.sm, height: 14 },
+  circle: { borderRadius: t.radii.full, width: 42, height: 42 },
   group: { gap: t.spacing[2] },
 }));

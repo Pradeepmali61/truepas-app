@@ -1,9 +1,9 @@
 import type { ReactNode } from "react";
 import { ScrollView, Text, View, type StyleProp, type ViewStyle } from "react-native";
 import { makeStyles } from "../../theme";
+import { EmptyState } from "../composite/states";
 import { Avatar } from "../ui/Avatar";
 import { Skeleton } from "../ui/Skeleton";
-import { EmptyState } from "../composite/states";
 
 export interface FeedEvent {
   key: string;
@@ -71,10 +71,10 @@ export function ActivityFeed({ events, loading, emptyState, style }: ActivityFee
 const useStyles = makeStyles((t) => ({
   feed: { gap: 0 },
   event: { flexDirection: "row", gap: t.spacing[3] },
-  rail: { alignItems: "center", width: 32 },
+  rail: { alignItems: "center", width: 34 },
   iconWrap: {
-    width: 32,
-    height: 32,
+    width: 34,
+    height: 34,
     borderRadius: t.radii.full,
     backgroundColor: t.colors.actionSecondary,
     alignItems: "center",

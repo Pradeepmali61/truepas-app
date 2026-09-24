@@ -280,7 +280,7 @@ const useStyles = makeStyles((t) => ({
   },
   heading: { alignItems: 'center', gap: t.spacing[1] },
   phoneRow: { flexDirection: 'row', gap: t.spacing[2] },
-  ccSelect: { width: 110 },
+  ccSelect: { width: 122 },
   phoneInput: { flex: 1 },
   helperRow: { flexDirection: 'row', justifyContent: 'flex-end' },
 }));

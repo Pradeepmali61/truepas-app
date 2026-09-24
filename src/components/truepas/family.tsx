@@ -202,7 +202,7 @@ export function MemberProfileCard({
           {[0, 1, 2, 3, 4].map((i) => (
             <Star
               key={i}
-              size={12}
+              size={14}
               color={i < stars ? theme.colors.actionPrimary : theme.colors.borderStrong}
               fill={i < stars ? theme.colors.actionPrimary : "transparent"}
             />
@@ -210,9 +210,9 @@ export function MemberProfileCard({
         </View>
       </View>
       <View style={{ gap: 8 }}>
-        {email && <ContactRow icon={<Mail size={12} color={theme.colors.actionPrimary} />} text={email} />}
-        {phone && <ContactRow icon={<Phone size={12} color={theme.colors.actionPrimary} />} text={phone} />}
-        {address && <ContactRow icon={<MapPin size={12} color={theme.colors.actionPrimary} />} text={address} />}
+        {email && <ContactRow icon={<Mail size={14} color={theme.colors.actionPrimary} />} text={email} />}
+        {phone && <ContactRow icon={<Phone size={14} color={theme.colors.actionPrimary} />} text={phone} />}
+        {address && <ContactRow icon={<MapPin size={14} color={theme.colors.actionPrimary} />} text={address} />}
       </View>
       <Button fullWidth>Manage access</Button>
       <Button fullWidth variant="secondary" iconLeft={<MessageCircle size={iconSize.sm} color={theme.colors.actionPrimary} />}>

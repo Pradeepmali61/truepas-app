@@ -98,8 +98,8 @@ export function StepDots({ total, current }: { total: number; current: number })
         <View
           key={i}
           style={{
-            width: i === current ? 18 : 6,
-            height: 6,
+            width: i === current ? 20 : 8,
+            height: 8,
             borderRadius: theme.radii.full,
             backgroundColor: i <= current ? theme.colors.actionPrimary : theme.colors.border,
           }}

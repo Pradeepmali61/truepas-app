@@ -1,7 +1,7 @@
+import { makeStyles, useThemeTokens } from "@/theme";
 import { LinearGradient } from "expo-linear-gradient";
 import { forwardRef, useState } from "react";
 import { StyleSheet, Text, TextInput, type TextInputProps, View } from "react-native";
-import { makeStyles, useThemeTokens } from "@/theme";
 
 interface FloatingInputProps extends TextInputProps {
   label: string;
@@ -58,7 +58,7 @@ export const FloatingInput = forwardRef<TextInput, FloatingInputProps>(
             <View style={styles.labelWrap}>
               <Text style={[styles.labelSmall, { color: labelColor }]}>{label}</Text>
             </View>
-            <View style={[styles.inputWrap, { borderColor, height: 56 }]}>
+            <View style={[styles.inputWrap, { borderColor, height: 58 }]}>
               <LinearGradient
                 colors={[theme.colors.surface, theme.colors.actionPrimarySubtle]}
                 start={{ x: 0, y: 0 }}
@@ -71,7 +71,7 @@ export const FloatingInput = forwardRef<TextInput, FloatingInputProps>(
         ) : (
           <View>
             <Text style={[styles.label, { color: labelColor }]}>{label}</Text>
-            <View style={[styles.inputWrap, { borderColor, height: 56 }]}>
+            <View style={[styles.inputWrap, { borderColor, height: 58 }]}>
               {inputBody}
             </View>
           </View>
@@ -97,7 +97,7 @@ const useStyles = makeStyles((t) => ({
     marginBottom: t.spacing[1],
     fontWeight: t.fontWeight.medium,
   },
-  labelSmall: { fontSize: 11 },
+  labelSmall: { fontSize: 13 },
   inputWrap: {
     flexDirection: "row",
     alignItems: "center",
@@ -113,5 +113,5 @@ const useStyles = makeStyles((t) => ({
     fontWeight: t.fontWeight.medium,
     color: t.colors.textPrimary,
   },
-  error: { marginTop: t.spacing[1], paddingHorizontal: t.spacing[1], fontSize: 11 },
+  error: { marginTop: t.spacing[1], paddingHorizontal: t.spacing[1], fontSize: 13 },
 }));

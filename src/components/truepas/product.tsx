@@ -158,8 +158,8 @@ export function ConfidenceRing({
 }) {
   const styles = useStyles();
   const theme = useThemeTokens();
-  const size = 132;
-  const stroke = 11;
+  const size = 134;
+  const stroke = 13;
   const r = (size - stroke) / 2;
   const c = 2 * Math.PI * r;
   return (
@@ -372,7 +372,7 @@ export function BookingCard({
           source={{ uri: booking.image }}
           style={{
             width: "100%",
-            height: 96,
+            height: 98,
             borderRadius: theme.radii.md,
           }}
         />
@@ -381,7 +381,7 @@ export function BookingCard({
         <View style={{ gap: 2, flexShrink: 1 }}>
           <Text style={styles.cardTitle} numberOfLines={1}>{booking.venue}</Text>
           <View style={styles.pinRow}>
-            <MapPin size={12} color={theme.colors.textMuted} />
+            <MapPin size={14} color={theme.colors.textMuted} />
             <Text style={styles.helper} numberOfLines={1}>{booking.location}</Text>
           </View>
         </View>
@@ -501,7 +501,7 @@ export function CheckInRow({
       >
         <View style={styles.rowBetween}>
           <View style={styles.rowCenter}>
-            <View style={[styles.productIcon, { backgroundColor: theme.colors.brandSubtle, width: 48, height: 48 }]}>
+            <View style={[styles.productIcon, { backgroundColor: theme.colors.brandSubtle, width: 50, height: 50 }]}>
               <Icon size={iconSize.lg} color={theme.colors.onBrandSubtle} />
             </View>
             <View style={{ gap: 2, flexShrink: 1 }}>
@@ -510,7 +510,7 @@ export function CheckInRow({
             </View>
           </View>
           <View style={styles.rowCenter}>
-            <Badge variant={status.variant} style={{ height: 28 }}>{status.label}</Badge>
+            <Badge variant={status.variant} style={{ height: 30 }}>{status.label}</Badge>
             <ChevronRight size={iconSize.md} color={theme.colors.textSecondary} />
           </View>
         </View>

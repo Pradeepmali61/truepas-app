@@ -68,8 +68,8 @@ const useStyles = makeStyles((t) => ({
   group: { gap: t.spacing[4] },
   row: { flexDirection: "row", gap: t.spacing[3], alignItems: "flex-start" },
   dot: {
-    width: 20,
-    height: 20,
+    width: 22,
+    height: 22,
     alignItems: "center",
     justifyContent: "center",
     borderRadius: t.radii.full,
@@ -82,8 +82,8 @@ const useStyles = makeStyles((t) => ({
   dotError: { borderColor: t.colors.error },
   dotDisabled: { opacity: t.opacity.disabled },
   dotInner: {
-    width: 10,
-    height: 10,
+    width: 12,
+    height: 12,
     borderRadius: t.radii.full,
     backgroundColor: t.colors.actionPrimary,
   },

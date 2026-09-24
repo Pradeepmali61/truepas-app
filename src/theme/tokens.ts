@@ -52,15 +52,15 @@ export const fontSize: Record<
   "xs" | "sm" | "base" | "md" | "lg" | "xl" | "2xl" | "3xl" | "4xl",
   number
 > = {
-  xs: 13,
-  sm: 14,
-  base: 16,
-  md: 17,
-  lg: 18,
-  xl: 20,
-  "2xl": 24,
-  "3xl": 30,
-  "4xl": 36,
+  xs: 15,
+  sm: 16,
+  base: 18,
+  md: 19,
+  lg: 20,
+  xl: 22,
+  "2xl": 26,
+  "3xl": 32,
+  "4xl": 38,
 };
 
 export const lineHeight: Record<"tight" | "snug" | "normal" | "relaxed", number> = {
@@ -164,17 +164,17 @@ export const sizes: Record<
   | "fieldGap",
   number
 > = {
-  heightXs: 30,
-  heightSm: 42,
-  heightMd: 54,
-  heightLg: 58,
-  touchTarget: 48,
-  controlPaddingXSm: 12,
-  controlPaddingXMd: 16,
-  controlPaddingXLg: 20,
-  cardPadding: 24,
-  sidebarWidth: 256,
-  headerHeight: 56,
+  heightXs: 32,
+  heightSm: 44,
+  heightMd: 56,
+  heightLg: 60,
+  touchTarget: 50,
+  controlPaddingXSm: 13,
+  controlPaddingXMd: 17,
+  controlPaddingXLg: 21,
+  cardPadding: 26,
+  sidebarWidth: 258,
+  headerHeight: 58,
   fieldBorderWidth: 1,
   labelGap: 8,
   /**
@@ -188,11 +188,11 @@ export const sizes: Record<
 };
 
 export const iconSize: Record<"xs" | "sm" | "md" | "lg" | "xl", number> = {
-  xs: 12,
-  sm: 16,
-  md: 20,
-  lg: 24,
-  xl: 32,
+  xs: 14,
+  sm: 18,
+  md: 22,
+  lg: 26,
+  xl: 34,
 };
 
 type ShadowKey = "none" | "sm" | "md" | "lg" | "xl";
