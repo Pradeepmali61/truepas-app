@@ -56,6 +56,9 @@ interface LivenessCameraProps {
 const BLINK_CLOSED_THRESHOLD = 0.35;
 const BLINK_OPEN_THRESHOLD = 0.6;
 const YAW_THRESHOLD = 12; // degrees
+// Client-side grace on top of the server's step_time_limits.max_ms — the
+// backend keeps sending 10s; we allow 2s more before failing the step.
+const STEP_GRACE_MS = 2000;
 
 /**
  * Full liveness challenge camera using react-native-vision-camera v5
@@ -225,7 +228,8 @@ export function LivenessCamera({ mode, personId, onSuccess, onError, allowBackCa
     // Action detected — check timing
     const durationMs = Date.now() - stepStartedAt.current;
     const { min_ms, max_ms } = liveness.challenge.step_time_limits;
-    console.log(`[Liveness] Action detected: duration=${durationMs}ms (limits: ${min_ms}-${max_ms}ms)`);
+    const stepMaxMs = max_ms + STEP_GRACE_MS;
+    console.log(`[Liveness] Action detected: duration=${durationMs}ms (limits: ${min_ms}-${stepMaxMs}ms)`);
     if (durationMs < min_ms) {
       // Too fast - not a failure, just ask them to hold the pose. The hint
       // auto-clears so the next (slower) attempt isn't blocked.
@@ -234,10 +238,10 @@ export function LivenessCamera({ mode, personId, onSuccess, onError, allowBackCa
       hintTimer.current = setTimeout(() => setHint(null), 1500);
       return;
     }
-    if (durationMs > max_ms) {
+    if (durationMs > stepMaxMs) {
       // too slow — fail the session locally so the retry UI shows and
       // sample processing stops (phase leaves 'challenging').
-      console.error('[Liveness] Step timed out:', durationMs, '>', max_ms);
+      console.error('[Liveness] Step timed out:', durationMs, '>', stepMaxMs);
       liveness.failSession('Time limit exceeded. Please try again.');
       return;
     }
@@ -460,7 +464,7 @@ export function LivenessCamera({ mode, personId, onSuccess, onError, allowBackCa
   // sweeps from step→step+1 over the server's max step time. Lazy useState
   // init — a ref read during render trips react-hooks/refs.
   const [capture] = useState(() => new Animated.Value(0));
-  const stepMs = liveness.challenge?.step_time_limits.max_ms ?? 6000;
+  const stepMs = (liveness.challenge?.step_time_limits.max_ms ?? 6000) + STEP_GRACE_MS;
   useEffect(() => {
     if (liveness.phase !== 'challenging') return;
     capture.setValue(0);
