@@ -1,5 +1,5 @@
-import { Platform } from "react-native";
 import { useThemeTokens } from "@/theme";
+import { Platform } from "react-native";
 
 /** Neumorphism color helpers — derived from the active theme's surface. */
 
@@ -12,9 +12,11 @@ function toHex(n: number) {
   return n.toString(16).padStart(2, "0");
 }
 
-function adjust(hex: string, percent: number) {
+export function adjust(hex: string, percent: number) {
   const [r, g, b] = hexToRgb(hex);
-  const clamp = (v: number) => Math.min(255, Math.max(0, v));
+  // Round before toHex — fractional channels produce "ea.0f5c…" strings,
+  // which native color parsers reject (LinearGradient crashes with NPE).
+  const clamp = (v: number) => Math.min(255, Math.max(0, Math.round(v)));
   return `#${toHex(clamp(r + (r * percent) / 100))}${toHex(clamp(g + (g * percent) / 100))}${toHex(clamp(b + (b * percent) / 100))}`;
 }
 

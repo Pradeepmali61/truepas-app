@@ -210,7 +210,7 @@ export default function AccountDetailsScreen() {
                       value={value}
                       onChange={onChange}
                       error={fieldState.error != null}
-                      style={{ marginTop: t.spacing[1.5] }}
+                      style={{ marginTop: 13 }}
                       accessibilityLabel="App PIN"
                     />
                   </FormField>
@@ -229,7 +229,7 @@ export default function AccountDetailsScreen() {
                     setConfirmPinError(undefined);
                   }}
                   error={confirmPinError != null || pinMismatch}
-                  style={{ marginTop: t.spacing[1.5] }}
+                  style={{ marginTop: 13 }}
                   accessibilityLabel="Confirm PIN"
                 />
               </FormField>

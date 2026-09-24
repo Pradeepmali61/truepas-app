@@ -1,8 +1,10 @@
+import { LinearGradient } from "expo-linear-gradient";
 import { CircleAlert, CircleCheck } from "lucide-react-native";
 import { cloneElement, isValidElement, type ReactElement, type ReactNode } from "react";
 import { Text, View, type StyleProp, type ViewStyle } from "react-native";
 import { makeStyles, useThemeTokens } from "../../theme";
 import { iconSize } from "../../theme/tokens";
+import { adjust } from "../app/neumorphism";
 import { Label } from "../ui/Label";
 import { useFieldLabelStyle } from "./FieldLabelStyle";
 
@@ -55,11 +57,16 @@ export function FormField({
       )}
       <View>
         {overlap && (
-          <View pointerEvents="none" style={styles.overlapLabel}>
+          <LinearGradient
+            pointerEvents="none"
+            colors={[adjust(theme.colors.surface, -3), theme.colors.surface]}
+            start={{ x: 0.2, y: 0.2 }}
+            end={{ x: 0.8, y: 0.8 }}
+            style={styles.overlapLabel}>
             <Label required={required} disabled={disabled} style={styles.overlapLabelText}>
               {label}
             </Label>
-          </View>
+          </LinearGradient>
         )}
         {control}
       </View>
