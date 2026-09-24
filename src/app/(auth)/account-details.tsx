@@ -7,6 +7,7 @@ import { KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { getRegistrationToken } from '@/api/client';
+import { toApiError } from '@/api/errors';
 import { DatePicker, FormField } from '@/components/composite';
 import { OtpInput } from '@/components/composite/OtpInput';
 import { useToast } from '@/components/composite/Toast';
@@ -19,6 +20,7 @@ import { AccountDetailsForm, accountDetailsSchema } from '@/features/auth/schema
 import { useKeyboardScrollPad } from '@/hooks/useKeyboardScrollPad';
 import { accountDetailsStore } from '@/services/accountDetailsStore';
 import { makeStyles, useThemeTokens } from '@/theme';
+import type { AccountDetailsRequest } from '@/types/domain';
 
 /** DatePicker speaks ISO ("YYYY-MM-DD"); the backend contract takes "MM/DD/YYYY". */
 const isoToApiDate = (iso: string) => {
@@ -29,6 +31,9 @@ const apiDateToIso = (v: string) => {
   const [m, d, y] = v.split('/');
   return m && d && y ? `${y}-${m}-${d}` : undefined;
 };
+
+const samePayload = (a: AccountDetailsRequest, b: AccountDetailsRequest) =>
+  (Object.keys(a) as (keyof AccountDetailsRequest)[]).every((k) => a[k] === b[k]);
 
 /** Register — account details + PIN + email + password (contract v1.1.0).
  *  Layout mirrors UI-design-repo AccountDetailsScreen 1:1.
@@ -59,38 +64,53 @@ export default function AccountDetailsScreen() {
       setConfirmPinError("PINs don't match");
       return;
     }
-    console.log('[AccountDetails] Submitting:', { fullName: values.fullName, email: values.email, dateOfBirth: values.dateOfBirth });
-    // Stash for the verify-email "Resend code" button — the email OTP is
-    // (re)sent by re-submitting this payload (no dedicated resend endpoint).
-    accountDetailsStore.stash(values);
-    try {
-      const response = await completeAccount.mutateAsync({
-        fullName: values.fullName,
-        dateOfBirth: values.dateOfBirth,
-        pin: values.pin,
-        email: values.email,
-        password: values.password,
-        confirmPassword: values.confirmPassword,
+    const payload: AccountDetailsRequest = {
+      fullName: values.fullName,
+      dateOfBirth: values.dateOfBirth,
+      pin: values.pin,
+      email: values.email,
+      password: values.password,
+      confirmPassword: values.confirmPassword,
+    };
+    console.log('[AccountDetails] Submitting:', { fullName: payload.fullName, email: payload.email, dateOfBirth: payload.dateOfBirth });
+    // Back-nav resubmit with nothing changed: details are already saved and
+    // re-POSTing only burns the email-OTP resend limit (429). Go straight to
+    // verify-email instead.
+    const stashed = accountDetailsStore.get();
+    if (stashed && samePayload(stashed, payload)) {
+      router.push({
+        pathname: '/(auth)/verify-email',
+        params: { email: payload.email },
       });
+      return;
+    }
+    try {
+      const response = await completeAccount.mutateAsync(payload);
       console.log('[AccountDetails] Response:', JSON.stringify(response));
+      // Stash on success for the verify-email "Resend code" button — the
+      // email OTP is (re)sent by re-submitting this payload (no dedicated
+      // resend endpoint). Also marks this payload as already-saved for the
+      // skip check above.
+      accountDetailsStore.stash(payload);
       // Keep the registration token in memory — verify-email needs it for the
       // OTP call AND for resending the email. It is cleared after email
       // verification succeeds (see verify-email onVerified).
       // Pass email to verify-email screen for the OTP request
       router.push({
         pathname: '/(auth)/verify-email',
-        params: { email: values.email },
+        params: { email: payload.email },
       });
     } catch (err: any) {
+      const apiErr = toApiError(err);
       console.error('[AccountDetails] Error:', {
-        message: err?.message,
-        status: err?.response?.status,
-        data: JSON.stringify(err?.response?.data),
+        message: apiErr.message,
+        status: apiErr.status,
+        traceId: apiErr.traceId,
       });
       toast({
         variant: 'error',
         title: "Couldn't save details",
-        description: err?.message ?? 'Check the form and try again.',
+        description: apiErr.message || 'Check the form and try again.',
       });
     }
   });
