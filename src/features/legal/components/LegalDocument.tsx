@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { ScrollView, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ScreenHeader } from '@/components/composite';
 import { Typography } from '@/components/ui';
@@ -21,6 +21,7 @@ interface LegalDocumentProps {
 export function LegalDocument({ title, updated, sections }: LegalDocumentProps) {
   const theme = useThemeTokens();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: theme.colors.background }}>
@@ -29,7 +30,7 @@ export function LegalDocument({ title, updated, sections }: LegalDocumentProps) 
         style={{ flex: 1 }}
         contentContainerStyle={{
           padding: theme.spacing[4],
-          paddingBottom: theme.spacing[8],
+          paddingBottom: theme.spacing[8] + insets.bottom,
         }}
         showsVerticalScrollIndicator={false}>
         <Typography variant="caption" color="muted">

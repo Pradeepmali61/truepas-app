@@ -11,7 +11,7 @@ import { iconSize } from '@/theme/tokens';
 
 const PROCESSING_MS = 2500;
 
-/** Delete account — processing across PostgreSQL, S3, ROC (PRD). */
+/** Delete account — processing across PostgreSQL, S3, face gallery (PRD). */
 export default function DeleteProcessingScreen() {
   const theme = useThemeTokens();
   const insets = useSafeAreaInsets();
@@ -63,7 +63,7 @@ export default function DeleteProcessingScreen() {
           style={{ padding: theme.spacing[4], alignSelf: 'stretch' }}>
           {step(<Check size={iconSize.sm} color={theme.colors.success} />, 'Account data removed (PostgreSQL)')}
           {step(<Check size={iconSize.sm} color={theme.colors.success} />, 'Images deleted (S3)')}
-          {step(<Hourglass size={iconSize.sm} color={theme.colors.actionPrimary} />, 'Removing face template (ROC)…')}
+          {step(<Hourglass size={iconSize.sm} color={theme.colors.actionPrimary} />, 'Removing face template…')}
         </NeuBox>
       </View>
     </SafeAreaView>

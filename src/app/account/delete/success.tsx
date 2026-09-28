@@ -42,7 +42,7 @@ export default function DeleteSuccessScreen() {
   const systems: { icon: ReactNode; label: string }[] = [
     { icon: <Database size={iconSize.sm} color={theme.colors.actionPrimary} />, label: 'PostgreSQL' },
     { icon: <ImageIcon size={iconSize.sm} color={theme.colors.actionPrimary} />, label: 'S3 Images' },
-    { icon: <ScanFace size={iconSize.sm} color={theme.colors.actionPrimary} />, label: 'ROC Gallery' },
+    { icon: <ScanFace size={iconSize.sm} color={theme.colors.actionPrimary} />, label: 'Face Gallery' },
   ];
 
   return (

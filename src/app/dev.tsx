@@ -150,7 +150,7 @@ const GROUPS: { title: string; screens: ScreenEntry[] }[] = [
         preset: 'auth-face',
         prepare: () => flowGuards.grant('face-update:camera'),
       },
-      { label: 'ROC retry error', route: '/face-update/error', preset: 'auth-face' },
+      { label: 'Face retry error', route: '/face-update/error', preset: 'auth-face' },
       {
         label: 'Success',
         route: '/face-update/success',

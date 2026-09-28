@@ -8,7 +8,7 @@ import { CoreButton, PopIn, RowIcon, Typography } from '@/components/ui';
 import { useThemeTokens } from '@/theme';
 import { iconSize } from '@/theme/tokens';
 
-/** Update face — ROC retry error. Never marks success on failure (PRD).
+/** Update face — retry error. Never marks success on failure (PRD).
  *  `retry` param (when set) routes Retry back to the flow that failed —
  *  registration passes '/(onboarding)/face-scan', the default is the
  *  face-update camera. */

@@ -7,7 +7,7 @@ const SECTIONS = [
   },
   {
     heading: '2. Biometric Data Handling',
-    body: 'Your facial template is encrypted and stored in ROC (Rank One Computing) gallery. It is never shared with third parties and is used solely for identity matching during verification.',
+    body: 'Your facial template is encrypted and stored in a dedicated face gallery. It is never shared with third parties and is used solely for identity matching during verification.',
   },
   {
     heading: '3. Minor/Guardianship Consent',
@@ -15,11 +15,11 @@ const SECTIONS = [
   },
   {
     heading: '4. Data Retention',
-    body: 'All data — PostgreSQL records, S3 images, and ROC face templates — is retained while your account is active and permanently deleted upon account deletion. Deletion is verified across all three systems.',
+    body: 'All data — PostgreSQL records, S3 images, and face templates — is retained while your account is active and permanently deleted upon account deletion. Deletion is verified across all three systems.',
   },
   {
     heading: '5. Your Rights',
-    body: 'You have the right to download your data, withdraw biometric consent, and delete your account at any time. Account deletion removes all data across PostgreSQL, S3, and ROC.',
+    body: 'You have the right to download your data, withdraw biometric consent, and delete your account at any time. Account deletion removes all data across PostgreSQL, S3, and the face gallery.',
   },
 ];
 

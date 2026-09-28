@@ -13,7 +13,7 @@ import { iconSize } from '@/theme/tokens';
 const RETENTION = [
   { label: 'Account data', policy: 'Retained while account is active' },
   { label: 'Document images', policy: 'Stored in S3, deleted with account' },
-  { label: 'Face template', policy: 'ROC gallery, deleted with account' },
+  { label: 'Face template', policy: 'Face gallery, deleted with account' },
 ];
 
 /** Data & privacy — retention info, deletion rights, consent management (PRD). */
@@ -107,7 +107,7 @@ export default function DataPrivacyScreen() {
               <Badge variant="success">Enrolled</Badge>
             </View>
             <Typography variant="body-sm" color="secondary">
-              Your encrypted face template is stored in ROC (Rank One Computing) gallery. It will be
+              Your encrypted face template is stored in a dedicated face gallery. It will be
               deleted permanently when you delete your account.
             </Typography>
           </NeuBox>

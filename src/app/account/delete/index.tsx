@@ -90,6 +90,7 @@ export default function DeleteAccountScreen() {
                 }}
                 error={pinError}
                 autoFocus
+                style={{ marginTop: 13 }}
                 accessibilityLabel="Account PIN"
               />
             </FormField>
