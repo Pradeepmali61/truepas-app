@@ -48,7 +48,9 @@ function lockSecondsFrom(err: unknown): number | null {
 export function usePinVerification() {
   const [pin, setPinState] = useState('');
   const [attemptsLeft, setAttemptsLeft] = useState(MAX_ATTEMPTS);
-  const [error, setError] = useState('');
+  // null = no error — screens test `error != null`, so '' must never be the
+  // idle value ('' != null renders red cells + an icon with no message).
+  const [error, setError] = useState<string | null>(null);
   const [lockedUntil, setLockedUntil] = useState<number | null>(null);
   const [lockSecondsLeft, setLockSecondsLeft] = useState(0);
   const verifyPin = useVerifyPin();
@@ -65,7 +67,7 @@ export function usePinVerification() {
       if (left === 0) {
         setLockedUntil(null);
         setAttemptsLeft(MAX_ATTEMPTS);
-        setError('');
+        setError(null);
       }
     };
     tick();
@@ -77,7 +79,7 @@ export function usePinVerification() {
   const submit = async (value?: string): Promise<string | null> => {
     const code = value ?? pin;
     if (code.length !== PIN_LENGTH || verifyPin.isPending || locked) return null;
-    setError('');
+    setError(null);
     try {
       await verifyPin.mutateAsync(code);
       return code;
@@ -108,7 +110,7 @@ export function usePinVerification() {
   // OTP verify screens).
   const setPin = (value: string) => {
     setPinState(value);
-    if (error) setError('');
+    if (error) setError(null);
   };
 
   return {
