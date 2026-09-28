@@ -10,8 +10,13 @@
  * Stored at: <documentDirectory>/profile-image.jpg
  */
 import { Directory, EncodingType, File, Paths } from 'expo-file-system';
+import { Platform } from 'react-native';
 
 const FILE_NAME = 'profile-image.jpg';
+
+// expo-file-system has no web implementation — File/Directory constructors
+// throw on web, so every entry point no-ops there.
+const NO_FS = Platform.OS === 'web';
 
 function profileFile(): File {
   return new File(Paths.document, FILE_NAME);
@@ -19,6 +24,7 @@ function profileFile(): File {
 
 /** Save a picked image locally (accepts a file URI). Returns the local URI. */
 export async function saveLocalProfileImage(imageUri: string): Promise<string> {
+  if (NO_FS) return imageUri;
   const dir = Paths.document;
   if (!(dir instanceof Directory ? dir.exists : true)) {
     new Directory(dir).create({ idempotent: true });
@@ -34,12 +40,14 @@ export async function saveLocalProfileImage(imageUri: string): Promise<string> {
 
 /** Get the locally stored profile image URI, or null. */
 export async function getLocalProfileImage(): Promise<string | null> {
+  if (NO_FS) return null;
   const file = profileFile();
   return file.exists ? file.uri : null;
 }
 
 /** Remove the locally stored profile image. */
 export async function clearLocalProfileImage(): Promise<void> {
+  if (NO_FS) return;
   const file = profileFile();
   if (file.exists) file.delete();
 }
@@ -53,6 +61,7 @@ function memberFile(personId: string): File {
 
 /** Save a family member's profile picture locally. Returns the local URI. */
 export async function saveMemberProfileImage(personId: string, imageUri: string): Promise<string> {
+  if (NO_FS) return imageUri;
   const dir = Paths.document;
   if (!(dir instanceof Directory ? dir.exists : true)) {
     new Directory(dir).create({ idempotent: true });
@@ -67,6 +76,7 @@ export async function saveMemberProfileImage(personId: string, imageUri: string)
 
 /** Get a family member's locally stored profile picture URI, or null. */
 export async function getMemberProfileImage(personId: string): Promise<string | null> {
+  if (NO_FS) return null;
   const file = memberFile(personId);
   return file.exists ? file.uri : null;
 }
@@ -78,6 +88,7 @@ export async function getMemberProfileImage(personId: string): Promise<string | 
  * photos (the avatar filename is fixed, not user-scoped).
  */
 export async function clearAllProfileImages(): Promise<void> {
+  if (NO_FS) return;
   await clearLocalProfileImage();
   const entries = new Directory(Paths.document).list();
   for (const entry of entries) {

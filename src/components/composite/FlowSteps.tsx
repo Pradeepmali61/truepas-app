@@ -62,7 +62,9 @@ export function FlowStepRow({
       )}
       <Text
         style={{
-          flex: 1,
+          // flexShrink (not flex:1) — flexBasis:0% can collapse the label to
+          // 0 width in shrink-wrap layouts on native, leaving icons alone.
+          flexShrink: 1,
           fontSize: t.fontSize.base,
           color:
             state === 'error'

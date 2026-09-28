@@ -10,8 +10,13 @@
  * Files are stored under: <documentDirectory>/doc-images/<documentId>/
  */
 import { Directory, EncodingType, File, Paths } from 'expo-file-system';
+import { Platform } from 'react-native';
 
 const BASE_DIR_NAME = 'doc-images';
+
+// expo-file-system has no web implementation — File/Directory constructors
+// throw on web, so every entry point no-ops there.
+const NO_FS = Platform.OS === 'web';
 
 function docDir(documentId: string): Directory {
   return new Directory(Paths.document, BASE_DIR_NAME, documentId);
@@ -29,7 +34,7 @@ export async function saveDocumentImages(
   documentId: string,
   images: { front?: string; back?: string; selfie?: string },
 ): Promise<void> {
-  if (!documentId) return;
+  if (!documentId || NO_FS) return;
 
   const base = new Directory(Paths.document, BASE_DIR_NAME);
   if (!base.exists) {
@@ -59,7 +64,7 @@ export async function getDocumentImageUri(
   documentId: string,
   kind: 'front' | 'back' | 'selfie' = 'front',
 ): Promise<string | null> {
-  if (!documentId) return null;
+  if (!documentId || NO_FS) return null;
   const file = docFile(documentId, kind);
   return file.exists ? file.uri : null;
 }
@@ -68,7 +73,7 @@ export async function getDocumentImageUri(
  * Remove stored images for a document.
  */
 export async function clearDocumentImages(documentId: string): Promise<void> {
-  if (!documentId) return;
+  if (!documentId || NO_FS) return;
   const dir = docDir(documentId);
   if (dir.exists) {
     dir.delete();
@@ -81,6 +86,7 @@ export async function clearDocumentImages(documentId: string): Promise<void> {
  * linger on the device after the session ends.
  */
 export async function clearAllDocumentImages(): Promise<void> {
+  if (NO_FS) return;
   const base = new Directory(Paths.document, BASE_DIR_NAME);
   if (base.exists) {
     base.delete();
