@@ -42,6 +42,15 @@ export function PhotoCapture() {
   const enrollFace = useEnrollFace();
   const [capturing, setCapturing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Stop the preview and let the native camera settle before leaving —
+  // unmounting an ACTIVE Camera on Fabric crashes (see LivenessCamera
+  // settleCameraThen).
+  const [cameraActive, setCameraActive] = useState(true);
+  const settleCameraThen = async (navigate: () => void) => {
+    setCameraActive(false);
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    navigate();
+  };
 
   useEffect(() => {
     if (!hasPermission) {
@@ -72,7 +81,7 @@ export function PhotoCapture() {
       const filePath = photoFile.filePath.startsWith('file://') ? photoFile.filePath : `file://${photoFile.filePath}`;
       const selfieBase64 = await new File(filePath).base64();
       await enrollFace.mutateAsync({ selfieBase64, personId });
-      goToMemberDetail();
+      await settleCameraThen(goToMemberDetail);
     } catch (err) {
       setError(toApiError(err).message || 'Could not enroll the photo. Please try again.');
     } finally {
@@ -84,7 +93,7 @@ export function PhotoCapture() {
     <ScreenHeader
       title={name ?? 'Face enrollment'}
       subtitle={age ? `Age ${age} · photo enrollment` : 'Photo enrollment'}
-      onBack={() => router.back()}
+      onBack={() => void settleCameraThen(router.back)}
       actions={
         <IconButton
           accessibilityLabel={cameraPosition === 'front' ? 'Switch to back camera' : 'Switch to front camera'}
@@ -138,7 +147,7 @@ export function PhotoCapture() {
                 ref={cameraRef}
                 style={styles.camera}
                 device={device}
-                isActive
+                isActive={cameraActive}
                 outputs={[photoOutput]}
                 mirrorMode="auto"
               />

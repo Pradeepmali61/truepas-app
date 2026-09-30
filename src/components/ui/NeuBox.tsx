@@ -147,8 +147,13 @@ export function NeuBox({ variant = "raised", radius, color, depth = 6, style, ch
     outerStyle.flexBasis != null ||
     outerStyle.aspectRatio != null;
 
+  // BUG015 — collapsable={false}: the host paints nothing, so Fabric flattens
+  // it away until a prop like opacity (SoftIconButton `disabled`) forces a
+  // real view. That un-flatten reparents the shadow layers + inner view, and
+  // on Android the mount fails ("addViewAt … child already has a parent") —
+  // tapping PhotoCapture's capture button crashed the app. Keep it concrete.
   return (
-    <View style={[{ borderRadius: r }, radiusStyle, outerStyle]}>
+    <View collapsable={false} style={[{ borderRadius: r }, radiusStyle, outerStyle]}>
       {variant === "raised" && (
         <>
           <View
