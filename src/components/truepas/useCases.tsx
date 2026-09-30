@@ -468,82 +468,254 @@ function ParkScene({ c }: { c: Tones }) {
 
 function CruiseScene({ c }: { c: Tones }) {
   const teal = "#35c7e8";
-  const portholes = (y: number, from: number, to: number, step: number) =>
-    Array.from({ length: Math.floor((to - from) / step) }, (_, i) => (
-      <Circle
-        key={i}
-        cx={from + i * step}
-        cy={y}
-        r={1.7}
-        fill={i % 4 === 1 ? WARM : c.deep}
-        opacity={i % 4 === 1 ? 1 : 0.55}
-      />
-    ));
+  const glass = mix(c.deep, c.night, 0.5);
+  /** A lit glass band along one deck — warm cabins with the odd dark one. */
+  const cabins = (y: number, from: number, to: number, seed: number) =>
+    Array.from({ length: Math.floor((to - from) / 6) }, (_, i) => {
+      const k = (i * 7 + seed) % 6;
+      return (
+        <Rect
+          key={i}
+          x={from + i * 6}
+          y={y}
+          width={3.6}
+          height={3}
+          rx={0.6}
+          fill={k < 3 ? WARM : c.pale}
+          opacity={k < 3 ? 0.95 : k === 5 ? 0.15 : 0.45}
+        />
+      );
+    });
+  // String lights, bow → mast, along a quadratic sag.
+  const bulbs = Array.from({ length: 11 }, (_, i) => {
+    const t = (i + 1) / 12;
+    const [x0, y0, x1, y1, x2, y2] = [184, 136, 224, 104, 262, 78];
+    return [
+      (1 - t) ** 2 * x0 + 2 * (1 - t) * t * x1 + t * t * x2,
+      (1 - t) ** 2 * y0 + 2 * (1 - t) * t * y1 + t * t * y2,
+    ];
+  });
+  // Cabin-light reflections under the hull.
+  const streaks: [number, number, number][] = [
+    [212, 20, 0.7],
+    [226, 12, 0.5],
+    [240, 24, 0.8],
+    [256, 14, 0.5],
+    [270, 22, 0.75],
+    [286, 10, 0.45],
+    [300, 20, 0.7],
+    [316, 13, 0.5],
+    [332, 18, 0.6],
+  ];
   return (
     <>
-      <Sky id="cr" top={c.night} bottom={mix(c.mid, teal, 0.55)} />
-      <Stars color={c.pale} only={6} />
-      <Glow id="cr-sun" cx={296} cy={140} r={80} color={WARM} o={0.45} />
-      <Circle cx={296} cy={140} r={24} fill={WARM} opacity={0.95} />
-      {/* sea */}
+      <Sky id="cr" top={c.night} bottom={mix(c.mid, PINK, 0.62)} />
+      <Stars color={c.pale} only={8} />
+      {/* crescent moon */}
+      <Glow id="cr-moon" cx={330} cy={32} r={34} color={c.pale} o={0.35} />
+      <Path d="M333 22A10 10 0 1 0 340 38A8 8 0 1 1 333 22Z" fill={c.pale} />
+      {/* horizon glow + distant islands */}
+      <Glow id="cr-haze" cx={240} cy={150} r={140} color={PINK} o={0.55} />
+      <Glow id="cr-haze2" cx={236} cy={150} r={70} color={WARM} o={0.55} />
+      <Path
+        d="M132 151Q152 136 170 142Q182 128 200 140Q210 136 222 151Z"
+        fill={c.deep}
+        opacity={0.75}
+      />
+      <Path
+        d="M318 151Q334 141 346 145Q354 139 364 143V151Z"
+        fill={c.deep}
+        opacity={0.6}
+      />
       <Defs>
         <LinearGradient id="cr-sea" x1="0" y1="0" x2="0" y2="1">
-          <Stop offset="0" stopColor={mix(c.deep, teal, 0.6)} />
+          <Stop offset="0" stopColor={mix(c.mid, teal, 0.5)} />
+          <Stop offset="0.35" stopColor={mix(c.deep, teal, 0.75)} />
           <Stop offset="1" stopColor={c.night} />
         </LinearGradient>
+        <LinearGradient id="cr-hull" x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0" stopColor="#ffffff" />
+          <Stop offset="1" stopColor={mix(c.pale, c.soft, 0.6)} />
+        </LinearGradient>
+        <LinearGradient id="cr-deck" x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0" stopColor="#ffffff" />
+          <Stop offset="1" stopColor={mix("#ffffff", c.pale, 0.55)} />
+        </LinearGradient>
+        <LinearGradient id="cr-funnel" x1="0" y1="0" x2="1" y2="0">
+          <Stop offset="0" stopColor={c.mid} />
+          <Stop offset="1" stopColor={c.deep} />
+        </LinearGradient>
       </Defs>
+      {/* sea */}
       <Rect y={150} width={VW} height={60} fill="url(#cr-sea)" />
-      <G fill={WARM}>
-        <Rect x={272} y={184} width={48} height={1.6} rx={1} opacity={0.5} />
-        <Rect x={280} y={192} width={32} height={1.6} rx={1} opacity={0.4} />
-        <Rect x={288} y={200} width={18} height={1.6} rx={1} opacity={0.3} />
-      </G>
+      <Rect y={150} width={VW} height={0.8} fill={c.pale} opacity={0.35} />
+      {/* broken shimmer: each light breaks into shrinking dashes */}
+      {streaks.map(([x, h, o]) =>
+        [0, 1, 2, 3].map((j) => (
+          <Rect
+            key={`${x}-${j}`}
+            x={x - 3 + (j % 2) * 2.5 - j * 0.4}
+            y={178 + j * (h / 4 + 1.5)}
+            width={7 - j * 1.4}
+            height={1.3}
+            rx={0.65}
+            fill={j % 2 ? c.pale : WARM}
+            opacity={o * (1 - j * 0.22)}
+          />
+        )),
+      )}
       <G
         stroke={c.pale}
-        strokeOpacity={0.28}
-        strokeWidth={1.2}
+        strokeOpacity={0.25}
+        strokeWidth={1}
         fill="none"
         strokeLinecap="round"
       >
-        <Path d="M170 196q8 -4 16 0t16 0" />
-        <Path d="M318 202q8 -4 16 0t16 0" />
-        <Path d="M226 204q8 -4 16 0" />
+        <Path d="M156 190q7 -3 14 0t14 0" />
+        <Path d="M300 204q7 -3 14 0t14 0" />
+        <Path d="M196 202q7 -3 14 0" />
       </G>
-      {/* ship */}
-      <Path d="M300 102L303 76H323L327 102Z" fill={c.mid} />
-      <Rect x={302} y={82} width={23} height={5} fill={WARM} />
-      <Rect
-        x={222}
-        y={102}
-        width={112}
-        height={15}
-        rx={3}
-        fill="#ffffff"
-        opacity={0.9}
-      />
-      <Rect
-        x={204}
-        y={116}
-        width={138}
-        height={17}
-        rx={3}
-        fill="#ffffff"
-        opacity={0.94}
-      />
-      <Rect x={190} y={132} width={158} height={19} rx={3} fill="#ffffff" />
-      <G>{portholes(109.5, 230, 330, 9)}</G>
-      <G>{portholes(124.5, 212, 340, 9)}</G>
-      <G>{portholes(141.5, 198, 346, 9)}</G>
+      {/* wake trailing off the stern */}
+      <G stroke="#ffffff" strokeLinecap="round" fill="none">
+        <Path
+          d="M350 172Q358 176 368 176"
+          strokeOpacity={0.5}
+          strokeWidth={1.4}
+        />
+        <Path
+          d="M344 176Q356 182 370 182"
+          strokeOpacity={0.3}
+          strokeWidth={1.2}
+        />
+      </G>
+
+      {/* funnel (behind the top decks) */}
       <Path
-        d="M168 150H356L340 176Q338 180 332 180H188Q182 180 180 176Z"
-        fill={c.pale}
+        d="M300 100L307 70Q308 66 312 66H327Q331 66 330 70L322 100Z"
+        fill="url(#cr-funnel)"
       />
-      <Rect x={176} y={160} width={172} height={5} fill={c.mid} />
-      <G stroke={c.pale} strokeWidth={1.3} fill="none" strokeLinecap="round">
-        <Path d="M214 40q5 -5 10 0q5 -5 10 0" />
-        <Path d="M242 56q4 -4 8 0q4 -4 8 0" />
+      <Path d="M306.4 73H329.3L328.2 78H305.2Z" fill={WARM} />
+      <Rect x={308} y={63} width={18} height={4} rx={2} fill={c.night} />
+      {/* mast + radar */}
+      <Line
+        x1={262}
+        y1={88}
+        x2={262}
+        y2={70}
+        stroke="#ffffff"
+        strokeWidth={1.4}
+      />
+      <Line
+        x1={256}
+        y1={76}
+        x2={268}
+        y2={76}
+        stroke="#ffffff"
+        strokeWidth={1.2}
+      />
+      <Circle cx={262} cy={69} r={1.6} fill={PINK} />
+      <Circle cx={280} cy={86} r={3.2} fill="#ffffff" />
+      {/* string lights */}
+      <Path
+        d="M184 136Q224 104 262 78"
+        stroke={c.pale}
+        strokeOpacity={0.5}
+        strokeWidth={0.6}
+        fill="none"
+      />
+      {bulbs.map(([x, y], i) => (
+        <Circle key={i} cx={x} cy={y} r={1.1} fill={i % 2 ? WARM : PINK} />
+      ))}
+
+      {/* superstructure — decks step back from a raked, rounded front */}
+      <Path
+        d="M246 99L242 91Q241 88 245 88H300Q303 88 303 91V99Z"
+        fill="url(#cr-deck)"
+      />
+      <Path d="M243.5 91.5H302V95.5H245.5Z" fill={glass} />
+      <G>{cabins(92, 250, 300, 2)}</G>
+      <Path
+        d="M230 111L225 102Q224 99 228 99H326Q330 99 330 102V111Z"
+        fill="url(#cr-deck)"
+      />
+      <Path d="M226.5 103H330V107.5H229Z" fill={glass} />
+      <G>{cabins(103.8, 234, 328, 1)}</G>
+      <Path
+        d="M214 124L208 114Q207 111 211 111H338Q342 111 342 114V124Z"
+        fill="url(#cr-deck)"
+      />
+      <Path d="M209.5 115H342V120H212.5Z" fill={glass} />
+      <G>{cabins(116, 218, 340, 4)}</G>
+      <Path
+        d="M198 137L191 127Q190 124 194 124H348Q352 124 352 127V137Z"
+        fill="url(#cr-deck)"
+      />
+      <Path d="M192.5 128H352V133H195.5Z" fill={glass} />
+      <G>{cabins(129, 202, 350, 3)}</G>
+      {/* lifeboats */}
+      {[222, 244, 266, 288, 310].map((x) => (
+        <Rect
+          key={x}
+          x={x}
+          y={134.5}
+          width={14}
+          height={4.5}
+          rx={2.25}
+          fill={WARM}
+        />
+      ))}
+
+      {/* hull */}
+      <Path
+        d="M176 137H356L349 168Q347 175 339 175H202Q193 175 189 168Z"
+        fill="url(#cr-hull)"
+      />
+      <Path
+        d="M186 162Q270 166 352 158L349 168Q347 175 339 175H202Q193 175 189 168Z"
+        fill={c.deep}
+      />
+      <Path
+        d="M180 146Q264 152 355 144"
+        stroke={c.mid}
+        strokeWidth={2.4}
+        fill="none"
+      />
+      <Path
+        d="M182 150Q264 156 354 148"
+        stroke={WARM}
+        strokeWidth={0.8}
+        fill="none"
+      />
+      {Array.from({ length: 22 }, (_, i) => (
+        <Circle
+          key={i}
+          cx={204 + i * 6.6}
+          cy={156.5}
+          r={1.1}
+          fill={c.deep}
+          opacity={0.45}
+        />
+      ))}
+      {/* bow foam */}
+      <Path
+        d="M184 172Q194 168 206 173Q196 177 184 172Z"
+        fill="#ffffff"
+        opacity={0.7}
+      />
+      <Path
+        d="M178 176Q192 172 212 177"
+        stroke="#ffffff"
+        strokeOpacity={0.45}
+        strokeWidth={1.2}
+        fill="none"
+        strokeLinecap="round"
+      />
+
+      <G stroke={c.pale} strokeWidth={1.2} fill="none" strokeLinecap="round">
+        <Path d="M222 44q4.5 -4.5 9 0q4.5 -4.5 9 0" />
+        <Path d="M248 58q3.5 -3.5 7 0q3.5 -3.5 7 0" />
       </G>
-      <FaceBadge x={194} y={70} s={36} ring={c.deep} />
+      <FaceBadge x={188} y={58} s={34} ring={c.deep} />
       <Scrim id="cr" color={c.night} />
     </>
   );
