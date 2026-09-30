@@ -38,8 +38,11 @@ export default function ChangePasswordScreen() {
   const toast = useToast();
 
   const passwordCheck = newPasswordSchema.safeParse(newPassword);
-  const nextError =
-    newPassword.length > 0 && !passwordCheck.success
+  // BUG008 — product rule: the new password must differ from the current one.
+  const sameAsCurrent = newPassword.length > 0 && newPassword === currentPassword;
+  const nextError = sameAsCurrent
+    ? 'New password must be different from your current password.'
+    : newPassword.length > 0 && !passwordCheck.success
       ? passwordCheck.error.issues[0].message
       : undefined;
   const confirmError =
@@ -47,7 +50,10 @@ export default function ChangePasswordScreen() {
       ? "Passwords don't match."
       : undefined;
   const canSubmit =
-    currentPassword.length > 0 && passwordCheck.success && confirmPassword === newPassword;
+    currentPassword.length > 0 &&
+    passwordCheck.success &&
+    !sameAsCurrent &&
+    confirmPassword === newPassword;
 
   const handleChange = async () => {
     if (!canSubmit || changePassword.isPending) return;

@@ -45,13 +45,16 @@ export default function ChangePinScreen() {
   }, [currentPin, router]);
 
   const mismatch = confirmPin.length === PIN_LENGTH && newPin !== confirmPin;
+  // BUG009 — product rule: the new PIN must differ from the current one.
+  const sameAsCurrent = newPin.length === PIN_LENGTH && newPin === currentPin;
 
   const handleUpdate = async (pin: string, confirm: string) => {
     if (
       !currentPin ||
       changePin.isPending ||
       pin.length !== PIN_LENGTH ||
-      pin !== confirm
+      pin !== confirm ||
+      pin === currentPin
     ) {
       return;
     }
@@ -95,11 +98,16 @@ export default function ChangePinScreen() {
           </View>
 
           <Section>
-            <FormField label="New PIN">
+            <FormField
+              label="New PIN"
+              error={
+                sameAsCurrent ? 'New PIN must be different from your current PIN.' : undefined
+              }>
               <OtpInput
                 length={PIN_LENGTH}
                 value={newPin}
                 onChange={setNewPin}
+                error={sameAsCurrent}
                 autoFocus
                 accessibilityLabel="New PIN"
               />
@@ -136,7 +144,10 @@ export default function ChangePinScreen() {
             size="lg"
             loading={changePin.isPending}
             disabled={
-              newPin.length !== PIN_LENGTH || confirmPin.length !== PIN_LENGTH || mismatch
+              newPin.length !== PIN_LENGTH ||
+              confirmPin.length !== PIN_LENGTH ||
+              mismatch ||
+              sameAsCurrent
             }
             onPress={() => void handleUpdate(newPin, confirmPin)}
           />

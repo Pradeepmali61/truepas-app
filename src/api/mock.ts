@@ -210,12 +210,18 @@ export const mockApi = {
     if (payload.currentPassword !== userPassword) {
       return fail('Current password is incorrect');
     }
+    if (payload.newPassword === payload.currentPassword) {
+      return fail('New password must be different from your current password');
+    }
     userPassword = payload.newPassword;
     return respond({ ok: true, message: 'Password changed' });
   },
   changePin: (payload: ChangePinRequest): Promise<OkResponse> => {
     if (payload.currentPin !== userPin) {
       return fail('Current PIN is incorrect');
+    }
+    if (payload.newPin === payload.currentPin) {
+      return fail('New PIN must be different from your current PIN');
     }
     userPin = payload.newPin;
     return respond({ ok: true, message: 'PIN changed' });
