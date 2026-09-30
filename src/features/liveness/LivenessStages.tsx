@@ -138,7 +138,6 @@ export function ChallengeStage({
           />
         </Blink>
         <Text
-          numberOfLines={2}
           style={{
             color: theme.colors.onActionPrimary,
             fontFamily: theme.fontFamily.sans.semibold,
@@ -223,7 +222,6 @@ export function ChallengeStage({
                 )}
               </View>
               <Text
-                numberOfLines={1}
                 style={{
                   flex: 1,
                   fontSize: theme.fontSize.base,
