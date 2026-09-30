@@ -6,5 +6,6 @@ export * from "./home";
 export * from "./liveness";
 export * from "./popups";
 export * from "./product";
+export * from "./useCases";
 export { useStyles as useKitStyles } from "./styles";
 

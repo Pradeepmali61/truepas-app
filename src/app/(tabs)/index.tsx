@@ -2,23 +2,22 @@
 /**
  * HomeScreen — dashboard tab. Ported 1:1 from UI-design-repo
  * `screens/main/HomeScreen.tsx`: brand header (logo + bell + avatar that
- * opens the profile drawer), next check-in hero, family-members card,
- * document wallet preview, and previous check-ins.
+ * opens the profile drawer), use-case carousel, next check-in hero,
+ * family-members card, and previous check-ins.
  *
- * Data comes from the real hooks (useFamily / useDocuments / useBookings /
+ * Data comes from the real hooks (useFamily / useBookings /
  * useNotifications) in place of the design's useApiData store.
  */
 import { useRouter } from 'expo-router';
-import { Bell, CalendarDays, Plus, UserPlus } from 'lucide-react-native';
+import { Bell, CalendarDays, UserPlus } from 'lucide-react-native';
 import { useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { TruepasIcon } from '@/components/app/TruepasIcon';
 import { AsyncBlock, EmptyState, ProfileDrawer, Section, SectionTitle, SkeletonRows } from '@/components/composite';
-import { BookingCard, DocumentRow, NextCheckinCard } from '@/components/truepas';
+import { BookingCard, NextCheckinCard, UseCaseCarousel } from '@/components/truepas';
 import { Avatar, FadeUp, Link, NeuBox, Skeleton, SoftIconButton, Typography } from '@/components/ui';
-import { useDocuments } from '@/features/documents/hooks';
 import { useFamily } from '@/features/family/hooks';
 import { useBookings } from '@/features/history/hooks';
 import { useNotifications } from '@/features/notifications/hooks';
@@ -40,7 +39,6 @@ export default function HomeScreen() {
     const [drawer, setDrawer] = useState(false);
 
     const family = useFamily();
-    const documents = useDocuments();
     const bookings = useBookings();
     const unread = useNotifications(true);
 
@@ -48,13 +46,11 @@ export default function HomeScreen() {
     const past = bookings.data?.filter((b) => b.status !== 'upcoming') ?? [];
     const upcoming = bookings.data?.filter((b) => b.status === 'upcoming') ?? [];
     const nextUpcoming = upcoming.sort((a, b) => a.checkIn.localeCompare(b.checkIn))[0];
-    const hasDocs = (documents.data?.length ?? 0) > 0;
 
     const refreshing =
-        family.isRefetching || documents.isRefetching || bookings.isRefetching || unread.isRefetching;
+        family.isRefetching || bookings.isRefetching || unread.isRefetching;
     const onRefresh = () => {
         void family.refetch();
-        void documents.refetch();
         void bookings.refetch();
         void unread.refetch();
     };
@@ -95,6 +91,11 @@ export default function HomeScreen() {
                             </Pressable>
                         </View>
                     </View>
+
+                    {/* ---------- use-case carousel ---------- */}
+                    <FadeUp>
+                        <UseCaseCarousel />
+                    </FadeUp>
 
                     {/* ---------- next check-in hero ---------- */}
                     {nextUpcoming != null && (
@@ -198,64 +199,6 @@ export default function HomeScreen() {
                                 )}
                             </AsyncBlock>
                         </NeuBox>
-                    </FadeUp>
-
-                    {/* ---------- your documents ---------- */}
-                    <FadeUp delay={90}>
-                        <Section>
-                            <SectionTitle
-                                action={
-                                    <Link accessibilityLabel="See all documents" onPress={() => router.push('/(tabs)/documents' as never)}>
-                                        See all
-                                    </Link>
-                                }>
-                                Your documents
-                            </SectionTitle>
-                            <AsyncBlock
-                                state={{
-                                    data: documents.data,
-                                    isPending: documents.isPending,
-                                    isError: documents.isError,
-                                    error: documents.error,
-                                    refetch: () => void documents.refetch(),
-                                }}
-                                empty={(docs) => docs.length === 0}
-                                emptyTitle="No documents yet"
-                                emptyBody="Add a passport, ID card, or license to verify your identity."
-                                skeleton={<SkeletonRows />}>
-                                {(docs) => (
-                                    <Section>
-                                        {docs.slice(0, 2).map((d, i) => (
-                                            <FadeUp key={d.id} delay={Math.min(i, 8) * 60}>
-                                                <DocumentRow
-                                                    doc={{
-                                                        label: d.label,
-                                                        number: d.number,
-                                                        status: d.status,
-                                                        expiresAt: d.expiresAt ? d.expiresAt.split('T')[0] : null,
-                                                        matchScore: d.matchScore,
-                                                        type: d.type,
-                                                    }}
-                                                    onPress={() => router.push(`/document/${d.id}` as never)}
-                                                />
-                                            </FadeUp>
-                                        ))}
-                                    </Section>
-                                )}
-                            </AsyncBlock>
-                            {!hasDocs && documents.data != null && (
-                                <Pressable
-                                    accessibilityRole="button"
-                                    accessibilityLabel="Add your documents"
-                                    onPress={() => router.push('/document/select-type' as never)}
-                                    style={({ pressed }) => pressed && styles.pressed}>
-                                    <NeuBox variant="raised" depth={4} style={styles.addRow}>
-                                        <Plus size={iconSize.md} color={t.colors.actionPrimary} />
-                                        <Text style={styles.addRowText}>Add your documents</Text>
-                                    </NeuBox>
-                                </Pressable>
-                            )}
-                        </Section>
                     </FadeUp>
 
                     {/* ---------- previous check-ins ---------- */}
@@ -377,12 +320,4 @@ const useStyles = makeStyles((t) => ({
         borderWidth: 2,
         borderColor: t.colors.background,
     },
-    addRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: t.spacing[2],
-        paddingVertical: t.spacing[3] + 1,
-    },
-    addRowText: { fontSize: t.fontSize.base, fontWeight: t.fontWeight.medium, color: t.colors.actionPrimary },
 }));
