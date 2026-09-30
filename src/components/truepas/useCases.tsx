@@ -2,856 +2,39 @@
 /**
  * UseCaseCarousel — Home-tab hero that shows what Truepas is for: hotels,
  * theme parks, cruises, attractions and family check-ins. Each slide is a
- * vector scene (react-native-svg) tinted from the active palette's
- * actionPrimary, so the art stays on-brand and crisp at every density.
+ * real photo (CC0, see assets/images/use-cases/CREDITS.md) graded toward the
+ * active palette with a violet scrim, so the set reads as one on-brand series.
  *
  * Auto-advances every few seconds; a manual swipe restarts the timer.
  */
+import { LinearGradient } from "expo-linear-gradient";
 import {
   FerrisWheel,
   Hotel,
   Landmark,
+  ScanFace,
   Ship,
   Users,
   type LucideIcon,
 } from "lucide-react-native";
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
+  Image,
   Pressable,
   ScrollView,
   Text,
   View,
+  type ImageSourcePropType,
   type LayoutChangeEvent,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from "react-native";
-import Svg, {
-  Circle,
-  Defs,
-  G,
-  Line,
-  LinearGradient,
-  Path,
-  RadialGradient,
-  Rect,
-  Stop,
-} from "react-native-svg";
 
 import { alpha, makeStyles, mix, useThemeTokens } from "@/theme";
 
-/** Scene canvas — every illustration is drawn in this box. */
-const VW = 360;
-const VH = 210;
+/** Photos are exported at 1024×597 — keep the card at the same ratio. */
+const ASPECT = 597 / 1024;
 const AUTOPLAY_MS = 5000;
-
-const WARM = "#ffd27a";
-const PINK = "#ff8fcf";
-const GO = "#4ade80";
-
-type Tones = {
-  night: string;
-  deep: string;
-  mid: string;
-  soft: string;
-  pale: string;
-};
-
-function useTones(): Tones {
-  const t = useThemeTokens();
-  const p = t.colors.actionPrimary;
-  return useMemo(
-    () => ({
-      night: mix(p, "#07041a", 0.28),
-      deep: mix(p, "#110838", 0.55),
-      mid: p,
-      soft: mix(p, "#ffffff", 0.5),
-      pale: mix(p, "#ffffff", 0.16),
-    }),
-    [p],
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/* Shared scene pieces                                                 */
-/* ------------------------------------------------------------------ */
-
-function Sky({ id, top, bottom }: { id: string; top: string; bottom: string }) {
-  return (
-    <>
-      <Defs>
-        <LinearGradient id={`${id}-sky`} x1="0" y1="0" x2="0" y2="1">
-          <Stop offset="0" stopColor={top} />
-          <Stop offset="1" stopColor={bottom} />
-        </LinearGradient>
-      </Defs>
-      <Rect width={VW} height={VH} fill={`url(#${id}-sky)`} />
-    </>
-  );
-}
-
-function Glow({
-  id,
-  cx,
-  cy,
-  r,
-  color,
-  o = 0.55,
-}: {
-  id: string;
-  cx: number;
-  cy: number;
-  r: number;
-  color: string;
-  o?: number;
-}) {
-  return (
-    <>
-      <Defs>
-        <RadialGradient
-          id={id}
-          cx={cx}
-          cy={cy}
-          r={r}
-          gradientUnits="userSpaceOnUse"
-        >
-          <Stop offset="0" stopColor={color} stopOpacity={o} />
-          <Stop offset="1" stopColor={color} stopOpacity={0} />
-        </RadialGradient>
-      </Defs>
-      <Circle cx={cx} cy={cy} r={r} fill={`url(#${id})`} />
-    </>
-  );
-}
-
-const STARS: [number, number, number][] = [
-  [196, 18, 1.1],
-  [228, 30, 0.8],
-  [252, 12, 1.2],
-  [286, 24, 0.7],
-  [344, 16, 1],
-  [214, 58, 0.7],
-  [338, 60, 0.8],
-  [178, 40, 0.9],
-  [270, 46, 0.6],
-  [306, 8, 0.8],
-];
-
-function Stars({ color, only }: { color: string; only?: number }) {
-  return (
-    <G>
-      {STARS.slice(0, only).map(([x, y, r], i) => (
-        <Circle
-          key={i}
-          cx={x}
-          cy={y}
-          r={r}
-          fill={color}
-          opacity={0.55 + (i % 3) * 0.15}
-        />
-      ))}
-    </G>
-  );
-}
-
-/** Left-side scrim so the caption stays legible over any scene. */
-function Scrim({ id, color }: { id: string; color: string }) {
-  return (
-    <>
-      <Defs>
-        <LinearGradient id={`${id}-scrim`} x1="0" y1="0" x2="1" y2="0">
-          <Stop offset="0" stopColor={color} stopOpacity={0.82} />
-          <Stop offset="0.5" stopColor={color} stopOpacity={0.35} />
-          <Stop offset="0.72" stopColor={color} stopOpacity={0} />
-        </LinearGradient>
-      </Defs>
-      <Rect width={VW} height={VH} fill={`url(#${id}-scrim)`} />
-    </>
-  );
-}
-
-/** Glass viewfinder with a face and a green "verified" tick — the product, in one glyph. */
-function FaceBadge({
-  x,
-  y,
-  s,
-  ring,
-}: {
-  x: number;
-  y: number;
-  s: number;
-  ring: string;
-}) {
-  const m = s * 0.16;
-  const k = s * 0.2;
-  return (
-    <G transform={`translate(${x} ${y})`}>
-      <Rect
-        width={s}
-        height={s}
-        rx={s * 0.26}
-        fill="#ffffff"
-        fillOpacity={0.14}
-        stroke="#ffffff"
-        strokeOpacity={0.5}
-        strokeWidth={1}
-      />
-      <Path
-        d={`M${m} ${m + k}V${m}H${m + k}M${s - m - k} ${m}H${s - m}V${m + k}M${s - m} ${s - m - k}V${s - m}H${s - m - k}M${m + k} ${s - m}H${m}V${s - m - k}`}
-        stroke="#ffffff"
-        strokeWidth={1.6}
-        strokeLinecap="round"
-        fill="none"
-      />
-      <Circle cx={s / 2} cy={s * 0.42} r={s * 0.12} fill="#ffffff" />
-      <Path
-        d={`M${s * 0.3} ${s * 0.76}C${s * 0.3} ${s * 0.6} ${s * 0.7} ${s * 0.6} ${s * 0.7} ${s * 0.76}Z`}
-        fill="#ffffff"
-      />
-      <Rect
-        x={m}
-        y={s * 0.53}
-        width={s - m * 2}
-        height={1.2}
-        fill={GO}
-        opacity={0.9}
-      />
-      <Circle
-        cx={s - 2}
-        cy={2}
-        r={s * 0.17}
-        fill={GO}
-        stroke={ring}
-        strokeWidth={2}
-      />
-      <Path
-        d={`M${s - 2 - s * 0.075} 2l${s * 0.05} ${s * 0.05}l${s * 0.09} -${s * 0.09}`}
-        stroke="#ffffff"
-        strokeWidth={1.8}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        fill="none"
-      />
-    </G>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/* Scenes                                                              */
-/* ------------------------------------------------------------------ */
-
-function HotelScene({ c }: { c: Tones }) {
-  const windows: ReactNode[] = [];
-  for (let r = 0; r < 7; r++) {
-    for (let col = 0; col < 5; col++) {
-      const lit = (r * 7 + col * 3) % 5 < 2;
-      windows.push(
-        <Rect
-          key={`${r}-${col}`}
-          x={222 + col * 15.5}
-          y={60 + r * 15}
-          width={8}
-          height={8}
-          rx={1.5}
-          fill={lit ? WARM : c.pale}
-          opacity={lit ? 0.92 : 0.22}
-        />,
-      );
-    }
-  }
-  return (
-    <>
-      <Sky id="ho" top={c.night} bottom={mix(c.mid, "#c04bd8", 0.6)} />
-      <Stars color={c.pale} />
-      <Glow id="ho-moon" cx={322} cy={38} r={44} color={c.pale} o={0.35} />
-      <Circle cx={322} cy={38} r={13} fill={c.pale} />
-      <Circle
-        cx={327}
-        cy={34}
-        r={11}
-        fill={mix(c.night, c.mid, 0.6)}
-        opacity={0.35}
-      />
-      {/* skyline */}
-      <G fill={c.deep} opacity={0.75}>
-        <Rect x={166} y={126} width={26} height={90} rx={2} />
-        <Rect x={190} y={104} width={18} height={112} rx={2} />
-        <Rect x={302} y={112} width={24} height={100} rx={2} />
-        <Rect x={328} y={90} width={34} height={122} rx={2} />
-      </G>
-      {/* hotel tower */}
-      <Defs>
-        <LinearGradient id="ho-tower" x1="0" y1="0" x2="0" y2="1">
-          <Stop offset="0" stopColor={mix(c.mid, "#ffffff", 0.8)} />
-          <Stop offset="1" stopColor={c.deep} />
-        </LinearGradient>
-      </Defs>
-      <Rect x={224} y={34} width={64} height={16} rx={4} fill={c.mid} />
-      <Rect
-        x={236}
-        y={38}
-        width={40}
-        height={7}
-        rx={2}
-        fill={WARM}
-        opacity={0.95}
-      />
-      <Rect
-        x={212}
-        y={48}
-        width={88}
-        height={168}
-        rx={6}
-        fill="url(#ho-tower)"
-      />
-      {windows}
-      {/* entrance */}
-      <Glow id="ho-door" cx={256} cy={200} r={46} color={WARM} o={0.45} />
-      <Path d="M222 176H290L296 184H216Z" fill={c.pale} />
-      <Rect
-        x={238}
-        y={184}
-        width={36}
-        height={26}
-        rx={2}
-        fill={WARM}
-        opacity={0.9}
-      />
-      <Line
-        x1={256}
-        y1={186}
-        x2={256}
-        y2={210}
-        stroke={c.deep}
-        strokeWidth={1}
-      />
-      {/* palm */}
-      <Path
-        d="M200 212Q197 184 204 160"
-        stroke={c.night}
-        strokeWidth={3}
-        fill="none"
-        strokeLinecap="round"
-      />
-      <G fill={c.night}>
-        <Path d="M204 160Q188 152 178 162Q192 156 204 162Z" />
-        <Path d="M204 160Q220 150 232 158Q218 156 204 162Z" />
-        <Path d="M204 160Q196 142 184 140Q198 148 203 161Z" />
-        <Path d="M204 160Q214 142 226 142Q212 150 205 161Z" />
-      </G>
-      <Rect y={206} width={VW} height={4} fill={c.night} />
-      <FaceBadge x={306} y={132} s={40} ring={c.deep} />
-      <Scrim id="ho" color={c.night} />
-    </>
-  );
-}
-
-function ParkScene({ c }: { c: Tones }) {
-  const cx = 282;
-  const cy = 96;
-  const R = 62;
-  const spokes = Array.from({ length: 12 }, (_, i) => (i * Math.PI * 2) / 12);
-  const bulbs = Array.from({ length: 24 }, (_, i) => (i * Math.PI * 2) / 24);
-  const burst = (x: number, y: number, color: string) => (
-    <G>
-      {Array.from({ length: 10 }, (_, i) => {
-        const a = (i * Math.PI * 2) / 10;
-        return (
-          <Line
-            key={i}
-            x1={x + Math.cos(a) * 5}
-            y1={y + Math.sin(a) * 5}
-            x2={x + Math.cos(a) * 13}
-            y2={y + Math.sin(a) * 13}
-            stroke={color}
-            strokeWidth={1.4}
-            strokeLinecap="round"
-          />
-        );
-      })}
-      <Circle cx={x} cy={y} r={1.8} fill={color} />
-    </G>
-  );
-  return (
-    <>
-      <Sky id="pk" top={c.deep} bottom={mix(c.mid, PINK, 0.45)} />
-      <Stars color={c.pale} only={7} />
-      {burst(208, 40, WARM)}
-      {burst(342, 26, PINK)}
-      <Glow id="pk-glow" cx={cx} cy={cy} r={90} color={PINK} o={0.3} />
-      {/* ferris wheel */}
-      <Path
-        d={`M${cx} ${cy}L${cx - 36} 206M${cx} ${cy}L${cx + 36} 206`}
-        stroke={c.pale}
-        strokeWidth={3.5}
-        strokeLinecap="round"
-      />
-      <Circle
-        cx={cx}
-        cy={cy}
-        r={R}
-        stroke={c.pale}
-        strokeWidth={2.5}
-        fill="none"
-      />
-      <Circle
-        cx={cx}
-        cy={cy}
-        r={R - 9}
-        stroke={c.pale}
-        strokeOpacity={0.4}
-        strokeWidth={1}
-        fill="none"
-      />
-      {spokes.map((a, i) => (
-        <Line
-          key={i}
-          x1={cx}
-          y1={cy}
-          x2={cx + Math.cos(a) * R}
-          y2={cy + Math.sin(a) * R}
-          stroke={c.pale}
-          strokeOpacity={0.55}
-          strokeWidth={1}
-        />
-      ))}
-      {bulbs.map((a, i) => (
-        <Circle
-          key={i}
-          cx={cx + Math.cos(a) * R}
-          cy={cy + Math.sin(a) * R}
-          r={1.3}
-          fill={WARM}
-        />
-      ))}
-      {spokes.map((a, i) => (
-        <Rect
-          key={i}
-          x={cx + Math.cos(a) * R - 5}
-          y={cy + Math.sin(a) * R + 1}
-          width={10}
-          height={9}
-          rx={3}
-          fill={i % 3 === 0 ? WARM : i % 3 === 1 ? PINK : c.soft}
-        />
-      ))}
-      <Circle cx={cx} cy={cy} r={6} fill={c.pale} />
-      {/* coaster */}
-      <G stroke={c.night} strokeOpacity={0.7} strokeWidth={1.4}>
-        {[
-          [184, 158],
-          [204, 138],
-          [222, 146],
-          [244, 186],
-          [304, 168],
-          [324, 144],
-          [344, 134],
-        ].map(([x, y]) => (
-          <Line key={x} x1={x} y1={210} x2={x} y2={y} />
-        ))}
-      </G>
-      <Path
-        d="M150 206C184 130 214 126 232 166S266 214 294 178S338 118 372 148"
-        stroke={c.night}
-        strokeWidth={4.5}
-        fill="none"
-        strokeLinecap="round"
-      />
-      {/* tent */}
-      <Path d="M178 206L198 176L218 206Z" fill={mix(PINK, c.mid, 0.6)} />
-      <Path d="M198 176L192 206H204Z" fill={c.pale} opacity={0.8} />
-      <Path d="M0 198Q90 188 180 196T360 192V210H0Z" fill={c.night} />
-      <FaceBadge x={322} y={138} s={34} ring={c.deep} />
-      <Scrim id="pk" color={c.night} />
-    </>
-  );
-}
-
-function CruiseScene({ c }: { c: Tones }) {
-  const teal = "#35c7e8";
-  const glass = mix(c.deep, c.night, 0.5);
-  /** A lit glass band along one deck — warm cabins with the odd dark one. */
-  const cabins = (y: number, from: number, to: number, seed: number) =>
-    Array.from({ length: Math.floor((to - from) / 6) }, (_, i) => {
-      const k = (i * 7 + seed) % 6;
-      return (
-        <Rect
-          key={i}
-          x={from + i * 6}
-          y={y}
-          width={3.6}
-          height={3}
-          rx={0.6}
-          fill={k < 3 ? WARM : c.pale}
-          opacity={k < 3 ? 0.95 : k === 5 ? 0.15 : 0.45}
-        />
-      );
-    });
-  // String lights, bow → mast, along a quadratic sag.
-  const bulbs = Array.from({ length: 11 }, (_, i) => {
-    const t = (i + 1) / 12;
-    const [x0, y0, x1, y1, x2, y2] = [184, 136, 224, 104, 262, 78];
-    return [
-      (1 - t) ** 2 * x0 + 2 * (1 - t) * t * x1 + t * t * x2,
-      (1 - t) ** 2 * y0 + 2 * (1 - t) * t * y1 + t * t * y2,
-    ];
-  });
-  // Cabin-light reflections under the hull.
-  const streaks: [number, number, number][] = [
-    [212, 20, 0.7],
-    [226, 12, 0.5],
-    [240, 24, 0.8],
-    [256, 14, 0.5],
-    [270, 22, 0.75],
-    [286, 10, 0.45],
-    [300, 20, 0.7],
-    [316, 13, 0.5],
-    [332, 18, 0.6],
-  ];
-  return (
-    <>
-      <Sky id="cr" top={c.night} bottom={mix(c.mid, PINK, 0.62)} />
-      <Stars color={c.pale} only={8} />
-      {/* crescent moon */}
-      <Glow id="cr-moon" cx={330} cy={32} r={34} color={c.pale} o={0.35} />
-      <Path d="M333 22A10 10 0 1 0 340 38A8 8 0 1 1 333 22Z" fill={c.pale} />
-      {/* horizon glow + distant islands */}
-      <Glow id="cr-haze" cx={240} cy={150} r={140} color={PINK} o={0.55} />
-      <Glow id="cr-haze2" cx={236} cy={150} r={70} color={WARM} o={0.55} />
-      <Path
-        d="M132 151Q152 136 170 142Q182 128 200 140Q210 136 222 151Z"
-        fill={c.deep}
-        opacity={0.75}
-      />
-      <Path
-        d="M318 151Q334 141 346 145Q354 139 364 143V151Z"
-        fill={c.deep}
-        opacity={0.6}
-      />
-      <Defs>
-        <LinearGradient id="cr-sea" x1="0" y1="0" x2="0" y2="1">
-          <Stop offset="0" stopColor={mix(c.mid, teal, 0.5)} />
-          <Stop offset="0.35" stopColor={mix(c.deep, teal, 0.75)} />
-          <Stop offset="1" stopColor={c.night} />
-        </LinearGradient>
-        <LinearGradient id="cr-hull" x1="0" y1="0" x2="0" y2="1">
-          <Stop offset="0" stopColor="#ffffff" />
-          <Stop offset="1" stopColor={mix(c.pale, c.soft, 0.6)} />
-        </LinearGradient>
-        <LinearGradient id="cr-deck" x1="0" y1="0" x2="0" y2="1">
-          <Stop offset="0" stopColor="#ffffff" />
-          <Stop offset="1" stopColor={mix("#ffffff", c.pale, 0.55)} />
-        </LinearGradient>
-        <LinearGradient id="cr-funnel" x1="0" y1="0" x2="1" y2="0">
-          <Stop offset="0" stopColor={c.mid} />
-          <Stop offset="1" stopColor={c.deep} />
-        </LinearGradient>
-      </Defs>
-      {/* sea */}
-      <Rect y={150} width={VW} height={60} fill="url(#cr-sea)" />
-      <Rect y={150} width={VW} height={0.8} fill={c.pale} opacity={0.35} />
-      {/* broken shimmer: each light breaks into shrinking dashes */}
-      {streaks.map(([x, h, o]) =>
-        [0, 1, 2, 3].map((j) => (
-          <Rect
-            key={`${x}-${j}`}
-            x={x - 3 + (j % 2) * 2.5 - j * 0.4}
-            y={178 + j * (h / 4 + 1.5)}
-            width={7 - j * 1.4}
-            height={1.3}
-            rx={0.65}
-            fill={j % 2 ? c.pale : WARM}
-            opacity={o * (1 - j * 0.22)}
-          />
-        )),
-      )}
-      <G
-        stroke={c.pale}
-        strokeOpacity={0.25}
-        strokeWidth={1}
-        fill="none"
-        strokeLinecap="round"
-      >
-        <Path d="M156 190q7 -3 14 0t14 0" />
-        <Path d="M300 204q7 -3 14 0t14 0" />
-        <Path d="M196 202q7 -3 14 0" />
-      </G>
-      {/* wake trailing off the stern */}
-      <G stroke="#ffffff" strokeLinecap="round" fill="none">
-        <Path
-          d="M350 172Q358 176 368 176"
-          strokeOpacity={0.5}
-          strokeWidth={1.4}
-        />
-        <Path
-          d="M344 176Q356 182 370 182"
-          strokeOpacity={0.3}
-          strokeWidth={1.2}
-        />
-      </G>
-
-      {/* funnel (behind the top decks) */}
-      <Path
-        d="M300 100L307 70Q308 66 312 66H327Q331 66 330 70L322 100Z"
-        fill="url(#cr-funnel)"
-      />
-      <Path d="M306.4 73H329.3L328.2 78H305.2Z" fill={WARM} />
-      <Rect x={308} y={63} width={18} height={4} rx={2} fill={c.night} />
-      {/* mast + radar */}
-      <Line
-        x1={262}
-        y1={88}
-        x2={262}
-        y2={70}
-        stroke="#ffffff"
-        strokeWidth={1.4}
-      />
-      <Line
-        x1={256}
-        y1={76}
-        x2={268}
-        y2={76}
-        stroke="#ffffff"
-        strokeWidth={1.2}
-      />
-      <Circle cx={262} cy={69} r={1.6} fill={PINK} />
-      <Circle cx={280} cy={86} r={3.2} fill="#ffffff" />
-      {/* string lights */}
-      <Path
-        d="M184 136Q224 104 262 78"
-        stroke={c.pale}
-        strokeOpacity={0.5}
-        strokeWidth={0.6}
-        fill="none"
-      />
-      {bulbs.map(([x, y], i) => (
-        <Circle key={i} cx={x} cy={y} r={1.1} fill={i % 2 ? WARM : PINK} />
-      ))}
-
-      {/* superstructure — decks step back from a raked, rounded front */}
-      <Path
-        d="M246 99L242 91Q241 88 245 88H300Q303 88 303 91V99Z"
-        fill="url(#cr-deck)"
-      />
-      <Path d="M243.5 91.5H302V95.5H245.5Z" fill={glass} />
-      <G>{cabins(92, 250, 300, 2)}</G>
-      <Path
-        d="M230 111L225 102Q224 99 228 99H326Q330 99 330 102V111Z"
-        fill="url(#cr-deck)"
-      />
-      <Path d="M226.5 103H330V107.5H229Z" fill={glass} />
-      <G>{cabins(103.8, 234, 328, 1)}</G>
-      <Path
-        d="M214 124L208 114Q207 111 211 111H338Q342 111 342 114V124Z"
-        fill="url(#cr-deck)"
-      />
-      <Path d="M209.5 115H342V120H212.5Z" fill={glass} />
-      <G>{cabins(116, 218, 340, 4)}</G>
-      <Path
-        d="M198 137L191 127Q190 124 194 124H348Q352 124 352 127V137Z"
-        fill="url(#cr-deck)"
-      />
-      <Path d="M192.5 128H352V133H195.5Z" fill={glass} />
-      <G>{cabins(129, 202, 350, 3)}</G>
-      {/* lifeboats */}
-      {[222, 244, 266, 288, 310].map((x) => (
-        <Rect
-          key={x}
-          x={x}
-          y={134.5}
-          width={14}
-          height={4.5}
-          rx={2.25}
-          fill={WARM}
-        />
-      ))}
-
-      {/* hull */}
-      <Path
-        d="M176 137H356L349 168Q347 175 339 175H202Q193 175 189 168Z"
-        fill="url(#cr-hull)"
-      />
-      <Path
-        d="M186 162Q270 166 352 158L349 168Q347 175 339 175H202Q193 175 189 168Z"
-        fill={c.deep}
-      />
-      <Path
-        d="M180 146Q264 152 355 144"
-        stroke={c.mid}
-        strokeWidth={2.4}
-        fill="none"
-      />
-      <Path
-        d="M182 150Q264 156 354 148"
-        stroke={WARM}
-        strokeWidth={0.8}
-        fill="none"
-      />
-      {Array.from({ length: 22 }, (_, i) => (
-        <Circle
-          key={i}
-          cx={204 + i * 6.6}
-          cy={156.5}
-          r={1.1}
-          fill={c.deep}
-          opacity={0.45}
-        />
-      ))}
-      {/* bow foam */}
-      <Path
-        d="M184 172Q194 168 206 173Q196 177 184 172Z"
-        fill="#ffffff"
-        opacity={0.7}
-      />
-      <Path
-        d="M178 176Q192 172 212 177"
-        stroke="#ffffff"
-        strokeOpacity={0.45}
-        strokeWidth={1.2}
-        fill="none"
-        strokeLinecap="round"
-      />
-
-      <G stroke={c.pale} strokeWidth={1.2} fill="none" strokeLinecap="round">
-        <Path d="M222 44q4.5 -4.5 9 0q4.5 -4.5 9 0" />
-        <Path d="M248 58q3.5 -3.5 7 0q3.5 -3.5 7 0" />
-      </G>
-      <FaceBadge x={188} y={58} s={34} ring={c.deep} />
-      <Scrim id="cr" color={c.night} />
-    </>
-  );
-}
-
-function AttractionScene({ c }: { c: Tones }) {
-  const cols = [204, 228, 252, 276, 300, 324];
-  return (
-    <>
-      <Sky id="at" top={c.night} bottom={mix(c.mid, "#ffb27a", 0.55)} />
-      <Stars color={c.pale} only={8} />
-      <Glow id="at-glow" cx={266} cy={150} r={110} color={WARM} o={0.25} />
-      {/* pediment + entablature */}
-      <Path d="M186 100L266 60L346 100Z" fill={c.pale} />
-      <Path d="M204 96L266 68L328 96Z" fill={c.mid} opacity={0.3} />
-      <Circle cx={266} cy={86} r={5} fill={WARM} opacity={0.9} />
-      <Rect x={190} y={99} width={152} height={12} rx={1} fill={c.pale} />
-      <Rect x={196} y={111} width={140} height={73} fill={c.deep} />
-      {/* doorway light */}
-      <Glow id="at-door" cx={269} cy={176} r={34} color={WARM} o={0.6} />
-      <Rect x={262} y={146} width={14} height={38} rx={1} fill={WARM} />
-      {/* columns */}
-      <Defs>
-        <LinearGradient id="at-col" x1="0" y1="0" x2="1" y2="0">
-          <Stop offset="0" stopColor={c.soft} />
-          <Stop offset="0.5" stopColor="#ffffff" />
-          <Stop offset="1" stopColor={c.soft} />
-        </LinearGradient>
-      </Defs>
-      {cols.map((x) => (
-        <G key={x}>
-          <Rect x={x - 2} y={111} width={14} height={4} fill={c.pale} />
-          <Rect x={x} y={115} width={10} height={69} fill="url(#at-col)" />
-        </G>
-      ))}
-      {/* steps */}
-      <Rect x={192} y={184} width={148} height={7} fill={c.pale} />
-      <Rect x={186} y={191} width={160} height={7} fill={c.soft} />
-      <Rect
-        x={180}
-        y={198}
-        width={172}
-        height={12}
-        fill={mix(c.soft, c.deep, 0.6)}
-      />
-      {/* flags */}
-      <G>
-        <Line
-          x1={186}
-          y1={100}
-          x2={186}
-          y2={76}
-          stroke={c.pale}
-          strokeWidth={1.2}
-        />
-        <Path d="M186 76h11l-3 4l3 4h-11Z" fill={PINK} />
-        <Line
-          x1={346}
-          y1={100}
-          x2={346}
-          y2={76}
-          stroke={c.pale}
-          strokeWidth={1.2}
-        />
-        <Path d="M346 76h11l-3 4l3 4h-11Z" fill={WARM} />
-      </G>
-      <FaceBadge x={314} y={20} s={34} ring={c.deep} />
-      <Scrim id="at" color={c.night} />
-    </>
-  );
-}
-
-function FamilyScene({ c }: { c: Tones }) {
-  const ground = 212;
-  const people = [
-    { cx: 226, top: 90, h: 122, fill: c.pale },
-    { cx: 294, top: 100, h: 112, fill: c.soft },
-    { cx: 260, top: 134, h: 78, fill: WARM },
-    { cx: 326, top: 148, h: 64, fill: PINK },
-  ];
-  return (
-    <>
-      <Sky id="fm" top={c.deep} bottom={mix(c.mid, "#7fd4ff", 0.5)} />
-      <Stars color={c.pale} only={5} />
-      <Glow id="fm-glow" cx={272} cy={130} r={110} color={c.pale} o={0.3} />
-      <Circle cx={272} cy={214} r={96} fill={c.mid} opacity={0.35} />
-      {/* link line through every head — one check-in for everyone */}
-      <Path
-        d="M226 96Q243 70 260 140Q277 80 294 106Q310 120 326 152"
-        stroke={c.pale}
-        strokeOpacity={0.6}
-        strokeWidth={1.2}
-        strokeDasharray="3 4"
-        fill="none"
-      />
-      {people.map((p, i) => {
-        const r = p.h * 0.13;
-        const hy = p.top + r;
-        const sy = p.top + r * 2 + 4;
-        const w = p.h * 0.44;
-        const pad = r + 5;
-        const k = r * 0.7;
-        return (
-          <G key={i}>
-            <Path
-              d={`M${p.cx - w / 2} ${ground}V${sy + w * 0.36}Q${p.cx - w / 2} ${sy} ${p.cx} ${sy}Q${p.cx + w / 2} ${sy} ${p.cx + w / 2} ${sy + w * 0.36}V${ground}Z`}
-              fill={p.fill}
-              opacity={0.95}
-            />
-            <Circle cx={p.cx} cy={hy} r={r} fill={p.fill} />
-            <Path
-              d={`M${p.cx - pad} ${hy - pad + k}V${hy - pad}H${p.cx - pad + k}M${p.cx + pad - k} ${hy - pad}H${p.cx + pad}V${hy - pad + k}M${p.cx + pad} ${hy + pad - k}V${hy + pad}H${p.cx + pad - k}M${p.cx - pad + k} ${hy + pad}H${p.cx - pad}V${hy + pad - k}`}
-              stroke="#ffffff"
-              strokeWidth={1.4}
-              strokeLinecap="round"
-              fill="none"
-            />
-            <Circle
-              cx={p.cx + pad}
-              cy={hy - pad}
-              r={4}
-              fill={GO}
-              stroke={c.deep}
-              strokeWidth={1.5}
-            />
-          </G>
-        );
-      })}
-      <Scrim id="fm" color={c.night} />
-    </>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/* Carousel                                                            */
-/* ------------------------------------------------------------------ */
 
 type Slide = {
   key: string;
@@ -859,7 +42,7 @@ type Slide = {
   title: string;
   body: string;
   Icon: LucideIcon;
-  Scene: (p: { c: Tones }) => ReactNode;
+  image: ImageSourcePropType;
 };
 
 const SLIDES: Slide[] = [
@@ -869,7 +52,7 @@ const SLIDES: Slide[] = [
     title: "Check in without the queue",
     body: "A quick face scan at the desk and your room is ready.",
     Icon: Hotel,
-    Scene: HotelScene,
+    image: require("../../../assets/images/use-cases/hotel.jpg"),
   },
   {
     key: "park",
@@ -877,7 +60,7 @@ const SLIDES: Slide[] = [
     title: "Walk straight to the rides",
     body: "Your face is your park pass. No wristbands.",
     Icon: FerrisWheel,
-    Scene: ParkScene,
+    image: require("../../../assets/images/use-cases/park.jpg"),
   },
   {
     key: "cruise",
@@ -885,7 +68,7 @@ const SLIDES: Slide[] = [
     title: "Board in seconds",
     body: "Skip the terminal line with your verified ID.",
     Icon: Ship,
-    Scene: CruiseScene,
+    image: require("../../../assets/images/use-cases/cruise.jpg"),
   },
   {
     key: "attraction",
@@ -893,7 +76,7 @@ const SLIDES: Slide[] = [
     title: "Your face is the ticket",
     body: "Museums, landmarks and tours: just walk in.",
     Icon: Landmark,
-    Scene: AttractionScene,
+    image: require("../../../assets/images/use-cases/attraction.jpg"),
   },
   {
     key: "family",
@@ -901,18 +84,20 @@ const SLIDES: Slide[] = [
     title: "Everyone checks in together",
     body: "Verify the whole family once, then go anywhere.",
     Icon: Users,
-    Scene: FamilyScene,
+    image: require("../../../assets/images/use-cases/family.jpg"),
   },
 ];
 
 export function UseCaseCarousel() {
   const styles = useCarouselStyles();
   const t = useThemeTokens();
-  const tones = useTones();
   const scroller = useRef<ScrollView>(null);
   const dragging = useRef(false);
   const [width, setWidth] = useState(0);
   const [index, setIndex] = useState(0);
+
+  const night = mix(t.colors.actionPrimary, "#07041a", 0.28);
+  const onPrimary = t.colors.onActionPrimary;
 
   const onLayout = (e: LayoutChangeEvent) =>
     setWidth(Math.round(e.nativeEvent.layout.width));
@@ -940,7 +125,7 @@ export function UseCaseCarousel() {
     if (i !== index && i >= 0 && i < SLIDES.length) setIndex(i);
   };
 
-  const height = Math.round(width * (VH / VW));
+  const height = Math.round(width * ASPECT);
 
   return (
     <View style={styles.wrap}>
@@ -958,7 +143,7 @@ export function UseCaseCarousel() {
               onScrollEndDrag={() => (dragging.current = false)}
               style={{ height }}
             >
-              {SLIDES.map(({ key, eyebrow, title, body, Icon, Scene }) => (
+              {SLIDES.map(({ key, eyebrow, title, body, Icon, image }) => (
                 <View
                   key={key}
                   style={{ width, height }}
@@ -966,17 +151,45 @@ export function UseCaseCarousel() {
                   accessibilityRole="image"
                   accessibilityLabel={`${eyebrow}. ${title}. ${body}`}
                 >
-                  <Svg
-                    width={width}
-                    height={height}
-                    viewBox={`0 0 ${VW} ${VH}`}
-                    preserveAspectRatio="xMidYMid slice"
-                  >
-                    <Scene c={tones} />
-                  </Svg>
+                  <Image
+                    source={image}
+                    style={styles.photo}
+                    resizeMode="cover"
+                  />
+                  {/* Colour grade: a light brand wash, then violet scrims
+                      from the left and bottom so the caption always reads. */}
+                  <View
+                    pointerEvents="none"
+                    style={[
+                      styles.fill,
+                      { backgroundColor: alpha(t.colors.actionPrimary, 0.14) },
+                    ]}
+                  />
+                  <LinearGradient
+                    pointerEvents="none"
+                    colors={[
+                      alpha(night, 0.88),
+                      alpha(night, 0.45),
+                      alpha(night, 0),
+                    ]}
+                    locations={[0, 0.45, 0.8]}
+                    start={{ x: 0, y: 0.5 }}
+                    end={{ x: 1, y: 0.5 }}
+                    style={styles.fill}
+                  />
+                  <LinearGradient
+                    pointerEvents="none"
+                    colors={[alpha(night, 0), alpha(night, 0.7)]}
+                    locations={[0.45, 1]}
+                    style={styles.fill}
+                  />
+                  <View style={styles.verified} pointerEvents="none">
+                    <ScanFace size={12} color={onPrimary} />
+                    <Text style={styles.verifiedText}>Face verified</Text>
+                  </View>
                   <View style={styles.caption} pointerEvents="none">
                     <View style={styles.eyebrow}>
-                      <Icon size={12} color={t.colors.onActionPrimary} />
+                      <Icon size={12} color={onPrimary} />
                       <Text style={styles.eyebrowText}>{eyebrow}</Text>
                     </View>
                     <View style={styles.copy}>
@@ -1024,12 +237,39 @@ const useCarouselStyles = makeStyles((t) => ({
     overflow: "hidden",
     minHeight: 120,
   },
+  photo: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: "100%",
+    height: "100%",
+  },
+  fill: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0 },
+  verified: {
+    position: "absolute",
+    top: t.spacing[4] + 2,
+    right: t.spacing[4] + 2,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: t.spacing[1],
+    paddingHorizontal: t.spacing[2],
+    paddingVertical: t.spacing[1],
+    borderRadius: t.radii.full,
+    backgroundColor: alpha(t.colors.success, 0.85),
+  },
+  verifiedText: {
+    fontSize: t.fontSize.xs,
+    fontWeight: t.fontWeight.semibold,
+    color: t.colors.onActionPrimary,
+  },
   caption: {
     position: "absolute",
     top: 0,
     bottom: 0,
     left: 0,
-    width: "62%",
+    width: "66%",
     padding: t.spacing[4] + 2,
     justifyContent: "space-between",
   },
@@ -1062,7 +302,7 @@ const useCarouselStyles = makeStyles((t) => ({
   body: {
     fontSize: t.fontSize.xs,
     lineHeight: t.fontSize.xs * 1.45,
-    color: alpha(t.colors.onActionPrimary, 0.78),
+    color: alpha(t.colors.onActionPrimary, 0.8),
   },
   dots: {
     flexDirection: "row",
