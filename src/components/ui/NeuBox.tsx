@@ -118,14 +118,21 @@ export function NeuBox({ variant = "raised", radius, color, depth = 6, style, ch
   // restores the elevation cue (the top-edge catch the highlight shadow can't
   // deliver). Skipped when the caller passes any real border key (radius keys
   // don't count) and applied before innerStyle, so caller borders always win.
+  //
+  // BUG010 — never DROP borderWidth once set: on Android, removing it sends
+  // NaN (not null) into BorderInsets, the padding box resolves to NaN and the
+  // overflow-hidden clip swallows every child (card turns blank after a
+  // dark → light switch, or a SoftIconButton raised ↔ inset press in dark).
+  // So the no-rim case sends an explicit 0 instead of omitting the key.
   const callerHasBorder = Object.keys(innerStyle).some((k) => k.startsWith("border") && !k.endsWith("Radius"));
-  const hairline: ViewStyle | null =
-    t.scheme === "dark" && variant === "raised" && !callerHasBorder
+  const hairline: ViewStyle | null = callerHasBorder
+    ? null
+    : t.scheme === "dark" && variant === "raised"
       ? {
           borderWidth: StyleSheet.hairlineWidth,
           borderColor: alpha(t.colors.textPrimary, 0.09),
         }
-      : null;
+      : { borderWidth: 0 };
 
   // Yoga inflates a flexGrow child even inside an auto-height host when a
   // bounded column ancestor has free space (yoga#701 legacy stretch) — an

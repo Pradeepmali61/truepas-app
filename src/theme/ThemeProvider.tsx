@@ -6,7 +6,7 @@ import {
     useState,
     type ReactNode,
 } from "react";
-import { StyleSheet, useColorScheme, type ImageStyle, type TextStyle, type ViewStyle } from "react-native";
+import { StyleSheet, type ImageStyle, type TextStyle, type ViewStyle } from "react-native";
 import {
     COMBO_PRESETS,
     type BrandRamp,
@@ -18,7 +18,8 @@ import {
 import { buildTheme, type Theme } from "./themes";
 import type { TypePreset } from "./tokens";
 
-export type ColorScheme = "light" | "dark" | "system";
+/** No "system" mode — the user picks Light or Dark explicitly. */
+export type ColorScheme = "light" | "dark";
 
 export type RadiusPreset = "sharp" | "default" | "round";
 
@@ -93,7 +94,7 @@ export interface ThemeProviderProps {
 }
 
 export function ThemeProvider({
-  scheme: schemeProp = "system",
+  scheme: schemeProp = "light",
   palette: paletteProp = "blue",
   brandRamp,
   ratio: ratioProp,
@@ -108,7 +109,6 @@ export function ThemeProvider({
   );
   const [radius, setRadius] = useState<RadiusPreset>("default");
   const [typeface, setTypeface] = useState<TypePreset>(typefaceProp);
-  const system = useColorScheme();
 
   /** Switching palette snaps to its designed ratio; user can still override. */
   const setPalette = (p: PaletteChoice) => {
@@ -117,8 +117,7 @@ export function ThemeProvider({
     if (preset?.defaultRatio) setRatio(preset.defaultRatio);
   };
 
-  const resolvedScheme: "light" | "dark" =
-    scheme === "system" ? (system === "dark" ? "dark" : "light") : scheme;
+  const resolvedScheme: "light" | "dark" = scheme;
 
   const theme = useMemo(() => {
     const choice = brandRamp ?? palette;

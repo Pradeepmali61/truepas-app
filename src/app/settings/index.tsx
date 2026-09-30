@@ -8,7 +8,7 @@
  * of the design's five; everything else is identical.
  */
 import { useRouter } from 'expo-router';
-import { Check, Moon, Smartphone, Sun, type LucideIcon } from 'lucide-react-native';
+import { Check, Moon, Sun, type LucideIcon } from 'lucide-react-native';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -54,7 +54,6 @@ const PALETTES: { value: PaletteChoice; label: string; dots: string[] }[] = [
 const MODES: { value: ColorScheme; label: string; icon: LucideIcon }[] = [
   { value: 'light', label: 'Light', icon: Sun },
   { value: 'dark', label: 'Dark', icon: Moon },
-  { value: 'system', label: 'System', icon: Smartphone },
 ];
 
 const RATIOS: { value: ColorRatio; label: string }[] = [

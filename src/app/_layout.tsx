@@ -85,7 +85,7 @@ export default function RootLayout() {
     <Provider store={store}>
       <QueryClientProvider client={queryClient}>
         <SafeAreaProvider>
-          <ThemeProvider scheme="system" palette="violetLedger" typeface="grotesk">
+          <ThemeProvider scheme="light"palette="violetLedger" typeface="grotesk">
             <FieldLabelStyleProvider>
               <ToastProvider>
                 <RootShell>
