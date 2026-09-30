@@ -118,6 +118,8 @@ export default function RegisterScreen() {
                   <FormField
                     label="Mobile number"
                     required
+                    // Flush the label's left edge with the country-code box's left edge.
+                    labelInset={0}
                     helperText="Enter your number without the country code."
                     error={fieldState.error?.message}>
                     <View style={styles.phoneRow}>
@@ -133,7 +135,7 @@ export default function RegisterScreen() {
                         style={styles.ccSelect}
                       />
                       <Input
-                        placeholder="(555) 555-0123"
+                        placeholder="98765 43210"
                         keyboardType="phone-pad"
                         autoComplete="tel"
                         value={value}
@@ -203,7 +205,7 @@ const useStyles = makeStyles((t) => ({
   },
   heading: { alignItems: 'center', gap: t.spacing[1] },
   section: { gap: t.spacing[4] },
-  phoneRow: { flexDirection: 'row', gap: t.spacing[2] },
+  phoneRow: { flexDirection: 'row', gap: t.spacing[2], marginTop: 20 },
   ccSelect: { width: 122 },
   phoneInput: { flex: 1 },
   footer: {

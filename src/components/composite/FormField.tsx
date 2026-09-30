@@ -17,6 +17,8 @@ export interface FormFieldProps {
   helperText?: ReactNode;
   required?: boolean;
   disabled?: boolean;
+  /** Left offset for the label's left edge — e.g. to align it over an inset control in a composite child */
+  labelInset?: number;
   /** A single form control (Input, Select, …) — `state` is injected */
   children: ReactElement;
   style?: StyleProp<ViewStyle>;
@@ -30,6 +32,7 @@ export function FormField({
   helperText,
   required,
   disabled,
+  labelInset,
   children,
   style,
 }: FormFieldProps) {
@@ -48,7 +51,7 @@ export function FormField({
   return (
     <View style={[styles.field, overlap && styles.fieldOverlap, style]}>
       {label != null && !overlap && (
-        <Label required={required} disabled={disabled}>
+        <Label required={required} disabled={disabled} style={{ marginLeft: labelInset }}>
           {label}
         </Label>
       )}
@@ -62,7 +65,7 @@ export function FormField({
             colors={[adjust(theme.colors.surface, -3), theme.colors.surface]}
             start={{ x: 0.2, y: 0.2 }}
             end={{ x: 0.8, y: 0.8 }}
-            style={styles.overlapLabel}>
+            style={[styles.overlapLabel, labelInset != null && { left: labelInset }]}>
             <Label required={required} disabled={disabled} style={styles.overlapLabelText}>
               {label}
             </Label>

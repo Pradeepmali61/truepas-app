@@ -194,7 +194,7 @@ export default function LoginScreen() {
                     style={styles.ccSelect}
                   />
                   <Input
-                    placeholder="(555) 555-0123"
+                    placeholder="98765 43210"
                     autoCapitalize="none"
                     autoCorrect={false}
                     keyboardType="phone-pad"

@@ -151,7 +151,7 @@ export function RegisterCard({
             }))}
           />
           <Input
-            placeholder="(555) 555-0123"
+            placeholder="98765 43210"
             keyboardType="phone-pad"
             containerStyle={styles.grow}
             value={phone}
