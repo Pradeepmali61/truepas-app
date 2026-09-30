@@ -39,7 +39,7 @@ const AUTOPLAY_MS = 5000;
 /** Photo colour grade — the theme's primary pulled toward royal blue, plus a
  *  deep navy for the scrims. */
 function grade(primary: string) {
-  const tint = mix(primary, "#1d4ed8", 0.3);
+  const tint = mix(primary, "#1d4ed8", 0.15);
   return { tint, night: mix(tint, "#040a1c", 0.3) };
 }
 
