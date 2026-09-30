@@ -165,6 +165,8 @@ export default function LoginScreen() {
             />
             <FormField
               label={mode === 'email' ? 'Email' : 'Phone number'}
+              // Flush the label's left edge with the control's left edge.
+              labelInset={0}
               error={identifierError}>
               {mode === 'email' ? (
                 <Input
@@ -178,6 +180,7 @@ export default function LoginScreen() {
                     setIdentifierError(undefined);
                     setFormError(null);
                   }}
+                  containerStyle={styles.labelledControl}
                   iconLeft={<Mail size={t.iconSize.md} color={t.colors.actionPrimary} />}
                 />
               ) : (
@@ -211,7 +214,7 @@ export default function LoginScreen() {
                 </View>
               )}
             </FormField>
-            <FormField label="Password" error={passwordError}>
+            <FormField label="Password" labelInset={0} error={passwordError}>
               <Input
                 placeholder="••••••••••"
                 secureTextEntry
@@ -221,6 +224,7 @@ export default function LoginScreen() {
                   setPasswordError(undefined);
                   setFormError(null);
                 }}
+                containerStyle={styles.labelledControl}
                 iconLeft={<Lock size={t.iconSize.md} color={t.colors.actionPrimary} />}
               />
             </FormField>
@@ -279,7 +283,9 @@ const useStyles = makeStyles((t) => ({
     justifyContent: 'center',
   },
   heading: { alignItems: 'center', gap: t.spacing[1] },
-  phoneRow: { flexDirection: 'row', gap: t.spacing[2] },
+  phoneRow: { flexDirection: 'row', gap: t.spacing[2], marginTop: 20 },
+  // Drop controls below the label chip so the two don't touch.
+  labelledControl: { marginTop: 20 },
   ccSelect: { width: 122 },
   phoneInput: { flex: 1 },
   helperRow: { flexDirection: 'row', justifyContent: 'flex-end' },
