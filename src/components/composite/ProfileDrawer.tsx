@@ -6,7 +6,7 @@
  * via Redux + useProfilePicture instead of the design's useSession store.
  */
 import { Mail, Phone, X } from "lucide-react-native";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
     Animated,
     Easing,
@@ -44,23 +44,51 @@ export function ProfileDrawer({ visible, onClose }: { visible: boolean; onClose:
     if (visible) setShown(true);
   }
 
-  useEffect(() => {
+  // The open animation must start from the Modal's onShow: on native
+  // (Fabric) a native-driver animation kicked off in the same commit that
+  // mounts the Modal is lost, leaving an invisible scrim over the screen and
+  // the panel parked off-screen — the avatar tap looked dead.
+  const modalReady = useRef(false);
+  const animateTo = (toValue: number, done?: () => void) =>
     Animated.timing(progress, {
-      toValue: visible ? 1 : 0,
+      toValue,
       duration: 240,
       easing: Easing.out(Easing.cubic),
       useNativeDriver: true,
-    }).start(() => {
-      if (!visible) setShown(false);
+    }).start(({ finished }) => {
+      if (finished) done?.();
     });
-  }, [visible, progress]);
+
+  useEffect(() => {
+    if (visible) {
+      // Re-opened while the close animation was still running — the Modal
+      // never unmounted, so onShow won't fire again.
+      if (modalReady.current) animateTo(1);
+      return;
+    }
+    animateTo(0, () => {
+      modalReady.current = false;
+      setShown(false);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- animateTo only closes over the stable `progress`
+  }, [visible]);
 
   if (!shown || !user) return null;
 
   const translateX = progress.interpolate({ inputRange: [0, 1], outputRange: [panelW, 0] });
 
   return (
-    <RNModal visible transparent animationType="none" onRequestClose={onClose} statusBarTranslucent>
+    <RNModal
+      visible
+      transparent
+      animationType="none"
+      onRequestClose={onClose}
+      statusBarTranslucent
+      onShow={() => {
+        modalReady.current = true;
+        if (visible) animateTo(1);
+      }}
+    >
       <View style={styles.root}>
         <Animated.View style={[styles.scrim, { opacity: progress }]}>
           <Pressable style={styles.scrimPress} onPress={onClose} accessibilityLabel="Close menu" />
