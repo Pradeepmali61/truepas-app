@@ -30,3 +30,7 @@ Any file that uses a function `style` (or `children` press-state fn) MUST have `
 
 - `npx tsc --noEmit`
 - `npx eslint <file>`
+
+## Git workflow
+
+- User preference: commit and push to `origin/main` after every ~4–5 changes — don't wait to be asked each time.
