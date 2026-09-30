@@ -36,6 +36,13 @@ import { alpha, makeStyles, mix, useThemeTokens } from "@/theme";
 const ASPECT = 597 / 1024;
 const AUTOPLAY_MS = 5000;
 
+/** Photo colour grade — the theme's primary pulled toward royal blue, plus a
+ *  deep navy for the scrims. */
+function grade(primary: string) {
+  const tint = mix(primary, "#1d4ed8", 0.3);
+  return { tint, night: mix(tint, "#040a1c", 0.3) };
+}
+
 type Slide = {
   key: string;
   eyebrow: string;
@@ -96,7 +103,7 @@ export function UseCaseCarousel() {
   const [width, setWidth] = useState(0);
   const [index, setIndex] = useState(0);
 
-  const night = mix(t.colors.actionPrimary, "#07041a", 0.28);
+  const { tint, night } = grade(t.colors.actionPrimary);
   const onPrimary = t.colors.onActionPrimary;
 
   const onLayout = (e: LayoutChangeEvent) =>
@@ -160,10 +167,7 @@ export function UseCaseCarousel() {
                       from the left and bottom so the caption always reads. */}
                   <View
                     pointerEvents="none"
-                    style={[
-                      styles.fill,
-                      { backgroundColor: alpha(t.colors.actionPrimary, 0.14) },
-                    ]}
+                    style={[styles.fill, { backgroundColor: alpha(tint, 0.2) }]}
                   />
                   <LinearGradient
                     pointerEvents="none"
@@ -229,7 +233,7 @@ const useCarouselStyles = makeStyles((t) => ({
   /* Shadow and clipping live on separate views — iOS drops the shadow of an overflow:hidden view. */
   shadow: {
     borderRadius: t.radii.xl,
-    backgroundColor: mix(t.colors.actionPrimary, "#07041a", 0.28),
+    backgroundColor: grade(t.colors.actionPrimary).night,
     ...t.shadows.lg,
   },
   frame: {
