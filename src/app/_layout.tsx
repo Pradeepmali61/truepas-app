@@ -1,7 +1,7 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { focusManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { router, Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { View } from 'react-native';
+import { AppState, Platform, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Provider } from 'react-redux';
 
@@ -27,6 +27,16 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+// React Query only knows about browser focus. On native, tell it when the app
+// returns to the foreground so stale queries (e.g. check-in history after a
+// venue check-in) refetch without a manual pull-to-refresh.
+if (Platform.OS !== 'web') {
+  focusManager.setEventListener((handleFocus) => {
+    const sub = AppState.addEventListener('change', (state) => handleFocus(state === 'active'));
+    return () => sub.remove();
+  });
+}
 
 // The API client fires this when the refresh token is missing or rejected.
 // Without it the app stayed "authenticated" in Redux while every request

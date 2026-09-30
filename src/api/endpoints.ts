@@ -84,13 +84,21 @@ export const realApi = {
     return data;
   },
   getBookings: async (): Promise<Booking[]> => {
-    const { data } = await apiClient.get<Booking[] | { bookings?: Booking[] }>('/bookings');
-    // [] is the valid "no check-ins yet" state — unwrap a {bookings:[]}
-    // envelope and treat any other non-array shape as empty rather than
-    // crashing the list on .filter/.length.
-    if (Array.isArray(data)) return data;
-    if (Array.isArray(data?.bookings)) return data.bookings;
-    return [];
+    const { data } = await apiClient.get<unknown>('/bookings');
+    // [] is the valid "no check-ins yet" state, and an empty body means the
+    // same. Unwrap the common list envelopes; any other shape is a contract
+    // mismatch and must surface as an error — silently returning [] made real
+    // check-ins look like an empty history (BUG018).
+    if (data == null || data === '') return [];
+    if (Array.isArray(data)) return data as Booking[];
+    if (typeof data === 'object') {
+      const envelope = data as Record<string, unknown>;
+      for (const key of ['bookings', 'items', 'data', 'content'] as const) {
+        if (Array.isArray(envelope[key])) return envelope[key] as Booking[];
+      }
+    }
+    if (__DEV__) console.warn('[API] GET /bookings → unexpected response shape', JSON.stringify(data));
+    throw new Error('Unexpected /bookings response shape');
   },
   getBooking: async (id: string): Promise<Booking | null> => {
     const { data } = await apiClient.get<Booking>(`/bookings/${id}`);

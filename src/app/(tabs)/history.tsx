@@ -4,9 +4,9 @@
  * rendered with the kit BookingCard and drilling into booking detail.
  * Ported 1:1 from UI-design-repo src/app/screens/main/ActivityScreen.tsx.
  */
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { CalendarClock } from 'lucide-react-native';
-import { useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -30,6 +30,18 @@ export default function HistoryScreen() {
   const insets = useSafeAreaInsets();
   const bookingsQuery = useBookings();
   const [view, setView] = useState<'upcoming' | 'past'>('upcoming');
+
+  /* Tabs stay mounted, so switching back would show the cached list. Refetch
+     on every re-focus so a check-in completed meanwhile shows up (BUG018);
+     the first focus is covered by the query's own mount fetch. */
+  const { refetch } = bookingsQuery;
+  const focusedOnce = useRef(false);
+  useFocusEffect(
+    useCallback(() => {
+      if (focusedOnce.current) void refetch();
+      focusedOnce.current = true;
+    }, [refetch]),
+  );
 
   const renderCard = (b: Booking, i: number) => (
     <FadeUp key={b.id} delay={Math.min(i, 8) * 60}>
