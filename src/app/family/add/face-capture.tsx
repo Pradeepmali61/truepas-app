@@ -37,7 +37,7 @@ export default function FamilyFaceCaptureScreen() {
 
   const goToMemberDetail = () => {
     if (personId) {
-      router.replace({ pathname: '/family/[id]', params: { id: personId } });
+      router.replace({ pathname: '/family/[id]', params: { id: personId, from: 'add' } });
     } else {
       router.dismissTo('/(tabs)');
     }

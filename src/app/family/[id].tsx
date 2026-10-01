@@ -5,10 +5,10 @@
  * "Continue setup" routes to our real next step (document capture, then
  * photo/liveness capture) instead of the design's single familyEnroll route.
  */
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { BadgeCheck, Camera, Circle, CircleCheck, FileText, ScanFace, Trash2, type LucideIcon } from 'lucide-react-native';
-import { useState } from 'react';
-import { RefreshControl, ScrollView, Text, View } from 'react-native';
+import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { BadgeCheck, Camera, Circle, CircleCheck, FileText, ScanFace, Trash2, Users, type LucideIcon } from 'lucide-react-native';
+import { useCallback, useState } from 'react';
+import { BackHandler, RefreshControl, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ActionSheet, AsyncBlock, ScreenHeader, Section, SectionTitle, SkeletonRows } from '@/components/composite';
@@ -69,7 +69,7 @@ export default function FamilyMemberScreen() {
     const insets = useSafeAreaInsets();
     const router = useRouter();
     const { toast } = useToast();
-    const { id } = useLocalSearchParams<{ id: string }>();
+    const { id, from } = useLocalSearchParams<{ id: string; from?: string }>();
 
     const member = useFamilyMember(id);
     const memberDocs = useDocuments(id);
@@ -100,6 +100,29 @@ export default function FamilyMemberScreen() {
                   } as never)
         : undefined;
 
+    // Arriving from the add flow, the stack below is add/scan/capture screens
+    // (each step router.replace'd) — back would land mid-flow. Reset to
+    // Tabs → Family so both the header back and "Go to Family" end on the list.
+    const goToFamily = () => {
+        if (router.canDismiss()) router.dismissAll();
+        router.push('/family' as never);
+    };
+    const onBack = from === 'add' ? goToFamily : () => router.back();
+
+    // Android hardware back gets the same treatment (iOS swipe-back is
+    // disabled below for the same reason).
+    useFocusEffect(
+        useCallback(() => {
+            if (from !== 'add') return;
+            const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+                if (router.canDismiss()) router.dismissAll();
+                router.push('/family' as never);
+                return true;
+            });
+            return () => sub.remove();
+        }, [from, router]),
+    );
+
     const cameras =
         m && m.allowedCameras?.length
             ? `${m.allowedCameras.map((c) => c[0].toUpperCase() + c.slice(1)).join(' + ')} camera`
@@ -121,10 +144,11 @@ export default function FamilyMemberScreen() {
 
     return (
         <SafeAreaView edges={['top']} style={styles.screen}>
+            <Stack.Screen options={{ gestureEnabled: from !== 'add' }} />
             <ScreenHeader
                 title={m?.name ?? 'Member'}
                 subtitle={m ? `${m.relationship} · ${m.age} yrs` : undefined}
-                onBack={() => router.back()}
+                onBack={onBack}
             />
             <ScrollView
                 style={styles.flex}
@@ -256,6 +280,15 @@ export default function FamilyMemberScreen() {
                     {!setupDone && continueSetup && (
                         <Button fullWidth size="lg" onPress={continueSetup}>
                             Continue setup
+                        </Button>
+                    )}
+                    {setupDone && (
+                        <Button
+                            fullWidth
+                            size="lg"
+                            onPress={goToFamily}
+                            iconLeft={<Users size={iconSize.sm} color={t.colors.onActionPrimary} />}>
+                            Go to Family
                         </Button>
                     )}
                     <Button
