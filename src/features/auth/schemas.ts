@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { ADULT_AGE, ageFromDob } from '@/utils/age';
+
 /** Input validation at the trust boundary (OWASP A03 — injection defense in depth). */
 export const loginSchema = z.object({
   identifier: z
@@ -38,7 +40,10 @@ export const accountDetailsSchema = z.object({
   dateOfBirth: z
     .string()
     .trim()
-    .regex(/^(0[1-9]|1[0-2])\/(0[1-9]|[12][0-9]|3[01])\/(19|20)\d{2}$/, 'Use MM/DD/YYYY'),
+    .regex(/^(0[1-9]|1[0-2])\/(0[1-9]|[12][0-9]|3[01])\/(19|20)\d{2}$/, 'Use MM/DD/YYYY')
+    .refine((dob) => Number.isFinite(ageFromDob(dob)), 'Enter a valid date')
+    .refine((dob) => !(ageFromDob(dob) < 0), 'Date of birth must be in the past')
+    .refine((dob) => !(ageFromDob(dob) < ADULT_AGE), `You must be ${ADULT_AGE} or older to create an account`),
   pin: z.string().regex(/^\d{4}$/, 'PIN must be exactly 4 digits'),
   email: z
     .string()
