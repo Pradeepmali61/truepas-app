@@ -31,7 +31,7 @@ interface Step {
 
 function stepsFor(m: FamilyMember, docDone: boolean): Step[] {
     const isPhoto = m.faceCaptureMode === 'photo';
-    const faceDone = m.faceEnrolled || m.verification === 'verified';
+    const faceDone = isFaceDone(m);
     return [
         {
             icon: FileText,
@@ -51,9 +51,16 @@ function stepsFor(m: FamilyMember, docDone: boolean): Step[] {
             icon: BadgeCheck,
             label: 'Enrolled',
             sub: 'Ready for venue check-in',
-            done: m.verification === 'verified',
+            done: docDone && faceDone,
         },
     ];
+}
+
+/** The backend never moves a member's `verification` to 'verified' after
+ *  face enrollment — it only flips `faceEnrolled`. Gating on 'verified'
+ *  alone left "Continue setup" showing forever after a successful scan. */
+function isFaceDone(m: FamilyMember): boolean {
+    return m.faceEnrolled || m.verification === 'verified';
 }
 
 export default function FamilyMemberScreen() {
@@ -77,6 +84,7 @@ export default function FamilyMemberScreen() {
     const doneDoc = memberDocs.data?.find((d) => d.status !== 'failed' && d.status !== 'missing');
     const docDone =
         doneDoc != null || m?.verification === 'pending_liveness' || m?.verification === 'verified';
+    const setupDone = !!m && docDone && isFaceDone(m);
 
     const continueSetup = m
         ? !docDone
@@ -152,7 +160,7 @@ export default function FamilyMemberScreen() {
                                     {memberData.relationship} · {memberData.age} yrs
                                 </Typography>
                                 <View style={styles.chipRow}>
-                                    <StatusChip status={memberData.verification} />
+                                    <StatusChip status={setupDone ? 'verified' : memberData.verification} />
                                     <Badge
                                         variant="info"
                                         icon={
@@ -245,7 +253,7 @@ export default function FamilyMemberScreen() {
 
             {m && (
                 <View style={[styles.footer, { paddingBottom: t.spacing[4] + insets.bottom }]}>
-                    {m.verification !== 'verified' && continueSetup && (
+                    {!setupDone && continueSetup && (
                         <Button fullWidth size="lg" onPress={continueSetup}>
                             Continue setup
                         </Button>

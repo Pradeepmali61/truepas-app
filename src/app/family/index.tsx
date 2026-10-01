@@ -89,6 +89,7 @@ export default function FamilyScreen() {
                                                     age: m.age,
                                                     ageBand: m.ageBand,
                                                     verification: m.verification,
+                                                    faceEnrolled: m.faceEnrolled,
                                                     faceCaptureMode: m.faceCaptureMode,
                                                     allowedCameras: m.allowedCameras,
                                                 }}

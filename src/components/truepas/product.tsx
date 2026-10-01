@@ -88,6 +88,8 @@ export interface ProductMember {
   age: number;
   ageBand: string;
   verification: string;
+  /** Face enrolled — the backend's signal that setup finished. */
+  faceEnrolled?: boolean;
   faceCaptureMode?: string;
   allowedCameras?: string[];
   profileImageUrl?: string | null;
@@ -289,7 +291,7 @@ export function DocumentCard({
 /** Family member card — relationship, age band, capture mode. */
 export function FamilyCard({ member, style }: { member: ProductMember; style?: StyleProp<ViewStyle> }) {
   const styles = useStyles();
-  const verified = member.verification === "verified";
+  const verified = member.verification === "verified" || !!member.faceEnrolled;
   return (
     <SoftCard style={[styles.productCard, style]}>
       <View style={styles.rowBetween}>
