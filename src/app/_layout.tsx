@@ -9,7 +9,6 @@ import { SessionExpiredError, setOnSessionExpired } from '@/api/client';
 import { FieldLabelStyleProvider, ToastProvider } from '@/components/composite';
 import { DevFloatingButton } from '@/components/layout/DevFloatingButton';
 import { sessionEnded } from '@/features/auth/slice';
-import { clearAllDocumentImages } from '@/services/documentImageStore';
 import { clearAllProfileImages } from '@/services/profileImageStore';
 import { store } from '@/store';
 import { ThemeProvider, useTheme, useTruepasFonts } from '@/theme';
@@ -44,9 +43,10 @@ if (Platform.OS !== 'web') {
 setOnSessionExpired(() => {
   queryClient.clear();
   store.dispatch(sessionEnded());
-  // Forced logout gets the same filesystem teardown as a manual logout —
-  // captured document/member photos must not outlive the session.
-  void Promise.allSettled([clearAllDocumentImages(), clearAllProfileImages()]);
+  // Forced logout gets the same teardown as a manual logout. Captured
+  // document scans are kept — the backend can't return them, so wiping
+  // here lost every passport photo on token expiry (see useLogoutFlow).
+  void clearAllProfileImages().catch(() => {});
   if (router.canDismiss()) {
     router.dismissAll();
   }

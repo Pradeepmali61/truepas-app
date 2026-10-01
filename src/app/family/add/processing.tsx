@@ -86,6 +86,51 @@ export default function FamilyProcessingScreen() {
     }
   };
 
+  /** Facepe-style REPLACE: the member's previous document of this type is
+   *  superseded by the new capture — remove the old one so repeat scans
+   *  don't pile up in the member's document list. */
+  const replaceOlderDocs = async (memberId: string, keepDocId: string) => {
+    try {
+      const existing = await api.getDocuments(memberId);
+      const duplicates = (existing ?? []).filter(
+        (d) => d.type === docType && d.id !== keepDocId,
+      );
+      for (const dup of duplicates) {
+        try {
+          await api.removeDocument(dup.id);
+          await clearDocumentImages(dup.id);
+          console.log('[FamilyAdd] Replaced existing member document:', dup.id, dup.type);
+        } catch (e) {
+          console.warn('[FamilyAdd] Failed to remove duplicate:', dup.id, e);
+        }
+      }
+    } catch (e) {
+      console.warn('[FamilyAdd] Replace lookup failed — keeping existing documents:', e);
+    }
+  };
+
+  /** A member with the same name + DOB already on the account — e.g. an
+   *  earlier attempt whose liveness failed and the user restarted "Add
+   *  family member". Reusing it stops every retry minting a duplicate. */
+  const findExistingMember = async (): Promise<FamilyMember | null> => {
+    if (!name || !dob) return null;
+    try {
+      const norm = (s: string) => s.trim().replace(/\s+/g, ' ').toLowerCase();
+      const age = ageFromDob(dob);
+      const list = await api.getFamily();
+      return (
+        (list ?? []).find(
+          (m) =>
+            norm(m.name) === norm(name) &&
+            (m.dateOfBirth ? m.dateOfBirth.split('T')[0] === dob.split('T')[0] : m.age === age),
+        ) ?? null
+      );
+    } catch (e) {
+      console.warn('[FamilyAdd] Existing-member lookup failed — creating new:', e);
+      return null;
+    }
+  };
+
   const process = async () => {
     try {
       setStatus('adding');
@@ -111,26 +156,7 @@ export default function FamilyProcessingScreen() {
           createdDocRef.current = doc;
         }
         console.log('[FamilyAdd] Document created:', JSON.stringify({ id: doc.id, personId: doc.personId, type: doc.type, label: doc.label }));
-        // Facepe-style REPLACE: the member's previous document of this type
-        // is superseded by the new capture — remove the old one so duplicate
-        // scans don't pile up in the member's document list.
-        try {
-          const existing = await api.getDocuments(personId);
-          const duplicates = (existing ?? []).filter(
-            (d) => d.type === docType && d.id !== doc.id,
-          );
-          for (const dup of duplicates) {
-            try {
-              await api.removeDocument(dup.id);
-              await clearDocumentImages(dup.id);
-              console.log('[FamilyAdd] Replaced existing member document:', dup.id, dup.type);
-            } catch (e) {
-              console.warn('[FamilyAdd] Failed to remove duplicate:', dup.id, e);
-            }
-          }
-        } catch (e) {
-          console.warn('[FamilyAdd] Replace lookup failed — keeping existing documents:', e);
-        }
+        await replaceOlderDocs(personId, doc.id);
         // Persist captured image locally so it can be shown in document detail
         try {
           await saveDocumentImages(doc.id, {
@@ -157,11 +183,16 @@ export default function FamilyProcessingScreen() {
       }
       console.log('[FamilyAdd] Creating member:', JSON.stringify({ name, dob, relationship, band }));
       let member = createdMemberRef.current;
+      let reused = false;
       if (!member) {
-        member = await addFamilyMember.mutateAsync({ name, dateOfBirth: dob, relationship });
+        member = await findExistingMember();
+        reused = !!member;
+        if (!member) {
+          member = await addFamilyMember.mutateAsync({ name, dateOfBirth: dob, relationship });
+        }
         createdMemberRef.current = member;
       }
-      console.log('[FamilyAdd] Member created:', member.id);
+      console.log(reused ? '[FamilyAdd] Reusing existing member:' : '[FamilyAdd] Member created:', member.id);
 
       // Attach the captured document to the newly created member
       const scanResult = getScanResult();
@@ -178,6 +209,7 @@ export default function FamilyProcessingScreen() {
         });
         createdDocRef.current = doc;
         console.log('[FamilyAdd] Document created:', JSON.stringify({ id: doc.id, personId: doc.personId, type: doc.type }));
+        if (reused) await replaceOlderDocs(member.id, doc.id);
         try {
           await saveDocumentImages(doc.id, {
             front: scanResult.documentPreviewBase64 ?? scanResult.documentImageBase64,

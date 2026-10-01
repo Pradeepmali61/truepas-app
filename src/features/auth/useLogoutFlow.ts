@@ -4,7 +4,6 @@ import { useCallback } from 'react';
 
 import { useLogout } from '@/features/auth/mutations';
 import { sessionEnded } from '@/features/auth/slice';
-import { clearAllDocumentImages } from '@/services/documentImageStore';
 import { clearAllProfileImages } from '@/services/profileImageStore';
 import { secureStorage } from '@/services/secureStorage';
 import { useAppDispatch } from '@/store';
@@ -13,7 +12,12 @@ import { useAppDispatch } from '@/store';
  * Full logout — server revoke (best-effort) + guaranteed local teardown:
  * React Query cache, Redux session, tokens (in-memory + secure store),
  * session-scoped in-memory stashes (cleared inside sessionEnded), and the
- * filesystem caches (captured document images, profile/member pictures).
+ * profile/member picture cache.
+ *
+ * Captured document scans are deliberately KEPT: the backend never returns
+ * them, so wiping here made every passport photo vanish after a re-login.
+ * They're keyed by server document id (unreachable from another account)
+ * and removed on document delete / account delete.
  *
  * The server call never blocks local cleanup — even if /auth/logout fails
  * or no refresh token is readable, the session ends locally.
@@ -36,7 +40,7 @@ export function useLogoutFlow() {
     } catch {
       // Best-effort — local teardown below runs regardless.
     }
-    await Promise.allSettled([clearAllDocumentImages(), clearAllProfileImages()]);
+    await clearAllProfileImages().catch(() => {});
     queryClient.clear();
     dispatch(sessionEnded());
     router.dismissTo('/(auth)/login' as never);
