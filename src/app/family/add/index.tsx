@@ -6,7 +6,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { Alert, DatePicker, FormField, ScreenHeader } from '@/components/composite';
 import { CoreButton, Input, Select, type SelectOption } from '@/components/ui';
-import { ADULT_AGE, ageBandFromAge, ageFromDob } from '@/features/family/hooks';
+import { ageBandFromAge, ageFromDob } from '@/features/family/hooks';
 import { useKeyboardScrollPad } from '@/hooks/useKeyboardScrollPad';
 import { useThemeTokens } from '@/theme';
 
@@ -24,8 +24,8 @@ function todayIso(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-/** Add family — step 1: member basics (POST /cb/family). Dependents must be
- *  under 18 (adults create their own account); the flow branches on computed age: 0-4 photo, 5-9 liveness (any camera),
+/** Add family — step 1: member basics (POST /cb/family). Any age is accepted;
+ *  the flow branches on computed age: 0-4 photo, 5-9 liveness (any camera),
  *  10+ front-camera liveness. */
 export default function AddFamilyScreen() {
   const theme = useThemeTokens();
@@ -48,8 +48,6 @@ export default function AddFamilyScreen() {
       const age = ageFromDob(dob);
       if (!Number.isFinite(age)) next.dob = 'Enter a valid date';
       else if (age < 0) next.dob = 'Date of birth must be in the past';
-      else if (age >= ADULT_AGE)
-        next.dob = `Members ${ADULT_AGE} or older need their own Truepas account`;
     }
     if (!relationship) next.relationship = 'Choose a relationship';
     setErrors(next);
