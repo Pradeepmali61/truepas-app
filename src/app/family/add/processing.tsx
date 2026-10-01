@@ -173,7 +173,7 @@ export default function FamilyProcessingScreen() {
         setStatus('done');
         // Route back to the member detail page (not just router.back()
         // which would land on the select-type page).
-        router.replace({ pathname: '/family/[id]', params: { id: personId, from: 'add' } });
+        router.replace({ pathname: '/family/[id]', params: { id: personId } });
         return;
       }
 

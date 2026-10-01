@@ -60,7 +60,7 @@ export function PhotoCapture() {
 
   const goToMemberDetail = () => {
     if (personId) {
-      router.replace({ pathname: '/family/[id]', params: { id: personId, from: 'add' } });
+      router.replace({ pathname: '/family/[id]', params: { id: personId } });
     } else {
       router.dismissTo('/(tabs)');
     }
