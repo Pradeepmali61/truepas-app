@@ -21,6 +21,7 @@ import { useKeyboardScrollPad } from '@/hooks/useKeyboardScrollPad';
 import { accountDetailsStore } from '@/services/accountDetailsStore';
 import { makeStyles, useThemeTokens } from '@/theme';
 import type { AccountDetailsRequest } from '@/types/domain';
+import { ADULT_AGE } from '@/utils/age';
 
 /** DatePicker speaks ISO ("YYYY-MM-DD"); the backend contract takes "MM/DD/YYYY". */
 const isoToApiDate = (iso: string) => {
@@ -30,6 +31,13 @@ const isoToApiDate = (iso: string) => {
 const apiDateToIso = (v: string) => {
   const [m, d, y] = v.split('/');
   return m && d && y ? `${y}-${m}-${d}` : undefined;
+};
+
+/** Latest DOB that is ADULT_AGE today, as local ISO — the picker's upper bound. */
+const latestAdultDob = () => {
+  const d = new Date();
+  d.setFullYear(d.getFullYear() - ADULT_AGE);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
 
 const samePayload = (a: AccountDetailsRequest, b: AccountDetailsRequest) =>
@@ -186,7 +194,7 @@ export default function AccountDetailsScreen() {
                   <FormField label="Date of birth" required error={fieldState.error?.message}>
                     <DatePicker
                       placeholder="Date of birth"
-                      maxDate={new Date().toISOString().slice(0, 10)}
+                      maxDate={latestAdultDob()}
                       value={apiDateToIso(value)}
                       onValueChange={(iso) => onChange(isoToApiDate(iso))}
                       state={fieldState.error ? 'error' : 'default'}

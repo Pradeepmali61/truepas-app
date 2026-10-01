@@ -49,13 +49,20 @@ export function DatePicker({
   const styles = useStyles();
   const theme = useThemeTokens();
   const [open, setOpen] = useState(false);
-  const initial = value ? new Date(`${value}T00:00:00`) : new Date();
+  // With no value, open on today — or on maxDate when it lies in the past
+  // (e.g. an 18+ DOB field), so the first view isn't all disabled days.
+  const startDate = () => {
+    if (value) return new Date(`${value}T00:00:00`);
+    const today = new Date();
+    return maxDate && maxDate < toISO(today) ? new Date(`${maxDate}T00:00:00`) : today;
+  };
+  const initial = startDate();
   const [view, setView] = useState({ year: initial.getFullYear(), month: initial.getMonth() });
   const [draft, setDraft] = useState<string | undefined>(value);
   const [mode, setMode] = useState<"days" | "years">("days");
 
   const openPicker = () => {
-    const base = value ? new Date(`${value}T00:00:00`) : new Date();
+    const base = startDate();
     setView({ year: base.getFullYear(), month: base.getMonth() });
     setDraft(value);
     setMode("days");
