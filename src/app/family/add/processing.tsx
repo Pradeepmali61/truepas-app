@@ -8,7 +8,7 @@ import { api } from '@/api';
 import { Alert, StagedFlow } from '@/components/composite';
 import { CoreButton, RowIcon, Spinner, Typography } from '@/components/ui';
 import { useAddDocument } from '@/features/documents/hooks';
-import { ageFromDob, useAddFamilyMember } from '@/features/family/hooks';
+import { ageFromDob, findMatchingMember, isDuplicateMemberError, useAddFamilyMember } from '@/features/family/hooks';
 import { clearDocumentImages, saveDocumentImages } from '@/services/documentImageStore';
 import { clearScanResult, getScanResult } from '@/services/scanStore';
 import { useThemeTokens } from '@/theme';
@@ -52,6 +52,7 @@ export default function FamilyProcessingScreen() {
   const needsFace = band !== '0-4';
   const [status, setStatus] = useState<ProcessingStatus>('adding');
   const [error, setError] = useState<string | null>(null);
+  const [retryable, setRetryable] = useState(true);
   // Staged flow — index advances at each real await boundary inside process().
   const [stepIndex, setStepIndex] = useState(0);
   const STEP_LABELS = isExistingMember
@@ -115,16 +116,7 @@ export default function FamilyProcessingScreen() {
   const findExistingMember = async (): Promise<FamilyMember | null> => {
     if (!name || !dob) return null;
     try {
-      const norm = (s: string) => s.trim().replace(/\s+/g, ' ').toLowerCase();
-      const age = ageFromDob(dob);
-      const list = await api.getFamily();
-      return (
-        (list ?? []).find(
-          (m) =>
-            norm(m.name) === norm(name) &&
-            (m.dateOfBirth ? m.dateOfBirth.split('T')[0] === dob.split('T')[0] : m.age === age),
-        ) ?? null
-      );
+      return findMatchingMember(await api.getFamily(), name, dob);
     } catch (e) {
       console.warn('[FamilyAdd] Existing-member lookup failed — creating new:', e);
       return null;
@@ -248,9 +240,28 @@ export default function FamilyProcessingScreen() {
       // overwritten by the next capture.
       const msg = err?.response?.data?.message ?? err?.message ?? 'Could not add family member';
       console.error('[FamilyAdd] Failed:', msg, JSON.stringify(err?.response?.data));
+      if (isDuplicateMemberError(err)) {
+        // Backend says this member exists but our lookup missed it — try once
+        // more and hand the user to that member instead of a dead-end error.
+        const match = await findExistingMember();
+        if (match) {
+          router.replace({ pathname: '/family/[id]', params: { id: match.id } });
+          return;
+        }
+        // Not in the list (e.g. removed earlier but still held by the backend).
+        setRetryable(false);
+        setError(
+          `${name ?? 'This member'} was added to your account before. Check your Family list, or contact support if they were removed.`,
+        );
+        setStatus('error');
+        return;
+      }
+      // Retry only helps when the request never got an answer or the server
+      // failed — not for validation/duplicate rejections.
+      const httpStatus = err?.response?.status;
+      setRetryable(!err?.response || httpStatus >= 500 || httpStatus === 408 || httpStatus === 429);
       setError(msg);
       setStatus('error');
-      // stay on screen with retry
     }
   };
 
@@ -290,9 +301,11 @@ export default function FamilyProcessingScreen() {
             {status === 'done' && 'Added!'}
             {status === 'error' && 'Could not add family member'}
           </Typography>
-          <Typography variant="body-sm" color="secondary" center>
-            {status === 'adding' ? 'Creating profile…' : 'Please wait'}
-          </Typography>
+          {status !== 'error' && (
+            <Typography variant="body-sm" color="secondary" center>
+              {status === 'adding' ? 'Creating profile…' : 'Please wait'}
+            </Typography>
+          )}
         </View>
 
         <View style={{ alignSelf: 'stretch', paddingHorizontal: theme.spacing[6] }}>
@@ -307,19 +320,21 @@ export default function FamilyProcessingScreen() {
           <>
             <Alert variant="error">{error}</Alert>
             <View style={{ alignSelf: 'stretch', gap: theme.spacing[3], marginTop: theme.spacing[2] }}>
+              {retryable && (
+                <CoreButton
+                  fullWidth
+                  accessibilityLabel="Retry"
+                  onPress={() => {
+                    setError(null);
+                    setStatus('adding');
+                    processRef.current?.();
+                  }}>
+                  Retry
+                </CoreButton>
+              )}
               <CoreButton
                 fullWidth
-                accessibilityLabel="Retry"
-                onPress={() => {
-                  setError(null);
-                  setStatus('adding');
-                  processRef.current?.();
-                }}>
-                Retry
-              </CoreButton>
-              <CoreButton
-                fullWidth
-                variant="outline"
+                variant={retryable ? 'outline' : undefined}
                 accessibilityLabel="Back to family"
                 onPress={() => router.dismissTo('/(tabs)')}>
                 Back to Family

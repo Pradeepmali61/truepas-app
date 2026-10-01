@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { api } from '@/api';
-import type { AddFamilyMemberRequest, FamilyAgeBand } from '@/types/domain';
+import { ageFromDob } from '@/utils/age';
+import type { AddFamilyMemberRequest, FamilyAgeBand, FamilyMember } from '@/types/domain';
 
 export { ADULT_AGE, ageFromDob } from '@/utils/age';
 
@@ -56,4 +57,30 @@ export function ageBandFromAge(age: number): FamilyAgeBand {
   if (age >= 10) return '10+';
   if (age >= 5) return '5-9';
   return '0-4';
+}
+
+/** Member already on the account with the same name + DOB (age when the
+ *  backend omits dateOfBirth) — the backend rejects re-adding them. */
+export function findMatchingMember(
+  list: FamilyMember[] | undefined,
+  name: string,
+  dob: string,
+): FamilyMember | null {
+  const norm = (s: string) => s.trim().replace(/\s+/g, ' ').toLowerCase();
+  const day = dob.split('T')[0];
+  const age = ageFromDob(dob);
+  return (
+    (list ?? []).find(
+      (m) =>
+        norm(m.name) === norm(name) &&
+        (m.dateOfBirth ? m.dateOfBirth.split('T')[0] === day : m.age === age),
+    ) ?? null
+  );
+}
+
+/** Backend "already exists" rejection on POST /family. */
+export function isDuplicateMemberError(err: any): boolean {
+  const status = err?.response?.status;
+  const msg = String(err?.response?.data?.message ?? '');
+  return status === 409 || /already exists/i.test(msg);
 }

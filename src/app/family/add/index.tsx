@@ -1,14 +1,17 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
-import { User } from 'lucide-react-native';
+import { Pencil, User, UserRound } from 'lucide-react-native';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Alert, DatePicker, FormField, ScreenHeader } from '@/components/composite';
+import { api } from '@/api';
+import { ActionSheet, Alert, DatePicker, FormField, ScreenHeader } from '@/components/composite';
 import { CoreButton, Input, Select, type SelectOption } from '@/components/ui';
-import { ageBandFromAge, ageFromDob } from '@/features/family/hooks';
+import { ageBandFromAge, ageFromDob, familyKeys, findMatchingMember } from '@/features/family/hooks';
 import { useKeyboardScrollPad } from '@/hooks/useKeyboardScrollPad';
 import { useThemeTokens } from '@/theme';
+import type { FamilyMember } from '@/types/domain';
 
 const RELATIONSHIPS: SelectOption[] = [
   { value: 'Child', label: 'Child' },
@@ -32,13 +35,16 @@ export default function AddFamilyScreen() {
   const insets = useSafeAreaInsets();
   const kbd = useKeyboardScrollPad();
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   const [fullName, setFullName] = useState('');
   const [dob, setDob] = useState('');
   const [relationship, setRelationship] = useState('Child');
   const [errors, setErrors] = useState<{ name?: string; dob?: string; relationship?: string }>({});
+  const [checking, setChecking] = useState(false);
+  const [existing, setExisting] = useState<FamilyMember | null>(null);
 
-  const submit = () => {
+  const submit = async () => {
     const trimmed = fullName.trim();
     const next: typeof errors = {};
     if (trimmed.length < 2) next.name = 'Name is required';
@@ -52,6 +58,27 @@ export default function AddFamilyScreen() {
     if (!relationship) next.relationship = 'Choose a relationship';
     setErrors(next);
     if (Object.keys(next).length > 0) return;
+
+    // Catch a duplicate HERE, before the user spends a document scan on it —
+    // the backend rejects the same name + DOB at the end of the flow.
+    setChecking(true);
+    try {
+      const list = await queryClient.fetchQuery({
+        queryKey: familyKeys.all,
+        queryFn: api.getFamily,
+        staleTime: 30_000,
+      });
+      const match = findMatchingMember(list, trimmed, dob);
+      if (match) {
+        setExisting(match);
+        return;
+      }
+    } catch {
+      // List unavailable — let the flow continue; processing handles the
+      // backend's duplicate rejection.
+    } finally {
+      setChecking(false);
+    }
 
     const age = ageFromDob(dob);
     const band = ageBandFromAge(age);
@@ -114,11 +141,40 @@ export default function AddFamilyScreen() {
             paddingBottom: theme.spacing[4] + insets.bottom,
             gap: theme.spacing[2],
           }}>
-          <CoreButton fullWidth size="lg" accessibilityLabel="Add member" onPress={submit}>
+          <CoreButton
+            fullWidth
+            size="lg"
+            accessibilityLabel="Add member"
+            loading={checking}
+            disabled={checking}
+            onPress={() => void submit()}>
             Add member
           </CoreButton>
         </View>
       </KeyboardAvoidingView>
+      <ActionSheet
+        visible={!!existing}
+        onClose={() => setExisting(null)}
+        title={existing ? `${existing.name} is already in your family` : undefined}
+        showCancel={false}
+        items={
+          existing
+            ? [
+                {
+                  key: 'open',
+                  label: `Open ${existing.name.split(' ')[0]}`,
+                  icon: <UserRound size={theme.iconSize.md} color={theme.colors.actionPrimary} />,
+                  onSelect: () => router.replace({ pathname: '/family/[id]', params: { id: existing.id } }),
+                },
+                {
+                  key: 'edit',
+                  label: 'Change details',
+                  icon: <Pencil size={theme.iconSize.md} color={theme.colors.textSecondary} />,
+                },
+              ]
+            : []
+        }
+      />
     </SafeAreaView>
   );
 }
